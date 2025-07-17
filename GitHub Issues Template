@@ -1,0 +1,310 @@
+# GitHub Issue Templates
+
+Create these files in `.github/ISSUE_TEMPLATE/` folder:
+
+## 1. Bug Report Template
+**File: `.github/ISSUE_TEMPLATE/bug_report.md`**
+
+```markdown
+---
+name: Bug report
+about: Create a report to help us improve
+title: '[BUG] '
+labels: bug
+assignees: ''
+---
+
+## Bug Description
+A clear and concise description of what the bug is.
+
+## Steps to Reproduce
+1. Go to '...'
+2. Click on '....'
+3. Scroll down to '....'
+4. See error
+
+## Expected Behavior
+A clear and concise description of what you expected to happen.
+
+## Actual Behavior
+A clear and concise description of what actually happened.
+
+## Screenshots
+If applicable, add screenshots to help explain your problem.
+
+## Environment
+- OS: [e.g. macOS, Windows, Linux]
+- Browser: [e.g. Chrome, Firefox, Safari]
+- Node.js version: [e.g. 18.17.0]
+- Project version: [e.g. 1.0.0]
+
+## Integration Details
+- [ ] HubSpot integration affected
+- [ ] Grain integration affected
+- [ ] JIRA integration affected
+- [ ] Slack integration affected
+- [ ] Database/Supabase affected
+- [ ] Webhook endpoints affected
+
+## Error Logs
+```
+Paste any error logs here
+```
+
+## Additional Context
+Add any other context about the problem here.
+
+## Possible Solution
+If you have ideas on how to fix this, please describe them here.
+```
+
+## 2. Feature Request Template
+**File: `.github/ISSUE_TEMPLATE/feature_request.md`**
+
+```markdown
+---
+name: Feature request
+about: Suggest an idea for this project
+title: '[FEATURE] '
+labels: enhancement
+assignees: ''
+---
+
+## Feature Description
+A clear and concise description of what you want to happen.
+
+## Problem/Use Case
+Is your feature request related to a problem? Please describe.
+A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+
+## Proposed Solution
+A clear and concise description of what you want to happen.
+
+## Alternative Solutions
+A clear and concise description of any alternative solutions or features you've considered.
+
+## Initiative Alignment
+Which strategic initiative does this feature align with?
+- [ ] Customer Research System
+- [ ] Competitive Intelligence Agent
+- [ ] Marketing Content Pipeline
+- [ ] Automated Product Updates
+- [ ] Other (please specify)
+
+## Impact Assessment
+- **Priority**: High / Medium / Low
+- **Effort**: High / Medium / Low
+- **Value**: High / Medium / Low
+
+## Integration Requirements
+Which integrations would this feature affect?
+- [ ] HubSpot API
+- [ ] Grain API
+- [ ] JIRA API
+- [ ] Slack API
+- [ ] Supabase database
+- [ ] AI/ML providers (OpenAI/Claude)
+- [ ] Webhook endpoints
+
+## Acceptance Criteria
+What would need to be true for this feature to be considered complete?
+- [ ] Criteria 1
+- [ ] Criteria 2
+- [ ] Criteria 3
+
+## Additional Context
+Add any other context, mockups, or examples about the feature request here.
+```
+
+## 3. Task/Enhancement Template
+**File: `.github/ISSUE_TEMPLATE/task.md`**
+
+```markdown
+---
+name: Task/Enhancement
+about: Create a task or enhancement for project development
+title: '[TASK] '
+labels: task
+assignees: ''
+---
+
+## Task Description
+A clear and concise description of what needs to be done.
+
+## Related Initiative
+Which initiative does this task belong to?
+- [ ] Initiative 1: Customer Research System
+- [ ] Initiative 2: Competitive Intelligence Agent
+- [ ] Initiative 3: Marketing Content Pipeline
+- [ ] Initiative 4: Automated Product Updates
+
+## Task Details
+- **Task ID**: T### (if applicable)
+- **Priority**: High / Medium / Low
+- **Estimated Effort**: # hours/days
+- **Phase**: Foundation / Data Integration / AI Analysis / User Interface / Product Updates
+
+## Requirements
+What are the specific requirements for this task?
+- [ ] Requirement 1
+- [ ] Requirement 2
+- [ ] Requirement 3
+
+## Technical Specifications
+- **Technologies involved**: [e.g. Next.js, Supabase, HubSpot API]
+- **Database changes**: Yes / No
+- **API endpoints**: Yes / No
+- **UI components**: Yes / No
+
+## Definition of Done
+What criteria must be met for this task to be considered complete?
+- [ ] Code implemented and tested
+- [ ] Documentation updated
+- [ ] Tests passing
+- [ ] Code reviewed
+- [ ] Deployed to staging/production
+
+## Dependencies
+Are there any dependencies or blockers?
+- [ ] Dependency 1
+- [ ] Dependency 2
+
+## Notes
+Any additional notes or considerations for this task.
+```
+
+## 4. Documentation Template
+**File: `.github/ISSUE_TEMPLATE/documentation.md`**
+
+```markdown
+---
+name: Documentation
+about: Request documentation improvements or additions
+title: '[DOCS] '
+labels: documentation
+assignees: ''
+---
+
+## Documentation Request
+What documentation needs to be created or improved?
+
+## Type of Documentation
+- [ ] API documentation
+- [ ] User guide
+- [ ] Developer guide
+- [ ] Integration guide
+- [ ] Troubleshooting guide
+- [ ] Code comments
+- [ ] README updates
+- [ ] Other (please specify)
+
+## Target Audience
+Who is the primary audience for this documentation?
+- [ ] End users
+- [ ] Developers
+- [ ] System administrators
+- [ ] Contributors
+- [ ] Other (please specify)
+
+## Current State
+Describe the current state of the documentation (if any).
+
+## Proposed Changes
+What specific changes or additions are needed?
+
+## Success Criteria
+How will we know when this documentation is complete and useful?
+- [ ] Criteria 1
+- [ ] Criteria 2
+- [ ] Criteria 3
+
+## Additional Context
+Any additional context, examples, or references that would be helpful.
+```
+
+## 5. Integration Issue Template
+**File: `.github/ISSUE_TEMPLATE/integration.md`**
+
+```markdown
+---
+name: Integration Issue
+about: Report issues with third-party integrations
+title: '[INTEGRATION] '
+labels: integration
+assignees: ''
+---
+
+## Integration Affected
+Which integration is experiencing issues?
+- [ ] HubSpot CRM
+- [ ] Grain Meetings
+- [ ] JIRA Project Management
+- [ ] Slack Notifications
+- [ ] Supabase Database
+- [ ] AI Providers (OpenAI/Claude)
+- [ ] Zapier Webhooks
+- [ ] Other (please specify)
+
+## Issue Description
+A clear and concise description of the integration issue.
+
+## Error Details
+```
+Paste any error messages, logs, or status codes here
+```
+
+## Integration Configuration
+- **API Version**: [e.g. HubSpot API v3]
+- **Authentication Method**: [e.g. Private App, OAuth]
+- **Endpoint**: [e.g. /crm/v3/objects/contacts]
+- **Rate Limits**: [if applicable]
+
+## Steps to Reproduce
+1. Step 1
+2. Step 2
+3. Step 3
+4. See error
+
+## Expected Behavior
+What should happen with this integration?
+
+## Actual Behavior
+What is actually happening?
+
+## Environment
+- **Environment**: Development / Staging / Production
+- **Last Working**: [date/time when it last worked]
+- **Recent Changes**: [any recent changes that might be related]
+
+## Impact Assessment
+- **Severity**: Critical / High / Medium / Low
+- **Affected Users**: [number or percentage]
+- **Business Impact**: [description of business impact]
+
+## Troubleshooting Attempted
+What troubleshooting steps have you already tried?
+- [ ] Checked API credentials
+- [ ] Verified API endpoint URLs
+- [ ] Checked rate limits
+- [ ] Reviewed error logs
+- [ ] Tested with different data
+- [ ] Other (please specify)
+
+## Additional Context
+Any additional context about the integration issue.
+```
+
+## Usage Instructions
+
+1. **Create the directory structure**:
+   ```bash
+   mkdir -p .github/ISSUE_TEMPLATE
+   ```
+
+2. **Create each template file** with the content above
+
+3. **Customize the templates** for your specific needs
+
+4. **Test the templates** by creating a new issue in your repository
+
+These templates will help standardize issue reporting and make it easier to track and resolve problems across your AI Customer Intelligence Platform project!
