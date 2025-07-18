@@ -7,7 +7,7 @@ const supabase = createClient(
 );
 
 interface CSQueryRequest {
-  action: 'search_customer' | 'get_interactions' | 'get_insights' | 'get_history' | 'quick_search' | 'get_context' | 'get_product_impact';
+  action: 'search_customer' | 'get_interactions' | 'get_insights' | 'get_history' | 'quick_search' | 'get_context' | 'get_product_impact' | 'get_customers';
   query?: string;
   customer_id?: string;
   email?: string;
@@ -104,6 +104,8 @@ export async function GET(request: Request) {
     switch (action) {
       case 'quick_search':
         return await quickSearch(query, limit);
+      case 'get_customers':
+        return await getCustomers(limit);
       case 'get_interactions':
         return await getCustomerInteractions(customer_id!, limit);
       case 'get_insights':
@@ -135,6 +137,8 @@ export async function POST(request: Request) {
     switch (action) {
       case 'search_customer':
         return await searchCustomer(params);
+      case 'get_customers':
+        return await getCustomers(params.limit || 10);
       case 'get_interactions':
         return await getCustomerInteractions(params.customer_id!, params.limit || 10);
       case 'get_insights':
@@ -157,6 +161,136 @@ export async function POST(request: Request) {
     console.error('CS Query POST API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+async function getCustomers(limit: number = 10): Promise<NextResponse> {
+  try {
+    // Mock customer data - in production, this would query your customer database
+    const mockCustomers: CustomerProfile[] = [
+      {
+        id: 'cust_001',
+        name: 'John Smith',
+        email: 'john.smith@example.com',
+        phone: '+1-555-0123',
+        company: 'Tech Corp',
+        segment: 'Enterprise',
+        status: 'active',
+        created_at: '2023-06-15T10:00:00Z',
+        last_interaction: '2024-01-15T10:30:00Z',
+        total_interactions: 27,
+        satisfaction_score: 4.2,
+        tags: ['vip', 'enterprise', 'api-user'],
+        custom_fields: {
+          account_manager: 'Sarah Johnson',
+          annual_revenue: 50000,
+          support_tier: 'Premium'
+        }
+      },
+      {
+        id: 'cust_002',
+        name: 'Jane Doe',
+        email: 'jane.doe@example.com',
+        phone: '+1-555-0456',
+        company: 'Innovation Inc',
+        segment: 'SMB',
+        status: 'active',
+        created_at: '2023-08-22T14:30:00Z',
+        last_interaction: '2024-01-14T14:20:00Z',
+        total_interactions: 12,
+        satisfaction_score: 4.5,
+        tags: ['startup', 'growth-potential'],
+        custom_fields: {
+          account_manager: 'Mike Chen',
+          annual_revenue: 15000,
+          support_tier: 'Standard'
+        }
+      },
+      {
+        id: 'cust_003',
+        name: 'Bob Johnson',
+        email: 'bob.johnson@example.com',
+        phone: '+1-555-0789',
+        company: 'Global Solutions',
+        segment: 'Enterprise',
+        status: 'active',
+        created_at: '2023-05-10T09:15:00Z',
+        last_interaction: '2024-01-13T16:45:00Z',
+        total_interactions: 43,
+        satisfaction_score: 4.8,
+        tags: ['enterprise', 'long-term', 'high-value'],
+        custom_fields: {
+          account_manager: 'Lisa Wang',
+          annual_revenue: 125000,
+          support_tier: 'Premium'
+        }
+      },
+      {
+        id: 'cust_004',
+        name: 'Alice Brown',
+        email: 'alice.brown@example.com',
+        phone: '+1-555-0321',
+        company: 'Startup Labs',
+        segment: 'SMB',
+        status: 'active',
+        created_at: '2023-09-30T11:20:00Z',
+        last_interaction: '2024-01-12T09:15:00Z',
+        total_interactions: 8,
+        satisfaction_score: 4.1,
+        tags: ['startup', 'new-customer'],
+        custom_fields: {
+          account_manager: 'Tom Wilson',
+          annual_revenue: 8000,
+          support_tier: 'Standard'
+        }
+      },
+      {
+        id: 'cust_005',
+        name: 'Charlie Davis',
+        email: 'charlie.davis@example.com',
+        phone: '+1-555-0654',
+        company: 'Enterprise Co',
+        segment: 'Enterprise',
+        status: 'prospect',
+        created_at: '2024-01-05T14:00:00Z',
+        last_interaction: '2024-01-11T11:30:00Z',
+        total_interactions: 3,
+        satisfaction_score: 4.0,
+        tags: ['prospect', 'enterprise', 'evaluation'],
+        custom_fields: {
+          account_manager: 'Sarah Johnson',
+          annual_revenue: 0,
+          support_tier: 'Trial'
+        }
+      }
+    ];
+    
+    return NextResponse.json({
+      success: true,
+      customers: mockCustomers.slice(0, limit),
+      total: mockCustomers.length,
+      summary: {
+        total_customers: mockCustomers.length,
+        by_segment: {
+          enterprise: mockCustomers.filter(c => c.segment === 'Enterprise').length,
+          smb: mockCustomers.filter(c => c.segment === 'SMB').length
+        },
+        by_status: {
+          active: mockCustomers.filter(c => c.status === 'active').length,
+          inactive: mockCustomers.filter(c => c.status === 'inactive').length,
+          prospect: mockCustomers.filter(c => c.status === 'prospect').length
+        },
+        avg_satisfaction: mockCustomers.reduce((sum, c) => sum + c.satisfaction_score, 0) / mockCustomers.length
+      },
+      execution_time: 52
+    });
+    
+  } catch (error) {
+    console.error('Error getting customers:', error);
+    return NextResponse.json(
+      { error: 'Failed to get customers' },
       { status: 500 }
     );
   }
@@ -193,7 +327,6 @@ async function quickSearch(query: string, limit: number = 10): Promise<NextRespo
         id: 'int_001',
         customer_name: 'John Smith',
         subject: 'Login issues with API',
-        type: 'ticket',
         status: 'resolved',
         created_at: '2024-01-15T09:00:00Z',
         match_score: 0.82,
@@ -205,11 +338,11 @@ async function quickSearch(query: string, limit: number = 10): Promise<NextRespo
     const filteredResults = mockResults.filter(result => 
       result.match_score > 0.7 && 
       (result.type === 'customer' ? 
-        result.name.toLowerCase().includes(query.toLowerCase()) ||
-        result.email.toLowerCase().includes(query.toLowerCase()) ||
-        result.company.toLowerCase().includes(query.toLowerCase()) :
-        result.subject.toLowerCase().includes(query.toLowerCase()) ||
-        result.customer_name.toLowerCase().includes(query.toLowerCase())
+        result.name?.toLowerCase().includes(query.toLowerCase()) ||
+        result.email?.toLowerCase().includes(query.toLowerCase()) ||
+        result.company?.toLowerCase().includes(query.toLowerCase()) :
+        result.subject?.toLowerCase().includes(query.toLowerCase()) ||
+        result.customer_name?.toLowerCase().includes(query.toLowerCase())
       )
     ).slice(0, limit);
     

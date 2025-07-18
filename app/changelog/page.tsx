@@ -1,7 +1,23 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { formatDistanceToNow, format, isToday, isYesterday, isThisWeek, isThisMonth, isThisYear } from 'date-fns';
+import { formatDistanceToNow, format } from 'date-fns';
+import { 
+  Search,
+  Filter,
+  Calendar,
+  Tag,
+  Users,
+  Clock,
+  Edit3,
+  Eye,
+  EyeOff,
+  Check,
+  X,
+  AlertCircle,
+  Star,
+  Zap
+} from 'lucide-react';
 
 interface ChangelogEntry {
   id: string;
@@ -18,6 +34,8 @@ interface ChangelogEntry {
   update_category?: string;
   importance_score?: number;
   breaking_changes?: boolean;
+  is_public?: boolean;
+  public_changelog_visible?: boolean;
 }
 
 interface FilterOptions {
@@ -25,24 +43,7 @@ interface FilterOptions {
   category: string;
   audience: string;
   timeRange: string;
-}
-
-interface GroupedEntries {
-  [key: string]: ChangelogEntry[];
-}
-
-interface ViewOptions {
-  groupBy: 'date' | 'category' | 'importance';
-  sortOrder: 'newest' | 'oldest';
-  showTimeline: boolean;
-}
-
-interface SearchState {
-  query: string;
-  isActive: boolean;
-  results: ChangelogEntry[];
-  totalResults: number;
-  searchFields: string[];
+  visibility: string;
 }
 
 export default function ChangelogPage() {
@@ -50,25 +51,60 @@ export default function ChangelogPage() {
   const [filteredEntries, setFilteredEntries] = useState<ChangelogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<FilterOptions>({
     contentType: 'all',
     category: 'all',
     audience: 'all',
-    timeRange: 'all'
+    timeRange: 'all',
+    visibility: 'all'
   });
-  const [viewOptions, setViewOptions] = useState<ViewOptions>({
-    groupBy: 'date',
-    sortOrder: 'newest',
-    showTimeline: true
-  });
-  const [groupedEntries, setGroupedEntries] = useState<GroupedEntries>({});
-  const [searchState, setSearchState] = useState<SearchState>({
-    query: '',
-    isActive: false,
-    results: [],
-    totalResults: 0,
-    searchFields: ['content_title', 'generated_content', 'tldr_summary']
-  });
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+
+  const handleEditEntry = (entryId: string) => {
+    setEditingEntryId(entryId);
+  };
+
+  const handleSaveEntry = async (updatedEntry: ChangelogEntry) => {
+    try {
+      const response = await fetch(`/api/changelog/${updatedEntry.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedEntry),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update entry');
+      }
+
+      setEntries(prev => prev.map(entry => 
+        entry.id === updatedEntry.id ? updatedEntry : entry
+      ));
+      setFilteredEntries(prev => prev.map(entry => 
+        entry.id === updatedEntry.id ? updatedEntry : entry
+      ));
+
+      setEditingEntryId(null);
+    } catch (error) {
+      console.error('Error updating entry:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingEntryId(null);
+  };
+
+  const handleFieldUpdate = (entryId: string, field: keyof ChangelogEntry, value: any) => {
+    const updateEntry = (entries: ChangelogEntry[]) => 
+      entries.map(entry => 
+        entry.id === entryId ? { ...entry, [field]: value } : entry
+      );
+    
+    setEntries(updateEntry);
+    setFilteredEntries(updateEntry);
+  };
 
   // Fetch changelog entries
   useEffect(() => {
@@ -94,26 +130,39 @@ export default function ChangelogPage() {
     fetchEntries();
   }, []);
 
-  // Apply filters
+  // Apply filters and search
   useEffect(() => {
     let filtered = [...entries];
 
-    // Filter by content type
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(entry => 
+        entry.content_title.toLowerCase().includes(query) ||
+        entry.generated_content.toLowerCase().includes(query) ||
+        entry.tldr_summary?.toLowerCase().includes(query)
+      );
+    }
+
+    // Apply other filters
     if (filters.contentType !== 'all') {
       filtered = filtered.filter(entry => entry.content_type === filters.contentType);
     }
-
-    // Filter by category
     if (filters.category !== 'all') {
       filtered = filtered.filter(entry => entry.update_category === filters.category);
     }
-
-    // Filter by audience
     if (filters.audience !== 'all') {
       filtered = filtered.filter(entry => entry.target_audience === filters.audience);
     }
+    if (filters.visibility !== 'all') {
+      if (filters.visibility === 'public') {
+        filtered = filtered.filter(entry => entry.is_public === true);
+      } else if (filters.visibility === 'private') {
+        filtered = filtered.filter(entry => entry.is_public === false);
+      }
+    }
 
-    // Filter by time range
+    // Apply time range filter
     if (filters.timeRange !== 'all') {
       const now = new Date();
       const timeRangeInDays = {
@@ -129,115 +178,11 @@ export default function ChangelogPage() {
       }
     }
 
-    // Sort by published date based on view options
-    if (viewOptions.sortOrder === 'newest') {
-      filtered.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
-    } else {
-      filtered.sort((a, b) => new Date(a.published_at).getTime() - new Date(b.published_at).getTime());
-    }
+    // Sort by newest first
+    filtered.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
 
     setFilteredEntries(filtered);
-  }, [entries, filters, viewOptions.sortOrder]);
-
-  // Group entries for chronological organization
-  useEffect(() => {
-    const grouped: GroupedEntries = {};
-
-    filteredEntries.forEach(entry => {
-      let groupKey: string;
-      
-      switch (viewOptions.groupBy) {
-        case 'date':
-          groupKey = getDateGroup(entry.published_at);
-          break;
-        case 'category':
-          groupKey = entry.update_category || 'uncategorized';
-          break;
-        case 'importance':
-          groupKey = getImportanceGroup(entry.importance_score || 0.5);
-          break;
-        default:
-          groupKey = 'all';
-      }
-
-      if (!grouped[groupKey]) {
-        grouped[groupKey] = [];
-      }
-      grouped[groupKey].push(entry);
-    });
-
-    setGroupedEntries(grouped);
-  }, [filteredEntries, viewOptions.groupBy]);
-
-  // Search functionality
-  useEffect(() => {
-    if (!searchState.query.trim()) {
-      setSearchState(prev => ({
-        ...prev,
-        isActive: false,
-        results: [],
-        totalResults: 0
-      }));
-      return;
-    }
-
-    const query = searchState.query.toLowerCase();
-    const searchResults = entries.filter(entry => {
-      return searchState.searchFields.some(field => {
-        const value = entry[field as keyof ChangelogEntry];
-        if (typeof value === 'string') {
-          return value.toLowerCase().includes(query);
-        }
-        if (Array.isArray(value)) {
-          return value.some(item => 
-            typeof item === 'string' && item.toLowerCase().includes(query)
-          );
-        }
-        return false;
-      });
-    });
-
-    setSearchState(prev => ({
-      ...prev,
-      isActive: true,
-      results: searchResults,
-      totalResults: searchResults.length
-    }));
-  }, [searchState.query, searchState.searchFields, entries]);
-
-  // Keyboard shortcuts for search
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // Ctrl/Cmd + K to focus search
-      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
-        event.preventDefault();
-        const searchInput = document.getElementById('search-input') as HTMLInputElement;
-        if (searchInput) {
-          searchInput.focus();
-        }
-      }
-      // Escape to clear search
-      if (event.key === 'Escape' && searchState.isActive) {
-        setSearchState(prev => ({
-          ...prev,
-          query: '',
-          isActive: false,
-          results: [],
-          totalResults: 0
-        }));
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [searchState.isActive]);
-
-  const handleFilterChange = (key: keyof FilterOptions, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [key]: value
-    }));
-  };
+  }, [entries, searchQuery, filters]);
 
   const getContentTypeIcon = (type: string) => {
     const icons = {
@@ -257,145 +202,51 @@ export default function ChangelogPage() {
 
   const getCategoryColor = (category: string) => {
     const colors = {
-      'major_release': 'bg-purple-100 text-purple-800 border-purple-200',
-      'feature_update': 'bg-blue-100 text-blue-800 border-blue-200',
-      'bug_fix': 'bg-red-100 text-red-800 border-red-200',
-      'security_update': 'bg-orange-100 text-orange-800 border-orange-200',
-      'performance_improvement': 'bg-green-100 text-green-800 border-green-200',
-      'integration_update': 'bg-indigo-100 text-indigo-800 border-indigo-200'
+      'major_release': 'bg-purple-100 text-purple-800',
+      'feature_update': 'bg-blue-100 text-blue-800',
+      'bug_fix': 'bg-red-100 text-red-800',
+      'security_update': 'bg-orange-100 text-orange-800',
+      'performance_improvement': 'bg-green-100 text-green-800',
+      'integration_update': 'bg-indigo-100 text-indigo-800'
     };
-    return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800 border-gray-200';
+    return colors[category as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
 
   const getImportanceIndicator = (score: number) => {
-    if (score >= 0.8) return { icon: '🔥', label: 'High Impact', color: 'text-red-600' };
-    if (score >= 0.6) return { icon: '📈', label: 'Medium Impact', color: 'text-yellow-600' };
-    return { icon: '📊', label: 'Low Impact', color: 'text-green-600' };
+    if (score >= 0.8) return { icon: AlertCircle, label: 'High Impact', color: 'text-red-600' };
+    if (score >= 0.6) return { icon: Star, label: 'Medium Impact', color: 'text-yellow-600' };
+    return { icon: Zap, label: 'Low Impact', color: 'text-green-600' };
   };
 
-  const getDateGroup = (publishedAt: string) => {
-    const date = new Date(publishedAt);
-    
-    if (isToday(date)) {
-      return 'Today';
-    } else if (isYesterday(date)) {
-      return 'Yesterday';
-    } else if (isThisWeek(date)) {
-      return 'This Week';
-    } else if (isThisMonth(date)) {
-      return 'This Month';
-    } else if (isThisYear(date)) {
-      return format(date, 'MMMM yyyy');
-    } else {
-      return format(date, 'yyyy');
+  const handleToggleVisibility = async (entryId: string, isPublic: boolean) => {
+    try {
+      const response = await fetch(`/api/changelog/${entryId}/visibility`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ is_public: isPublic }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update visibility');
+      }
+
+      const updateVisibility = (entries: ChangelogEntry[]) => 
+        entries.map(entry => 
+          entry.id === entryId ? { ...entry, is_public: isPublic } : entry
+        );
+
+      setEntries(updateVisibility);
+      setFilteredEntries(updateVisibility);
+    } catch (error) {
+      console.error('Error updating visibility:', error);
     }
-  };
-
-  const getImportanceGroup = (score: number) => {
-    if (score >= 0.8) return 'High Impact';
-    if (score >= 0.6) return 'Medium Impact';
-    return 'Low Impact';
-  };
-
-  const getGroupIcon = (groupKey: string, groupBy: string) => {
-    if (groupBy === 'date') {
-      if (groupKey === 'Today') return '📅';
-      if (groupKey === 'Yesterday') return '📆';
-      if (groupKey === 'This Week') return '🗓️';
-      if (groupKey === 'This Month') return '🗓️';
-      return '🗓️';
-    } else if (groupBy === 'category') {
-      return getContentTypeIcon(groupKey);
-    } else if (groupBy === 'importance') {
-      if (groupKey === 'High Impact') return '🔥';
-      if (groupKey === 'Medium Impact') return '📈';
-      return '📊';
-    }
-    return '📋';
-  };
-
-  const getGroupOrder = (groupBy: string) => {
-    if (groupBy === 'date') {
-      return ['Today', 'Yesterday', 'This Week', 'This Month'];
-    } else if (groupBy === 'importance') {
-      return ['High Impact', 'Medium Impact', 'Low Impact'];
-    }
-    return [];
-  };
-
-  const getSortedGroupKeys = (groupedEntries: GroupedEntries, groupBy: string) => {
-    const keys = Object.keys(groupedEntries);
-    const priorityOrder = getGroupOrder(groupBy);
-    
-    // Sort keys based on priority order, then alphabetically
-    return keys.sort((a, b) => {
-      const aIndex = priorityOrder.indexOf(a);
-      const bIndex = priorityOrder.indexOf(b);
-      
-      if (aIndex !== -1 && bIndex !== -1) {
-        return aIndex - bIndex;
-      } else if (aIndex !== -1) {
-        return -1;
-      } else if (bIndex !== -1) {
-        return 1;
-      } else {
-        return a.localeCompare(b);
-      }
-    });
-  };
-
-  const highlightSearchTerm = (text: string, query: string) => {
-    if (!query.trim() || !searchState.isActive) return text;
-    
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    const parts = text.split(regex);
-    
-    return parts.map((part, index) => {
-      if (part.toLowerCase() === query.toLowerCase()) {
-        return `<mark class="bg-yellow-200 px-1 rounded">${part}</mark>`;
-      }
-      return part;
-    }).join('');
-  };
-
-  const getDisplayEntries = () => {
-    return searchState.isActive ? searchState.results : filteredEntries;
-  };
-
-  const getDisplayGroupedEntries = () => {
-    if (!searchState.isActive) return groupedEntries;
-    
-    // Re-group search results
-    const searchGrouped: GroupedEntries = {};
-    searchState.results.forEach(entry => {
-      let groupKey: string;
-      
-      switch (viewOptions.groupBy) {
-        case 'date':
-          groupKey = getDateGroup(entry.published_at);
-          break;
-        case 'category':
-          groupKey = entry.update_category || 'uncategorized';
-          break;
-        case 'importance':
-          groupKey = getImportanceGroup(entry.importance_score || 0.5);
-          break;
-        default:
-          groupKey = 'all';
-      }
-
-      if (!searchGrouped[groupKey]) {
-        searchGrouped[groupKey] = [];
-      }
-      searchGrouped[groupKey].push(entry);
-    });
-    
-    return searchGrouped;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading changelog...</p>
@@ -406,7 +257,7 @@ export default function ChangelogPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-600 text-6xl mb-4">⚠️</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Error Loading Changelog</h2>
@@ -423,368 +274,312 @@ export default function ChangelogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="py-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Product Updates</h1>
-                <p className="mt-2 text-gray-600">
-                  Stay up to date with the latest product improvements and releases
-                </p>
-              </div>
-              <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-500">
-                  {searchState.isActive ? (
-                    <>
-                      {searchState.totalResults} {searchState.totalResults === 1 ? 'result' : 'results'} for "{searchState.query}"
-                    </>
-                  ) : (
-                    <>
-                      {getDisplayEntries().length} {getDisplayEntries().length === 1 ? 'update' : 'updates'}
-                    </>
-                  )}
-                </div>
-                <div className="flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                  <span className="text-sm text-gray-600">Live</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Search & Filters */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-          {/* Search Bar */}
-          <div className="mb-6">
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                id="search-input"
-                type="text"
-                placeholder="Search updates... (⌘K)"
-                value={searchState.query}
-                onChange={(e) => setSearchState(prev => ({ ...prev, query: e.target.value }))}
-                className="block w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              />
-              {searchState.query && (
-                <button
-                  onClick={() => setSearchState(prev => ({ ...prev, query: '', isActive: false, results: [], totalResults: 0 }))}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                >
-                  <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              )}
-            </div>
-            {searchState.isActive && (
-              <div className="mt-2 flex items-center space-x-4 text-sm text-gray-600">
-                <span>
-                  Found {searchState.totalResults} {searchState.totalResults === 1 ? 'result' : 'results'}
-                </span>
-                <div className="flex items-center space-x-2">
-                  <span>Search in:</span>
-                  <div className="flex items-center space-x-2">
-                    {[
-                      { key: 'content_title', label: 'Titles' },
-                      { key: 'generated_content', label: 'Content' },
-                      { key: 'tldr_summary', label: 'Summaries' }
-                    ].map(field => (
-                      <label key={field.key} className="flex items-center space-x-1">
-                        <input
-                          type="checkbox"
-                          checked={searchState.searchFields.includes(field.key)}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSearchState(prev => ({
-                                ...prev,
-                                searchFields: [...prev.searchFields, field.key]
-                              }));
-                            } else {
-                              setSearchState(prev => ({
-                                ...prev,
-                                searchFields: prev.searchFields.filter(f => f !== field.key)
-                              }));
-                            }
-                          }}
-                          className="text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                        <span className="text-xs">{field.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="mb-4">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">View Options</h3>
-            <div className="flex flex-wrap gap-4 mb-4">
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700">Group by:</label>
-                <select
-                  value={viewOptions.groupBy}
-                  onChange={(e) => setViewOptions(prev => ({ ...prev, groupBy: e.target.value as 'date' | 'category' | 'importance' }))}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="date">Date</option>
-                  <option value="category">Category</option>
-                  <option value="importance">Importance</option>
-                </select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700">Sort:</label>
-                <select
-                  value={viewOptions.sortOrder}
-                  onChange={(e) => setViewOptions(prev => ({ ...prev, sortOrder: e.target.value as 'newest' | 'oldest' }))}
-                  className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="newest">Newest First</option>
-                  <option value="oldest">Oldest First</option>
-                </select>
-              </div>
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700">
-                  <input
-                    type="checkbox"
-                    checked={viewOptions.showTimeline}
-                    onChange={(e) => setViewOptions(prev => ({ ...prev, showTimeline: e.target.checked }))}
-                    className="mr-2"
-                  />
-                  Show Timeline
-                </label>
-              </div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Content Type
-              </label>
-              <select
-                value={filters.contentType}
-                onChange={(e) => handleFilterChange('contentType', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Types</option>
-                <option value="product_announcement">Product Announcements</option>
-                <option value="feature_release">Feature Releases</option>
-                <option value="bug_fix">Bug Fixes</option>
-                <option value="security_update">Security Updates</option>
-                <option value="performance_improvement">Performance Improvements</option>
-                <option value="integration_update">Integration Updates</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Category
-              </label>
-              <select
-                value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Categories</option>
-                <option value="major_release">Major Release</option>
-                <option value="feature_update">Feature Update</option>
-                <option value="bug_fix">Bug Fix</option>
-                <option value="security_update">Security Update</option>
-                <option value="performance_improvement">Performance Improvement</option>
-                <option value="integration_update">Integration Update</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Audience
-              </label>
-              <select
-                value={filters.audience}
-                onChange={(e) => handleFilterChange('audience', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Audiences</option>
-                <option value="customers">Customers</option>
-                <option value="prospects">Prospects</option>
-                <option value="internal_team">Internal Team</option>
-                <option value="media">Media</option>
-                <option value="executives">Executives</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Time Range
-              </label>
-              <select
-                value={filters.timeRange}
-                onChange={(e) => handleFilterChange('timeRange', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Time</option>
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Changelog Entries */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-12">
-        {getDisplayEntries().length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">📋</div>
-            <h3 className="text-xl font-medium text-gray-900 mb-2">No updates found</h3>
-            <p className="text-gray-600">
-              {searchState.isActive 
-                ? `No updates found for "${searchState.query}". Try a different search term.`
-                : entries.length === 0 
-                  ? "No product updates have been published yet." 
-                  : "Try adjusting your filters to see more updates."
-              }
-            </p>
-          </div>
-        ) : (
-          <div className={`${viewOptions.showTimeline ? 'relative' : ''}`}>
-            {/* Timeline Line */}
-            {viewOptions.showTimeline && viewOptions.groupBy === 'date' && (
-              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-            )}
-            
-            {getSortedGroupKeys(getDisplayGroupedEntries(), viewOptions.groupBy).map((groupKey) => (
-              <div key={groupKey} className="mb-8">
-                {/* Group Header */}
-                <div className={`flex items-center mb-6 ${viewOptions.showTimeline && viewOptions.groupBy === 'date' ? 'relative' : ''}`}>
-                  {viewOptions.showTimeline && viewOptions.groupBy === 'date' && (
-                    <div className="absolute left-8 transform -translate-x-1/2 w-4 h-4 bg-blue-600 rounded-full border-4 border-white shadow-lg"></div>
-                  )}
-                  <div className={`flex items-center space-x-3 ${viewOptions.showTimeline && viewOptions.groupBy === 'date' ? 'ml-16' : ''}`}>
-                    <div className="text-2xl">
-                      {getGroupIcon(groupKey, viewOptions.groupBy)}
-                    </div>
-                    <div>
-                      <h2 className="text-xl font-bold text-gray-900">{groupKey}</h2>
-                      <p className="text-sm text-gray-500">
-                        {getDisplayGroupedEntries()[groupKey].length} {getDisplayGroupedEntries()[groupKey].length === 1 ? 'update' : 'updates'}
-                      </p>
-                    </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Filters Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6 sticky top-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <Filter className="w-5 h-5 mr-2" />
+                  Filters
+                </h3>
+                
+                {/* Search */}
+                <div className="mb-6">
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <input
+                      type="text"
+                      placeholder="Search updates..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
                   </div>
                 </div>
 
-                {/* Group Entries */}
-                <div className={`space-y-6 ${viewOptions.showTimeline && viewOptions.groupBy === 'date' ? 'ml-16' : ''}`}>
-                  {getDisplayGroupedEntries()[groupKey].map((entry) => {
+                {/* Content Type Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    <Tag className="w-4 h-4 inline mr-1" />
+                    Content Type
+                  </label>
+                  <select
+                    value={filters.contentType}
+                    onChange={(e) => setFilters({...filters, contentType: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="product_announcement">Product Announcements</option>
+                    <option value="feature_release">Feature Releases</option>
+                    <option value="bug_fix">Bug Fixes</option>
+                    <option value="security_update">Security Updates</option>
+                    <option value="performance_improvement">Performance Improvements</option>
+                    <option value="integration_update">Integration Updates</option>
+                  </select>
+                </div>
+
+                {/* Category Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    <Users className="w-4 h-4 inline mr-1" />
+                    Category
+                  </label>
+                  <select
+                    value={filters.category}
+                    onChange={(e) => setFilters({...filters, category: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Categories</option>
+                    <option value="major_release">Major Release</option>
+                    <option value="feature_update">Feature Update</option>
+                    <option value="bug_fix">Bug Fix</option>
+                    <option value="security_update">Security Update</option>
+                    <option value="performance_improvement">Performance Improvement</option>
+                    <option value="integration_update">Integration Update</option>
+                  </select>
+                </div>
+
+                {/* Time Range Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    <Clock className="w-4 h-4 inline mr-1" />
+                    Time Range
+                  </label>
+                  <select
+                    value={filters.timeRange}
+                    onChange={(e) => setFilters({...filters, timeRange: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Time</option>
+                    <option value="7d">Last 7 days</option>
+                    <option value="30d">Last 30 days</option>
+                    <option value="90d">Last 90 days</option>
+                  </select>
+                </div>
+
+                {/* Visibility Filter */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                    <Eye className="w-4 h-4 inline mr-1" />
+                    Visibility
+                  </label>
+                  <select
+                    value={filters.visibility}
+                    onChange={(e) => setFilters({...filters, visibility: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="all">All Updates</option>
+                    <option value="public">Public Only</option>
+                    <option value="private">Private Only</option>
+                  </select>
+                </div>
+
+                {/* Results Count */}
+                <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-xl">
+                  <span className="font-medium">{filteredEntries.length}</span> updates found
+                </div>
+              </div>
+            </div>
+
+            {/* Main Content */}
+            <div className="lg:col-span-3">
+              {filteredEntries.length === 0 ? (
+                <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-12 text-center">
+                  <div className="text-gray-400 text-6xl mb-4">📋</div>
+                  <h3 className="text-xl font-medium text-gray-900 mb-2">No updates found</h3>
+                  <p className="text-gray-600">
+                    {searchQuery ? `No updates found for "${searchQuery}". Try a different search term.` : 'Try adjusting your filters to see more updates.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {filteredEntries.map((entry) => {
                     const importance = getImportanceIndicator(entry.importance_score || 0.5);
+                    const ImportanceIcon = importance.icon;
                     
                     return (
                       <div
                         key={entry.id}
-                        className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                        className={`bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border p-6 hover:shadow-xl transition-all duration-200 ${
+                          editingEntryId === entry.id ? 'border-2 border-blue-300' : 'border-gray-200/50'
+                        }`}
                       >
-                        <div className="p-6">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start space-x-4 flex-1">
-                              <div className="text-2xl">
-                                {getContentTypeIcon(entry.content_type)}
-                              </div>
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-3 mb-2">
-                                  <h3 className="text-xl font-semibold text-gray-900">
-                                    <span 
-                                      dangerouslySetInnerHTML={{
-                                        __html: highlightSearchTerm(entry.content_title, searchState.query)
-                                      }}
-                                    />
-                                  </h3>
-                                  {entry.breaking_changes && (
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 border border-red-200">
-                                      Breaking Change
-                                    </span>
-                                  )}
-                                </div>
-                                
-                                <div className="flex items-center space-x-4 mb-3">
-                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(entry.update_category || 'feature_update')}`}>
-                                    {entry.update_category?.replace('_', ' ') || 'Feature Update'}
-                                  </span>
-                                  <span className={`inline-flex items-center text-sm ${importance.color}`}>
-                                    <span className="mr-1">{importance.icon}</span>
-                                    {importance.label}
-                                  </span>
-                                  <span className="text-sm text-gray-500">
-                                    {formatDistanceToNow(new Date(entry.published_at), { addSuffix: true })}
-                                  </span>
-                                  {viewOptions.groupBy !== 'date' && (
-                                    <span className="text-sm text-gray-500">
-                                      • {format(new Date(entry.published_at), 'MMM d, yyyy')}
-                                    </span>
-                                  )}
-                                </div>
-
-                                {entry.tldr_summary && (
-                                  <div className="mb-4 p-3 bg-blue-50 rounded-md border border-blue-200">
-                                    <h4 className="text-sm font-medium text-blue-900 mb-1">TL;DR</h4>
-                                    <p className="text-sm text-blue-800">
-                                      <span 
-                                        dangerouslySetInnerHTML={{
-                                          __html: highlightSearchTerm(entry.tldr_summary, searchState.query)
-                                        }}
-                                      />
-                                    </p>
-                                  </div>
-                                )}
-
-                                {entry.tldr_bullet_points && entry.tldr_bullet_points.length > 0 && (
-                                  <div className="mb-4">
-                                    <h4 className="text-sm font-medium text-gray-900 mb-2">Key Points:</h4>
-                                    <ul className="list-disc list-inside space-y-1">
-                                      {entry.tldr_bullet_points.map((point, index) => (
-                                        <li key={index} className="text-sm text-gray-700">{point}</li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-
-                                <div className="prose prose-sm max-w-none text-gray-700">
-                                  {entry.generated_content && (
-                                    <div className="whitespace-pre-wrap">
-                                      <span 
-                                        dangerouslySetInnerHTML={{
-                                          __html: highlightSearchTerm(entry.generated_content, searchState.query)
-                                        }}
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-3 mb-2">
+                              {editingEntryId === entry.id ? (
+                                <input
+                                  type="text"
+                                  value={entry.content_title}
+                                  onChange={(e) => handleFieldUpdate(entry.id, 'content_title', e.target.value)}
+                                  className="text-xl font-semibold text-gray-900 bg-white border border-gray-300 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              ) : (
+                                <h3 className="text-xl font-semibold text-gray-900">
+                                  {entry.content_title}
+                                </h3>
+                              )}
+                              {entry.breaking_changes && (
+                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                  Breaking Change
+                                </span>
+                              )}
                             </div>
                             
-                            <div className="flex items-center space-x-2 ml-4">
-                              <div className="text-right">
-                                <div className="text-sm text-gray-500">Quality Score</div>
+                            <div className="flex items-center space-x-4 mb-3">
+                              {editingEntryId === entry.id ? (
+                                <select
+                                  value={entry.update_category || 'feature_update'}
+                                  onChange={(e) => handleFieldUpdate(entry.id, 'update_category', e.target.value)}
+                                  className="px-3 py-1 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                  <option value="major_release">Major Release</option>
+                                  <option value="feature_update">Feature Update</option>
+                                  <option value="bug_fix">Bug Fix</option>
+                                  <option value="security_update">Security Update</option>
+                                  <option value="performance_improvement">Performance Improvement</option>
+                                  <option value="integration_update">Integration Update</option>
+                                </select>
+                              ) : (
+                                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(entry.update_category || 'feature_update')}`}>
+                                  {entry.update_category?.replace('_', ' ') || 'Feature Update'}
+                                </span>
+                              )}
+                              
+                              {editingEntryId === entry.id ? (
+                                <select
+                                  value={entry.importance_score && entry.importance_score >= 0.8 ? 'high' : entry.importance_score && entry.importance_score >= 0.6 ? 'medium' : 'low'}
+                                  onChange={(e) => {
+                                    const score = e.target.value === 'high' ? 0.9 : e.target.value === 'medium' ? 0.7 : 0.5;
+                                    handleFieldUpdate(entry.id, 'importance_score', score);
+                                  }}
+                                  className="px-3 py-1 border border-gray-300 rounded-xl text-xs font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                  <option value="high">High Impact</option>
+                                  <option value="medium">Medium Impact</option>
+                                  <option value="low">Low Impact</option>
+                                </select>
+                              ) : (
+                                <span className={`inline-flex items-center text-sm ${importance.color}`}>
+                                  <ImportanceIcon className="w-4 h-4 mr-1" />
+                                  {importance.label}
+                                </span>
+                              )}
+                              
+                              <span className="text-sm text-gray-500">
+                                {formatDistanceToNow(new Date(entry.published_at), { addSuffix: true })}
+                              </span>
+                            </div>
+
+                            {(entry.tldr_summary || editingEntryId === entry.id) && (
+                              <div className="mb-4 p-3 bg-blue-50 rounded-xl border border-blue-200">
+                                <h4 className="text-sm font-medium text-blue-900 mb-1">TL;DR</h4>
+                                {editingEntryId === entry.id ? (
+                                  <textarea
+                                    value={entry.tldr_summary || ''}
+                                    onChange={(e) => handleFieldUpdate(entry.id, 'tldr_summary', e.target.value)}
+                                    className="w-full text-sm text-blue-800 bg-white border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                                    rows={2}
+                                    placeholder="Add TL;DR summary..."
+                                  />
+                                ) : (
+                                  <p className="text-sm text-blue-800">{entry.tldr_summary}</p>
+                                )}
+                              </div>
+                            )}
+
+                            {entry.tldr_bullet_points && entry.tldr_bullet_points.length > 0 && (
+                              <div className="mb-4 p-3 bg-gray-50 rounded-xl">
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">Key Points:</h4>
+                                <ul className="list-disc list-inside space-y-1">
+                                  {entry.tldr_bullet_points.map((point, index) => (
+                                    <li key={index} className="text-sm text-gray-700">{point}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            <div className="prose prose-sm max-w-none text-gray-700">
+                              {editingEntryId === entry.id ? (
+                                <textarea
+                                  value={entry.generated_content}
+                                  onChange={(e) => handleFieldUpdate(entry.id, 'generated_content', e.target.value)}
+                                  className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 resize-none"
+                                  rows={6}
+                                  placeholder="Enter content..."
+                                />
+                              ) : (
+                                <div className="whitespace-pre-wrap">{entry.generated_content}</div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center space-x-4 ml-4">
+                            {/* Edit Button */}
+                            {editingEntryId === entry.id ? (
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => handleSaveEntry(entry)}
+                                  className="flex items-center space-x-2 px-3 py-1 bg-green-100 text-green-800 hover:bg-green-200 rounded-xl transition-colors"
+                                >
+                                  <Check className="w-4 h-4" />
+                                  <span className="text-xs font-medium">Save</span>
+                                </button>
+                                <button
+                                  onClick={handleCancelEdit}
+                                  className="flex items-center space-x-2 px-3 py-1 bg-gray-100 text-gray-800 hover:bg-gray-200 rounded-xl transition-colors"
+                                >
+                                  <X className="w-4 h-4" />
+                                  <span className="text-xs font-medium">Cancel</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => handleEditEntry(entry.id)}
+                                className="flex items-center space-x-2 px-3 py-1 bg-blue-100 text-blue-800 hover:bg-blue-200 rounded-xl transition-colors"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                                <span className="text-xs font-medium">Edit</span>
+                              </button>
+                            )}
+
+                            {/* Public Visibility Toggle */}
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => handleToggleVisibility(entry.id, !entry.is_public)}
+                                className={`flex items-center space-x-2 px-3 py-1 rounded-xl transition-colors ${
+                                  entry.is_public 
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                                }`}
+                              >
+                                {entry.is_public ? (
+                                  <Eye className="w-4 h-4" />
+                                ) : (
+                                  <EyeOff className="w-4 h-4" />
+                                )}
+                                <span className="text-xs font-medium">
+                                  {entry.is_public ? 'Public' : 'Private'}
+                                </span>
+                              </button>
+                            </div>
+                            
+                            {/* Quality Score */}
+                            <div className="text-center">
+                              <div className="text-sm text-gray-500">Quality</div>
+                              <div className="flex items-center space-x-2">
                                 <div className="text-lg font-semibold text-gray-900">
                                   {(entry.quality_score * 100).toFixed(0)}%
                                 </div>
+                                <div className={`w-3 h-3 rounded-full ${
+                                  entry.quality_score >= 0.8 ? 'bg-green-500' :
+                                  entry.quality_score >= 0.6 ? 'bg-yellow-500' :
+                                  'bg-red-500'
+                                }`}></div>
                               </div>
-                              <div className={`w-3 h-3 rounded-full ${
-                                entry.quality_score >= 0.8 ? 'bg-green-500' :
-                                entry.quality_score >= 0.6 ? 'bg-yellow-500' :
-                                'bg-red-500'
-                              }`}></div>
                             </div>
                           </div>
                         </div>
@@ -792,10 +587,10 @@ export default function ChangelogPage() {
                     );
                   })}
                 </div>
-              </div>
-            ))}
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
