@@ -21,10 +21,7 @@ class HubSpotIntegration {
       
       for (const contact of contactsResponse.results) {
         const contactData = {
-          hubspot_contact_id: contact.id,
-          lifecycle_stage: contact.properties.lifecyclestage,
-          properties: contact.properties,
-          last_sync: new Date().toISOString()
+          hubspot_contact_id: contact.id
         };
         
         // Insert/update in Supabase
@@ -59,8 +56,7 @@ class HubSpotIntegration {
           deal_name: deal.properties.dealname,
           deal_stage: deal.properties.dealstage,
           deal_amount: deal.properties.amount ? parseFloat(deal.properties.amount) : null,
-          close_date: deal.properties.closedate,
-          properties: deal.properties
+          close_date: deal.properties.closedate
         };
         
         const { data, error } = await supabase

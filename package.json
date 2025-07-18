@@ -18,6 +18,9 @@
     "test:integrations": "node tests/integration/test-integrations.js",
     "test:webhooks": "node test-webhook.js",
     "test:live": "node test-live-webhook.js",
+    "test:hubspot": "node test-hubspot-integration.js",
+    "test:ai": "node test-ai-provider.js",
+    "db:setup": "node scripts/setup-database-simple.js",
     "db:migrate": "node scripts/migrate-database.js",
     "db:seed": "node scripts/seed-database.js",
     "db:reset": "node scripts/reset-database.js",
@@ -50,57 +53,57 @@
   },
   "homepage": "https://github.com/skotter-marq/AI-Customer-Intelligence-Platform#readme",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.9.1",
     "@hubspot/api-client": "^13.0.0",
     "@supabase/supabase-js": "^2.51.0",
-    "dotenv": "^17.2.0",
-    "next": "15.4.1",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
     "axios": "^1.6.2",
-    "date-fns": "^2.30.0",
-    "lodash": "^4.17.21",
-    "uuid": "^9.0.1",
-    "zod": "^3.22.4",
-    "openai": "^4.20.1",
-    "@anthropic-ai/sdk": "^0.9.1",
-    "jsonwebtoken": "^9.0.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "helmet": "^7.1.0",
+    "date-fns": "^2.30.0",
+    "dotenv": "^17.2.0",
     "express-rate-limit": "^7.1.5",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "lodash": "^4.17.21",
+    "next": "15.4.1",
     "nodemailer": "^6.9.7",
-    "winston": "^3.11.0"
+    "openai": "^4.104.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@next/bundle-analyzer": "^15.0.0",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/lodash": "^4.14.202",
-    "@types/uuid": "^9.0.7",
-    "@types/jsonwebtoken": "^9.0.5",
+    "@testing-library/jest-dom": "^6.1.5",
+    "@testing-library/react": "^14.1.2",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/lodash": "^4.14.202",
+    "@types/node": "^20",
     "@types/nodemailer": "^6.4.14",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/uuid": "^9.0.7",
     "@typescript-eslint/eslint-plugin": "^6.13.1",
     "@typescript-eslint/parser": "^6.13.1",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^8.2.2",
+    "cross-env": "^7.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.4.1",
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "postcss": "^8.4.32",
     "prettier": "^3.1.0",
     "prettier-plugin-tailwindcss": "^0.5.7",
-    "jest": "^29.7.0",
-    "@testing-library/react": "^14.1.2",
-    "@testing-library/jest-dom": "^6.1.5",
-    "jest-environment-jsdom": "^29.7.0",
     "supertest": "^6.3.3",
-    "cross-env": "^7.0.3",
-    "concurrently": "^8.2.2",
-    "autoprefixer": "^10.4.16",
-    "postcss": "^8.4.32",
-    "@next/bundle-analyzer": "^15.0.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   },
@@ -122,10 +125,22 @@
   },
   "jest": {
     "testEnvironment": "jsdom",
-    "setupFilesAfterEnv": ["<rootDir>/jest.setup.js"],
-    "testPathIgnorePatterns": ["<rootDir>/.next/", "<rootDir>/node_modules/"],
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.js"
+    ],
+    "testPathIgnorePatterns": [
+      "<rootDir>/.next/",
+      "<rootDir>/node_modules/"
+    ],
     "transform": {
-      "^.+\\.(js|jsx|ts|tsx)$": ["babel-jest", { "presets": ["next/babel"] }]
+      "^.+\\.(js|jsx|ts|tsx)$": [
+        "babel-jest",
+        {
+          "presets": [
+            "next/babel"
+          ]
+        }
+      ]
     },
     "moduleNameMapping": {
       "^@/(.*)$": "<rootDir>/$1"
@@ -144,7 +159,9 @@
     "singleQuote": true,
     "printWidth": 80,
     "tabWidth": 2,
-    "plugins": ["prettier-plugin-tailwindcss"]
+    "plugins": [
+      "prettier-plugin-tailwindcss"
+    ]
   },
   "eslintConfig": {
     "extends": [
