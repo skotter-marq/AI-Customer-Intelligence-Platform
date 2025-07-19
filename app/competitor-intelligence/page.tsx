@@ -16,8 +16,108 @@ import {
   ExternalLink,
   BarChart3,
   Users,
-  DollarSign
+  DollarSign,
+  Activity,
+  Globe,
+  MessageSquare,
+  Send,
+  Bell,
+  Settings,
+  Download,
+  Share2,
+  Plus,
+  Edit,
+  Trash2,
+  Building,
+  MapPin,
+  Zap,
+  Shield,
+  Award,
+  Briefcase,
+  LineChart,
+  PieChart
 } from 'lucide-react';
+
+interface CompetitorNews {
+  id: string;
+  title: string;
+  summary: string;
+  date: string;
+  source: string;
+  url: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+}
+
+interface FinancialMetrics {
+  revenue: string;
+  profit_margin: number;
+  revenue_growth: number;
+  burn_rate?: string;
+  runway?: string;
+}
+
+interface SocialMetrics {
+  linkedin_followers: number;
+  twitter_followers: number;
+  glassdoor_rating: number;
+  employee_sentiment: 'positive' | 'neutral' | 'negative';
+}
+
+interface MarketTrend {
+  period: string;
+  value: number;
+  competitor_id: string;
+  metric_type: 'market_share' | 'revenue' | 'growth_rate' | 'employee_count';
+}
+
+interface SlackNotification {
+  id: string;
+  type: 'insight' | 'alert' | 'report';
+  title: string;
+  message: string;
+  channels: string[];
+  scheduled_time?: string;
+  sent: boolean;
+  created_at: string;
+}
+
+interface IntelligenceAgent {
+  id: string;
+  name: string;
+  type: 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding' | 'products';
+  status: 'active' | 'paused' | 'error' | 'stopped';
+  competitor_ids: string[];
+  schedule: 'hourly' | 'daily' | 'weekly' | 'monthly' | 'on_trigger';
+  last_run: string;
+  next_run: string;
+  success_rate: number;
+  total_insights: number;
+  configuration: AgentConfiguration;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AgentConfiguration {
+  sources: string[]; // websites, APIs, social media, etc.
+  keywords: string[];
+  price_threshold?: number;
+  sentiment_tracking?: boolean;
+  deep_analysis?: boolean;
+  notification_triggers: string[];
+  data_retention_days: number;
+}
+
+interface AgentResult {
+  id: string;
+  agent_id: string;
+  competitor_id: string;
+  data_type: string;
+  raw_data: any;
+  processed_insights: string[];
+  confidence_score: number;
+  timestamp: string;
+  source_url?: string;
+}
 
 interface CompetitorProfile {
   id: string;
@@ -30,6 +130,19 @@ interface CompetitorProfile {
   status: 'active' | 'monitoring' | 'inactive';
   threat_level: 'high' | 'medium' | 'low';
   last_updated: string;
+  website: string;
+  location: string;
+  description: string;
+  recent_funding: string;
+  valuation: string;
+  growth_rate: number;
+  market_share: number;
+  key_products: string[];
+  strengths: string[];
+  weaknesses: string[];
+  recent_news: CompetitorNews[];
+  financial_metrics: FinancialMetrics;
+  social_metrics: SocialMetrics;
 }
 
 interface CompetitorInsight {
@@ -55,6 +168,9 @@ interface IntelligenceMetrics {
 export default function CompetitorIntelligencePage() {
   const [competitors, setCompetitors] = useState<CompetitorProfile[]>([]);
   const [insights, setInsights] = useState<CompetitorInsight[]>([]);
+  const [agents, setAgents] = useState<IntelligenceAgent[]>([]);
+  const [marketTrends, setMarketTrends] = useState<MarketTrend[]>([]);
+  const [slackNotifications, setSlackNotifications] = useState<SlackNotification[]>([]);
   const [metrics, setMetrics] = useState<IntelligenceMetrics>({
     total_competitors: 0,
     active_monitoring: 0,
@@ -64,6 +180,8 @@ export default function CompetitorIntelligencePage() {
   });
   const [selectedFilter, setSelectedFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [insightFilter, setInsightFilter] = useState<'all' | 'pricing' | 'feature' | 'marketing' | 'hiring' | 'funding'>('all');
+  const [selectedCompetitor, setSelectedCompetitor] = useState<CompetitorProfile | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'profiles' | 'agents' | 'analytics' | 'communications'>('overview');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -86,7 +204,39 @@ export default function CompetitorIntelligencePage() {
           founded: '1999',
           status: 'active',
           threat_level: 'high',
-          last_updated: '2024-01-15T10:30:00Z'
+          last_updated: '2024-01-15T10:30:00Z',
+          website: 'salesforce.com',
+          location: 'San Francisco, CA',
+          description: 'Leading cloud-based CRM platform with AI-powered sales and marketing tools',
+          recent_funding: 'IPO 2004',
+          valuation: '$248B',
+          growth_rate: 24.3,
+          market_share: 23.8,
+          key_products: ['Sales Cloud', 'Service Cloud', 'Marketing Cloud', 'Einstein AI'],
+          strengths: ['Market leader', 'Comprehensive platform', 'Strong AI integration'],
+          weaknesses: ['High complexity', 'Expensive for SMBs', 'Steep learning curve'],
+          recent_news: [
+            {
+              id: 'n1',
+              title: 'Salesforce announces new AI features for Sales Cloud',
+              summary: 'Enhanced predictive analytics and automated lead scoring capabilities',
+              date: '2024-01-15',
+              source: 'TechCrunch',
+              url: 'https://techcrunch.com/salesforce-ai',
+              sentiment: 'positive'
+            }
+          ],
+          financial_metrics: {
+            revenue: '$31.4B',
+            profit_margin: 2.1,
+            revenue_growth: 11.2
+          },
+          social_metrics: {
+            linkedin_followers: 1200000,
+            twitter_followers: 890000,
+            glassdoor_rating: 4.4,
+            employee_sentiment: 'positive'
+          }
         },
         {
           id: '2',
@@ -98,7 +248,39 @@ export default function CompetitorIntelligencePage() {
           founded: '2006',
           status: 'active',
           threat_level: 'high',
-          last_updated: '2024-01-15T09:15:00Z'
+          last_updated: '2024-01-15T09:15:00Z',
+          website: 'hubspot.com',
+          location: 'Cambridge, MA',
+          description: 'Inbound marketing, sales, and customer service platform with integrated CRM',
+          recent_funding: 'IPO 2014',
+          valuation: '$31B',
+          growth_rate: 32.1,
+          market_share: 12.4,
+          key_products: ['Marketing Hub', 'Sales Hub', 'Service Hub', 'CMS Hub'],
+          strengths: ['User-friendly interface', 'Strong inbound methodology', 'Integrated platform'],
+          weaknesses: ['Limited enterprise features', 'Pricing complexity', 'Reporting limitations'],
+          recent_news: [
+            {
+              id: 'n2',
+              title: 'HubSpot launches AI-powered content assistant',
+              summary: 'New AI writing tools integrated across marketing and sales workflows',
+              date: '2024-01-14',
+              source: 'MarTech Today',
+              url: 'https://martech.hubspot.com/ai-content',
+              sentiment: 'positive'
+            }
+          ],
+          financial_metrics: {
+            revenue: '$1.7B',
+            profit_margin: -2.3,
+            revenue_growth: 25.1
+          },
+          social_metrics: {
+            linkedin_followers: 980000,
+            twitter_followers: 455000,
+            glassdoor_rating: 4.3,
+            employee_sentiment: 'positive'
+          }
         },
         {
           id: '3',
@@ -171,8 +353,121 @@ export default function CompetitorIntelligencePage() {
         }
       ];
 
+      // Mock AI Agents data
+      const mockAgents: IntelligenceAgent[] = [
+        {
+          id: 'agent1',
+          name: 'Pricing Monitor',
+          type: 'pricing',
+          status: 'active',
+          competitor_ids: ['1', '2'],
+          schedule: 'daily',
+          last_run: '2024-01-15T08:00:00Z',
+          next_run: '2024-01-16T08:00:00Z',
+          success_rate: 94.2,
+          total_insights: 127,
+          configuration: {
+            sources: ['competitor websites', 'pricing pages', 'product demos'],
+            keywords: ['pricing', 'cost', 'subscription', 'enterprise'],
+            price_threshold: 10,
+            sentiment_tracking: false,
+            deep_analysis: true,
+            notification_triggers: ['price_change', 'new_tier'],
+            data_retention_days: 90
+          },
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-15T10:30:00Z'
+        },
+        {
+          id: 'agent2',
+          name: 'Feature Tracker',
+          type: 'features',
+          status: 'active',
+          competitor_ids: ['1', '2', '3', '4'],
+          schedule: 'weekly',
+          last_run: '2024-01-14T12:00:00Z',
+          next_run: '2024-01-21T12:00:00Z',
+          success_rate: 89.1,
+          total_insights: 84,
+          configuration: {
+            sources: ['product pages', 'release notes', 'changelogs', 'documentation'],
+            keywords: ['new feature', 'update', 'launch', 'beta', 'AI'],
+            sentiment_tracking: true,
+            deep_analysis: true,
+            notification_triggers: ['new_feature', 'major_update'],
+            data_retention_days: 120
+          },
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-14T15:00:00Z'
+        },
+        {
+          id: 'agent3',
+          name: 'News & Social Monitor',
+          type: 'news',
+          status: 'active',
+          competitor_ids: ['1', '2'],
+          schedule: 'hourly',
+          last_run: '2024-01-15T10:00:00Z',
+          next_run: '2024-01-15T11:00:00Z',
+          success_rate: 96.8,
+          total_insights: 312,
+          configuration: {
+            sources: ['tech news sites', 'social media', 'press releases', 'blogs'],
+            keywords: ['acquisition', 'funding', 'partnership', 'executive'],
+            sentiment_tracking: true,
+            deep_analysis: false,
+            notification_triggers: ['negative_news', 'major_announcement'],
+            data_retention_days: 60
+          },
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-15T10:00:00Z'
+        }
+      ];
+
+      // Mock Market Trends data
+      const mockMarketTrends: MarketTrend[] = [
+        { period: '2024-01', value: 23.8, competitor_id: '1', metric_type: 'market_share' },
+        { period: '2024-02', value: 23.5, competitor_id: '1', metric_type: 'market_share' },
+        { period: '2024-03', value: 24.1, competitor_id: '1', metric_type: 'market_share' },
+        { period: '2024-01', value: 12.1, competitor_id: '2', metric_type: 'market_share' },
+        { period: '2024-02', value: 12.3, competitor_id: '2', metric_type: 'market_share' },
+        { period: '2024-03', value: 12.4, competitor_id: '2', metric_type: 'market_share' },
+        { period: '2024-01', value: 24.1, competitor_id: '1', metric_type: 'revenue_growth' },
+        { period: '2024-02', value: 23.8, competitor_id: '1', metric_type: 'revenue_growth' },
+        { period: '2024-03', value: 24.3, competitor_id: '1', metric_type: 'revenue_growth' },
+        { period: '2024-01', value: 31.2, competitor_id: '2', metric_type: 'revenue_growth' },
+        { period: '2024-02', value: 32.5, competitor_id: '2', metric_type: 'revenue_growth' },
+        { period: '2024-03', value: 32.1, competitor_id: '2', metric_type: 'revenue_growth' }
+      ];
+
+      // Mock Slack Notifications data
+      const mockSlackNotifications: SlackNotification[] = [
+        {
+          id: 'slack1',
+          type: 'alert',
+          title: 'Salesforce Price Increase Alert',
+          message: 'Salesforce increased Enterprise tier pricing by 15% - immediate competitor analysis recommended',
+          channels: ['#competitive-intel', '#sales-team'],
+          sent: true,
+          created_at: '2024-01-15T08:30:00Z'
+        },
+        {
+          id: 'slack2',
+          type: 'insight',
+          title: 'Weekly Competitive Intelligence Report',
+          message: 'HubSpot launched new AI features, Pipedrive acquired new integration partner',
+          channels: ['#competitive-intel', '#product-team'],
+          scheduled_time: '2024-01-16T09:00:00Z',
+          sent: false,
+          created_at: '2024-01-15T10:00:00Z'
+        }
+      ];
+
       setCompetitors(mockCompetitors);
       setInsights(mockInsights);
+      setAgents(mockAgents);
+      setMarketTrends(mockMarketTrends);
+      setSlackNotifications(mockSlackNotifications);
       
       // Calculate metrics
       const newMetrics: IntelligenceMetrics = {
@@ -244,7 +539,7 @@ export default function CompetitorIntelligencePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Loading competitor intelligence...</p>
@@ -254,17 +549,31 @@ export default function CompetitorIntelligencePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Competitor Intelligence</h1>
-            <p className="text-gray-600">Monitor competitive landscape and market insights</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Competitor Intelligence</h1>
+                <p className="text-gray-600">Monitor competitive landscape and market insights</p>
+              </div>
+              <div className="flex items-center space-x-3">
+                <button className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">
+                  <Plus className="w-4 h-4" />
+                  <span>Add Competitor</span>
+                </button>
+                <button className="flex items-center space-x-2 px-4 py-2 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors">
+                  <Download className="w-4 h-4" />
+                  <span>Export Report</span>
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
+          {/* Enhanced Metrics Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mb-8">
             <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6">
               <div className="flex items-center justify-between">
                 <div>
@@ -320,13 +629,56 @@ export default function CompetitorIntelligencePage() {
                 <BarChart3 className="w-8 h-8 text-purple-600" />
               </div>
             </div>
+            
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">Active Agents</p>
+                  <p className="text-2xl font-bold text-gray-900">{agents.filter(a => a.status === 'active').length}</p>
+                </div>
+                <Zap className="w-8 h-8 text-indigo-600" />
+              </div>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Competitors Section */}
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50">
-              <div className="p-6 border-b border-gray-200/50">
-                <div className="flex items-center justify-between">
+          {/* Navigation Tabs */}
+          <div className="mb-8">
+            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-2">
+              <div className="flex items-center space-x-1">
+                {[
+                  { id: 'overview', label: 'Overview', icon: BarChart3 },
+                  { id: 'profiles', label: 'Competitor Profiles', icon: Building },
+                  { id: 'agents', label: 'AI Agents', icon: Zap },
+                  { id: 'analytics', label: 'Market Analytics', icon: LineChart },
+                  { id: 'communications', label: 'Communications', icon: MessageSquare }
+                ].map((tab) => {
+                  const TabIcon = tab.icon;
+                  return (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        activeTab === tab.id
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      <TabIcon className="w-4 h-4" />
+                      <span>{tab.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Competitors Section */}
+              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50">
+                <div className="p-6 border-b border-gray-200/50">
+                  <div className="flex items-center justify-between">
                   <h2 className="text-xl font-semibold text-gray-900">Competitor Profiles</h2>
                   <div className="flex items-center space-x-2">
                     <Filter className="w-4 h-4 text-gray-600" />

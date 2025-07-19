@@ -24,7 +24,7 @@ export default function Navigation() {
   const navigationGroups: NavigationGroup[] = [
     {
       title: 'Customer Research',
-      color: 'text-blue-600',
+      color: 'text-indigo-600',
       items: [
         {
           name: 'Customer Intelligence',
@@ -42,7 +42,7 @@ export default function Navigation() {
     },
     {
       title: 'Content Pipeline',
-      color: 'text-green-600',
+      color: 'text-purple-600',
       items: [
         {
           name: 'Product Updates',
@@ -66,7 +66,7 @@ export default function Navigation() {
     },
     {
       title: 'System Management',
-      color: 'text-purple-600',
+      color: 'text-indigo-700',
       items: [
         {
           name: 'Dashboard',
@@ -90,7 +90,7 @@ export default function Navigation() {
     },
     {
       title: 'Integrations',
-      color: 'text-orange-600',
+      color: 'text-purple-700',
       items: [
         {
           name: 'Slack Integration',
@@ -125,12 +125,12 @@ export default function Navigation() {
   return (
     <>
       {/* Top Navigation Bar */}
-      <nav className="bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-200/50 sticky top-0 z-50">
+      <nav className="bg-gradient-to-r from-indigo-100 via-white to-purple-100 backdrop-blur-md shadow-lg border-b border-indigo-200/20 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             {/* Logo */}
             <Link href="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
+              <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
                 <span className="text-white font-bold text-sm">AI</span>
               </div>
               <span className="text-xl font-bold text-gray-900">Marq AI Product Insights</span>
@@ -144,8 +144,8 @@ export default function Navigation() {
                   href={item.href}
                   className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
                     isActiveRoute(item.href)
-                      ? 'bg-blue-100 text-blue-700 shadow-sm'
-                      : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                      ? 'bg-indigo-100 text-indigo-700 shadow-sm'
+                      : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'
                   }`}
                 >
                   {item.label}
@@ -158,7 +158,7 @@ export default function Navigation() {
               {/* Mobile menu button */}
               <button
                 type="button"
-                className="md:hidden inline-flex items-center justify-center p-2 rounded-xl text-gray-700 hover:text-blue-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500 transition-colors"
+                className="md:hidden inline-flex items-center justify-center p-2 rounded-xl text-gray-700 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-colors"
                 onClick={() => setIsOpen(!isOpen)}
               >
                 <span className="sr-only">Open main menu</span>
@@ -208,7 +208,7 @@ export default function Navigation() {
                           href={item.href}
                           className={`block p-4 rounded-xl transition-all ${
                             isActiveRoute(item.href)
-                              ? 'bg-blue-50 border-2 border-blue-200 text-blue-700'
+                              ? 'bg-indigo-50 border-2 border-indigo-200 text-indigo-700'
                               : 'border-2 border-gray-100 hover:border-gray-200 hover:bg-gray-50'
                           }`}
                           onClick={() => setIsOpen(false)}

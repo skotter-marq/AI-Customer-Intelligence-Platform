@@ -18,8 +18,11 @@ This is a Next.js 15 AI-powered customer intelligence platform that integrates w
 ## Quick Start Commands
 
 ```bash
-# Development
-npm run dev --turbopack    # Start dev server (recommended)
+# Development (RECOMMENDED - handles cleanup automatically)
+./dev-start.sh            # Clean startup with issue detection
+
+# Alternative manual commands
+npm run dev --turbopack    # Start dev server
 npm run build             # Build for production
 npm run start            # Start production server
 npm run lint             # Check code quality
