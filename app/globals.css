@@ -26,6 +26,16 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   font-feature-settings: 'cv11', 'ss01';
   font-variation-settings: 'opsz' 32;
+  overflow-x: hidden;
+}
+
+html, body {
+  overscroll-behavior: none;
+  min-height: 100vh;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 /* Component utilities */

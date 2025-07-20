@@ -391,9 +391,14 @@ export default function CSQueryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 pt-20">
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Customer Intelligence</h1>
+            <p className="text-gray-600">Advanced customer search, analysis, and AI-powered insights</p>
+          </div>
           {/* Primary Tabbed Interface */}
           <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
             {/* Tab Navigation */}

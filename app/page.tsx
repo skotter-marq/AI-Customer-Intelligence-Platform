@@ -418,9 +418,15 @@ export default function CustomerIntelPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-20">
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Customer Intelligence Dashboard</h1>
+            <p className="text-gray-600">Analyze customer data, track trends, and generate insights with AI-powered tools</p>
+          </div>
+
           {/* AI Assistant Section */}
           <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6 mb-6">
             <div className="flex items-center space-x-3 mb-4">
@@ -494,73 +500,85 @@ export default function CustomerIntelPage() {
           {/* Primary Tabbed Interface */}
           <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
             {/* Tab Navigation */}
-            <div className="border-b border-gray-200/50">
-              <nav className="flex space-x-8 px-6 py-4 overflow-x-auto justify-center">
+            <div className="border-b border-gray-200">
+              <nav className="flex space-x-8 px-6 overflow-x-auto">
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === 'overview'
-                      ? 'bg-blue-100 text-blue-700 font-medium'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <BarChart3 className="w-5 h-5" />
-                  <span>Overview</span>
+                  <div className="flex items-center space-x-2">
+                    <BarChart3 className="w-4 h-4" />
+                    <span>Overview</span>
+                  </div>
                 </button>
                 <button
                   onClick={() => setActiveTab('grain')}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === 'grain'
-                      ? 'bg-green-100 text-green-700 font-medium'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <Phone className="w-5 h-5" />
-                  <span>Grain Calls</span>
+                  <div className="flex items-center space-x-2">
+                    <Phone className="w-4 h-4" />
+                    <span>Grain Calls</span>
+                  </div>
                 </button>
                 <button
                   onClick={() => setActiveTab('hubspot')}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === 'hubspot'
-                      ? 'bg-orange-100 text-orange-700 font-medium'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <Building className="w-5 h-5" />
-                  <span>HubSpot</span>
+                  <div className="flex items-center space-x-2">
+                    <Building className="w-4 h-4" />
+                    <span>HubSpot</span>
+                  </div>
                 </button>
                 <button
                   onClick={() => setActiveTab('support')}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === 'support'
-                      ? 'bg-purple-100 text-purple-700 font-medium'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <MessageSquare className="w-5 h-5" />
-                  <span>Support</span>
+                  <div className="flex items-center space-x-2">
+                    <MessageSquare className="w-4 h-4" />
+                    <span>Support</span>
+                  </div>
                 </button>
                 <button
                   onClick={() => setActiveTab('product')}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === 'product'
-                      ? 'bg-indigo-100 text-indigo-700 font-medium'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <Zap className="w-5 h-5" />
-                  <span>Product Impact</span>
+                  <div className="flex items-center space-x-2">
+                    <Zap className="w-4 h-4" />
+                    <span>Product Impact</span>
+                  </div>
                 </button>
                 <button
                   onClick={() => setActiveTab('insights')}
-                  className={`flex items-center space-x-2 px-4 py-3 rounded-lg transition-colors whitespace-nowrap ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
                     activeTab === 'insights'
-                      ? 'bg-pink-100 text-pink-700 font-medium'
-                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
-                  <Brain className="w-5 h-5" />
-                  <span>AI Insights</span>
+                  <div className="flex items-center space-x-2">
+                    <Brain className="w-4 h-4" />
+                    <span>AI Insights</span>
+                  </div>
                 </button>
               </nav>
             </div>

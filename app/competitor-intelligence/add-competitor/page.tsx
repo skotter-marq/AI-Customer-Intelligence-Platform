@@ -1584,7 +1584,7 @@ export default function AddCompetitorPage() {
   const canCreateCompetitor = newCompetitor.name && newCompetitor.industry;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-20">
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}

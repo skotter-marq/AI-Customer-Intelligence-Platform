@@ -521,12 +521,6 @@ export default function CreateAgentPage() {
       setResearchComplete(true);
       setAiPopulatedFields(new Set(['sources', 'keywords', 'notification_triggers', 'description']));
 
-      // Auto-collapse Step 1 after AI configuration
-      setStepsCollapsed(prev => ({
-        ...prev,
-        step1: true
-      }));
-
       // Scroll to show the AI Configuration Results (Step 2)
       setTimeout(() => {
         aiConfigRef.current?.scrollIntoView({ 
@@ -1001,7 +995,7 @@ export default function CreateAgentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-20">
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -1964,13 +1958,14 @@ export default function CreateAgentPage() {
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {/* Step 3: Review & Create */}
-          {(researchComplete || isEditMode) && (
+          {(researchComplete || isEditMode) && (isEditMode || !stepsCollapsed.step3) && (
             <div id="step-3" className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 mb-8">
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-6">
@@ -1987,7 +1982,10 @@ export default function CreateAgentPage() {
                 <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200 p-4 mb-6">
                   <div className="flex items-center space-x-3 mb-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedAgentType?.color || 'bg-gray-100'}`}>
-                      {selectedAgentType && <selectedAgentType.icon className="w-4 h-4" />}
+                      {selectedAgentType && (() => {
+                        const IconComponent = selectedAgentType.icon;
+                        return <IconComponent className="w-4 h-4" />;
+                      })()}
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">{newAgent.name || 'Unnamed Agent'}</h3>
