@@ -1600,7 +1600,7 @@ export default function AddCompetitorPage() {
                 <h1 className="text-3xl font-bold text-gray-900">
                   {isEditMode ? 'Edit Competitor' : 'Add New Competitor'}
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-gray-800">
                   {isEditMode ? 'Update competitor profile and intelligence settings' : 'Create a comprehensive competitor profile for intelligence monitoring'}
                 </p>
               </div>
@@ -1689,7 +1689,7 @@ export default function AddCompetitorPage() {
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">Step 1: Basic Information</h2>
-                    <p className="text-sm text-gray-600">Company name, industry, and contact details</p>
+                    <p className="text-sm text-gray-800">Company name, industry, and contact details</p>
                   </div>
                 </div>
                 {stepsCollapsed.step1 ? (
@@ -1703,28 +1703,28 @@ export default function AddCompetitorPage() {
                 <div className="mt-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
                         Company Name *
                       </label>
                       <input
                         type="text"
                         value={newCompetitor.name}
                         onChange={(e) => setNewCompetitor({...newCompetitor, name: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="e.g., Salesforce"
                         disabled={isResearching}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
                         Website
                       </label>
                       <input
                         type="url"
                         value={newCompetitor.website}
                         onChange={(e) => setNewCompetitor({...newCompetitor, website: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="https://salesforce.com"
                         disabled={isResearching}
                       />
@@ -1732,7 +1732,7 @@ export default function AddCompetitorPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-900">
                           Industry *
                         </label>
                         {getFieldIndicator('industry')}
@@ -1740,7 +1740,7 @@ export default function AddCompetitorPage() {
                       <select
                         value={newCompetitor.industry}
                         onChange={(e) => handleFieldChange('industry', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         disabled={isResearching}
                       >
                         <option value="">Select Industry</option>
@@ -1757,7 +1757,7 @@ export default function AddCompetitorPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">
+                        <label className="block text-sm font-medium text-gray-900">
                           Location
                         </label>
                         {getFieldIndicator('location')}
@@ -1766,7 +1766,7 @@ export default function AddCompetitorPage() {
                         type="text"
                         value={newCompetitor.location}
                         onChange={(e) => handleFieldChange('location', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="San Francisco, CA"
                         disabled={isResearching}
                       />
@@ -1851,39 +1851,39 @@ export default function AddCompetitorPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Company Name *</label>
+                        <label className="block text-sm font-medium text-gray-900">Company Name *</label>
                         {getFieldIndicator('name')}
                       </div>
                       <input
                         type="text"
                         value={newCompetitor.name}
                         onChange={(e) => handleFieldChange('name', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="e.g., Salesforce"
                       />
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Website</label>
+                        <label className="block text-sm font-medium text-gray-900">Website</label>
                         {getFieldIndicator('website')}
                       </div>
                       <input
                         type="url"
                         value={newCompetitor.website}
                         onChange={(e) => handleFieldChange('website', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="https://salesforce.com"
                       />
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Industry *</label>
+                        <label className="block text-sm font-medium text-gray-900">Industry *</label>
                         {getFieldIndicator('industry')}
                       </div>
                       <select
                         value={newCompetitor.industry}
                         onChange={(e) => handleFieldChange('industry', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                       >
                         <option value="">Select Industry</option>
                         <option value="CRM & Sales">CRM & Sales</option>
@@ -1898,14 +1898,14 @@ export default function AddCompetitorPage() {
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Location</label>
+                        <label className="block text-sm font-medium text-gray-900">Location</label>
                         {getFieldIndicator('location')}
                       </div>
                       <input
                         type="text"
                         value={newCompetitor.location}
                         onChange={(e) => handleFieldChange('location', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="San Francisco, CA"
                       />
                     </div>
@@ -1913,14 +1913,14 @@ export default function AddCompetitorPage() {
                   
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">Company Description</label>
+                      <label className="block text-sm font-medium text-gray-900">Company Description</label>
                       {getFieldIndicator('description')}
                     </div>
                     <textarea
                       value={newCompetitor.description}
                       onChange={(e) => handleFieldChange('description', e.target.value)}
                       rows={4}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                       placeholder="Brief description of the company, its mission, and main products/services..."
                     />
                   </div>
@@ -1941,40 +1941,40 @@ export default function AddCompetitorPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Founded Year</label>
+                        <label className="block text-sm font-medium text-gray-900">Founded Year</label>
                         {getFieldIndicator('founded')}
                       </div>
                       <input
                         type="text"
                         value={newCompetitor.founded}
                         onChange={(e) => handleFieldChange('founded', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="2006"
                       />
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Employee Count</label>
+                        <label className="block text-sm font-medium text-gray-900">Employee Count</label>
                         {getFieldIndicator('employees')}
                       </div>
                       <input
                         type="text"
                         value={newCompetitor.employees}
                         onChange={(e) => handleFieldChange('employees', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="1,000"
                       />
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Market Cap / Valuation</label>
+                        <label className="block text-sm font-medium text-gray-900">Market Cap / Valuation</label>
                         {getFieldIndicator('marketCap')}
                       </div>
                       <input
                         type="text"
                         value={newCompetitor.marketCap}
                         onChange={(e) => handleFieldChange('marketCap', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="$31B"
                       />
                     </div>
@@ -1996,7 +1996,7 @@ export default function AddCompetitorPage() {
                   {/* Threat Level */}
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <label className="block text-sm font-medium text-gray-700">Competitive Threat Level</label>
+                      <label className="block text-sm font-medium text-gray-900">Competitive Threat Level</label>
                       {getFieldIndicator('threat_level')}
                     </div>
                     <div className="grid grid-cols-3 gap-4">
@@ -2034,7 +2034,7 @@ export default function AddCompetitorPage() {
                   {/* Key Products */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">Key Products/Services</label>
+                      <label className="block text-sm font-medium text-gray-900">Key Products/Services</label>
                       {getFieldIndicator('key_products')}
                     </div>
                     <div className="relative">
@@ -2046,7 +2046,7 @@ export default function AddCompetitorPage() {
                           onKeyPress={(e) => e.key === 'Enter' && addKeyProduct()}
                           onFocus={() => newProduct.length > 1 && setShowProductSuggestions(productSuggestions.length > 0)}
                           onBlur={() => setTimeout(() => setShowProductSuggestions(false), 200)} // Delay to allow clicking suggestions
-                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                           placeholder="Search products or type custom (e.g., Design Platform, API...)"
                         />
                         <button
@@ -2114,7 +2114,7 @@ export default function AddCompetitorPage() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Competitive Strengths</label>
+                        <label className="block text-sm font-medium text-gray-900">Competitive Strengths</label>
                         {getFieldIndicator('strengths')}
                       </div>
                       <div className="relative">
@@ -2126,7 +2126,7 @@ export default function AddCompetitorPage() {
                             onKeyPress={(e) => e.key === 'Enter' && addStrength()}
                             onFocus={() => newStrength.length > 1 && setShowStrengthSuggestions(strengthSuggestions.length > 0)}
                             onBlur={() => setTimeout(() => setShowStrengthSuggestions(false), 200)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                             placeholder="Search strengths or type custom (e.g., Market leader, Great UX...)"
                           />
                           <button
@@ -2192,7 +2192,7 @@ export default function AddCompetitorPage() {
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-sm font-medium text-gray-700">Competitive Weaknesses</label>
+                        <label className="block text-sm font-medium text-gray-900">Competitive Weaknesses</label>
                         {getFieldIndicator('weaknesses')}
                       </div>
                       <div className="relative">
@@ -2204,7 +2204,7 @@ export default function AddCompetitorPage() {
                             onKeyPress={(e) => e.key === 'Enter' && addWeakness()}
                             onFocus={() => newWeakness.length > 1 && setShowWeaknessSuggestions(weaknessSuggestions.length > 0)}
                             onBlur={() => setTimeout(() => setShowWeaknessSuggestions(false), 200)}
-                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                             placeholder="Search weaknesses or type custom (e.g., High complexity, Expensive...)"
                           />
                           <button

@@ -295,7 +295,7 @@ export default function ChangelogPage() {
                       placeholder="Search updates..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 focus:border-blue-500"
                     />
                   </div>
                 </div>
@@ -309,7 +309,7 @@ export default function ChangelogPage() {
                   <select
                     value={filters.contentType}
                     onChange={(e) => setFilters({...filters, contentType: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
                     <option value="all">All Types</option>
                     <option value="product_announcement">Product Announcements</option>
@@ -330,7 +330,7 @@ export default function ChangelogPage() {
                   <select
                     value={filters.category}
                     onChange={(e) => setFilters({...filters, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
                     <option value="all">All Categories</option>
                     <option value="major_release">Major Release</option>
@@ -351,7 +351,7 @@ export default function ChangelogPage() {
                   <select
                     value={filters.timeRange}
                     onChange={(e) => setFilters({...filters, timeRange: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
                     <option value="all">All Time</option>
                     <option value="7d">Last 7 days</option>
@@ -369,7 +369,7 @@ export default function ChangelogPage() {
                   <select
                     value={filters.visibility}
                     onChange={(e) => setFilters({...filters, visibility: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
                   >
                     <option value="all">All Updates</option>
                     <option value="public">Public Only</option>

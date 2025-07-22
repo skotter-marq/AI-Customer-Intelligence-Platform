@@ -231,8 +231,11 @@ export default function CreateContentPage() {
         console.log('- Content type:', selectedLayout.contentTypes[0]);
         console.log('- Sections count:', contentToSave.sections.length);
         
-        // Auto-export HTML for preview
-        exportForPreview();
+        // Auto-export HTML for preview (with small delay to ensure state is updated)
+        setTimeout(() => {
+          console.log('🔄 AUTO-SAVE: Triggering delayed export after state update');
+          exportForPreview();
+        }, 100);
       } catch (error) {
         console.warn('Failed to save content to localStorage:', error);
       }
@@ -1781,9 +1784,34 @@ export default function CreateContentPage() {
   // Export content for preview
   const exportForPreview = () => {
     if (richContent && editingId) {
-      console.log('🔧 DEBUG: Exporting richContent with title:', richContent.title);
-      console.log('🔧 DEBUG: richContent sections count:', richContent.sections.length);
+      console.log('🔧 EXPORT DEBUG: Starting export process');
+      console.log('🔧 EXPORT DEBUG: EditingId:', editingId);
+      console.log('🔧 EXPORT DEBUG: RichContent title:', richContent.title);
+      console.log('🔧 EXPORT DEBUG: RichContent sections count:', richContent.sections.length);
+      console.log('🔧 EXPORT DEBUG: All section contents:', richContent.sections.map(s => ({ 
+        type: s.type, 
+        content: s.content ? s.content.substring(0, 50) + '...' : 'empty'
+      })));
+      
+      // Force save the current content state to localStorage first
+      if (selectedLayout) {
+        const unifiedKey = `content_${editingId}_latest`;
+        const legacyKey = `content_${editingId}_${selectedLayout.id}`;
+        
+        const contentToSave = {
+          ...richContent,
+          selectedLayout: selectedLayout.id,
+          lastUpdated: new Date().toISOString()
+        };
+        
+        localStorage.setItem(unifiedKey, JSON.stringify(contentToSave));
+        localStorage.setItem(legacyKey, JSON.stringify(contentToSave));
+        console.log('🔧 EXPORT DEBUG: Saved content to localStorage keys:', unifiedKey, legacyKey);
+      }
+      
       const previewHTML = generatePreviewHTML(richContent);
+      console.log('🔧 EXPORT DEBUG: Generated HTML length:', previewHTML.length);
+      console.log('🔧 EXPORT DEBUG: HTML preview (first 200 chars):', previewHTML.substring(0, 200));
       
       // Save to both unified and legacy keys
       const unifiedHTMLKey = `preview_html_${editingId}_latest`;
@@ -1791,11 +1819,18 @@ export default function CreateContentPage() {
       
       localStorage.setItem(unifiedHTMLKey, previewHTML);
       localStorage.setItem(legacyHTMLKey, previewHTML);
+      console.log('🔧 EXPORT DEBUG: Saved HTML to localStorage keys:', unifiedHTMLKey, legacyHTMLKey);
       
       console.log('✅ UNIFIED HTML EXPORT: Saved to both keys');
       console.log('- Unified key:', unifiedHTMLKey);
       console.log('- Legacy key:', legacyHTMLKey);
-      console.log('HTML preview:', previewHTML.substring(0, 200) + '...');
+      console.log('HTML preview length:', previewHTML.length, 'characters');
+      console.log('HTML preview sample:', previewHTML.substring(0, 300) + '...');
+    } else {
+      console.warn('⚠️ EXPORT FAILED: Missing richContent or editingId', {
+        hasRichContent: !!richContent,
+        editingId: editingId
+      });
     }
   };
 
@@ -1868,29 +1903,43 @@ export default function CreateContentPage() {
                     )}
 
                     {/* Publish Button */}
-                    {publishStatus === 'draft' && (
-                      <button
-                        onClick={() => {
-                          // Publish and return to pipeline
-                          console.log('🚀 PUBLISH: Publishing and returning to pipeline');
-                          setPublishStatus('published');
-                          router.push('/content-pipeline');
-                        }}
-                        className="flex items-center space-x-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        <span>Publish</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        console.log('🚀 PUBLISH: Publishing content');
+                        setPublishStatus('published');
+                        exportForPreview();
+                      }}
+                      className="flex items-center space-x-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Publish</span>
+                    </button>
 
                     {/* Preview Button */}
                     <button
                       onClick={() => {
                         console.log('🚀 PREVIEW BUTTON: Force exporting latest content...');
+                        console.log('🔍 PREVIEW DEBUG: Current richContent state:');
+                        console.log('- Title:', richContent?.title);
+                        console.log('- Sections:', richContent?.sections?.length);
+                        console.log('- All sections:', richContent?.sections?.map(s => ({ type: s.type, content: s.content?.substring(0, 30) + '...' })));
                         exportForPreview();
-                        // Small delay to ensure export completes before opening preview
+                        // Delay to ensure export completes and all state updates are captured
                         setTimeout(() => {
-                          const previewUrl = `/content/next-generation-security-framework-launch`;
+                          // Map editingId to the correct content slug
+                          const contentSlugMap: { [key: string]: string } = {
+                            '1': 'future-data-analytics-industry-trends',
+                            '2': 'techcorp-digital-transformation-journey', 
+                            '3': 'next-generation-security-framework-launch',
+                            '4': 'platform-vs-competitors-feature-analysis',
+                            '5': 'product-spotlight-revolutionary-features',
+                            '7': 'behind-code-mobile-first-architecture',
+                            '8': 'roi-analysis-enterprise-value-impact'
+                          };
+                          
+                          const previewSlug = contentSlugMap[editingId || ''] || 'next-generation-security-framework-launch';
+                          const previewUrl = `/content/${previewSlug}`;
+                          console.log('🔗 PREVIEW URL: Opening', previewUrl, 'for editingId:', editingId);
                           window.open(previewUrl, '_blank');
                         }, 100);
                       }}
@@ -1902,22 +1951,55 @@ export default function CreateContentPage() {
                   </div>
                 </>
               ) : (
-                // Create mode - show preview button when content is generated
+                // Create mode - show action buttons when content is generated
                 contentGenerated && (
-                  <button
-                    onClick={() => {
-                      console.log('🚀 PREVIEW BUTTON: Force exporting latest content...');
-                      exportForPreview();
-                      setTimeout(() => {
-                        const previewUrl = `/content/next-generation-security-framework-launch`;
-                        window.open(previewUrl, '_blank');
-                      }, 100);
-                    }}
-                    className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    <Eye className="w-4 h-4" />
-                    <span>Preview</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    {/* Publish Button */}
+                    <button
+                      onClick={() => {
+                        console.log('🚀 PUBLISH: Publishing content');
+                        setPublishStatus('published');
+                        exportForPreview();
+                      }}
+                      className="flex items-center space-x-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Publish</span>
+                    </button>
+
+                    {/* Preview Button */}
+                    <button
+                      onClick={() => {
+                        console.log('🚀 PREVIEW BUTTON: Force exporting latest content...');
+                        console.log('🔍 PREVIEW DEBUG: Current richContent state:');
+                        console.log('- Title:', richContent?.title);
+                        console.log('- Sections:', richContent?.sections?.length);
+                        console.log('- All sections:', richContent?.sections?.map(s => ({ type: s.type, content: s.content?.substring(0, 30) + '...' })));
+                        exportForPreview();
+                        setTimeout(() => {
+                          // Map editingId to the correct content slug
+                          const contentSlugMap: { [key: string]: string } = {
+                            '1': 'future-data-analytics-industry-trends',
+                            '2': 'techcorp-digital-transformation-journey', 
+                            '3': 'next-generation-security-framework-launch',
+                            '4': 'platform-vs-competitors-feature-analysis',
+                            '5': 'product-spotlight-revolutionary-features',
+                            '7': 'behind-code-mobile-first-architecture',
+                            '8': 'roi-analysis-enterprise-value-impact'
+                          };
+                          
+                          const previewSlug = contentSlugMap[editingId || ''] || 'next-generation-security-framework-launch';
+                          const previewUrl = `/content/${previewSlug}`;
+                          console.log('🔗 PREVIEW URL: Opening', previewUrl, 'for editingId:', editingId);
+                          window.open(previewUrl, '_blank');
+                        }, 100);
+                      }}
+                      className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span>Preview</span>
+                    </button>
+                  </div>
                 )
               )}
             </div>

@@ -214,8 +214,7 @@ export default function CompetitorIntelligencePage() {
   const [competitorGrouping, setCompetitorGrouping] = useState<'threat' | 'industry' | 'size' | 'none'>('none');
   const [loading, setLoading] = useState(true);
   const [showDatabaseSetupNotice, setShowDatabaseSetupNotice] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'market-insights' | 'product-intelligence' | 'sales-marketing' | 'alerts'>('overview');
-  const [expandedReports, setExpandedReports] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<'overview'>('overview');
   const [reportStatuses, setReportStatuses] = useState<Record<string, 'new' | 'in-review' | 'action-taken' | 'resolved'>>({});
   const [reviewedReports, setReviewedReports] = useState<string[]>([]);
   const [selectedReports, setSelectedReports] = useState<string[]>([]);
@@ -226,13 +225,34 @@ export default function CompetitorIntelligencePage() {
     category: 'all',
     timeRange: 'all'
   });
+  const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set());
+  const [reportsCurrentPage, setReportsCurrentPage] = useState(1);
+  const reportsPerPage = 5;
 
   const toggleReportExpansion = (reportId: string) => {
-    setExpandedReports(prev => 
-      prev.includes(reportId) 
-        ? prev.filter(id => id !== reportId)
-        : [...prev, reportId]
-    );
+    setExpandedReports(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(reportId)) {
+        newSet.delete(reportId);
+      } else {
+        newSet.add(reportId);
+      }
+      return newSet;
+    });
+  };
+
+  const getFilteredReports = () => {
+    return getCombinedIntelligenceReports();
+  };
+
+  const getPaginatedReports = () => {
+    const filtered = getFilteredReports();
+    const startIndex = (reportsCurrentPage - 1) * reportsPerPage;
+    return filtered.slice(startIndex, startIndex + reportsPerPage);
+  };
+
+  const getReportsTotalPages = () => {
+    return Math.ceil(getFilteredReports().length / reportsPerPage);
   };
 
   const updateReportStatus = (reportId: string, status: 'new' | 'in-review' | 'action-taken' | 'resolved') => {
@@ -1003,6 +1023,184 @@ export default function CompetitorIntelligencePage() {
     return patterns[patternType as keyof typeof patterns] || patterns.default;
   };
 
+  // Combined Intelligence Reports Function
+  const getCombinedIntelligenceReports = () => {
+    const allReports = [
+      {
+        id: 'market-1',
+        title: 'Salesforce Pricing Strategy Update',
+        summary: 'Salesforce introduced a new enterprise pricing tier with advanced AI features at $300/user/month, representing a 25% increase from previous pricing.',
+        competitor: 'Salesforce',
+        category: 'Pricing Changes',
+        time: '2 hours ago',
+        confidence: 94,
+        status: 'new',
+        reportType: 'market' as const,
+        expandedContent: {
+          summary: 'Comprehensive analysis of Salesforce\'s new enterprise pricing strategy and its competitive implications.',
+          keyFindings: [
+            'New Enterprise AI tier priced at $300/user/month (+25% from previous top tier)',
+            'Advanced Einstein features now require enterprise subscription',
+            'Competitive pricing analysis shows 15-20% premium over similar offerings',
+            'Bundle strategy removes individual AI feature purchases'
+          ],
+          impact: 'This pricing change may force enterprise customers to evaluate alternatives, creating opportunities for competitive displacement in price-sensitive accounts.',
+          recommendations: [
+            'Develop competitive response pricing for enterprise AI features',
+            'Target Salesforce enterprise accounts with value-based pricing proposals',
+            'Enhance our AI feature positioning against new Salesforce offerings',
+            'Create migration incentives for price-sensitive Salesforce customers'
+          ],
+          confidence: 94,
+          sources: ['Salesforce pricing page', 'Customer feedback', 'Sales team reports', 'Competitive analysis']
+        }
+      },
+      {
+        id: 'product-1',
+        title: 'HubSpot AI Features Launch',
+        summary: 'HubSpot launched comprehensive AI-powered lead scoring and content generation tools, directly competing with our ML-driven insights platform.',
+        competitor: 'HubSpot',
+        category: 'Product Updates',
+        time: '4 hours ago',
+        confidence: 89,
+        status: 'new',
+        reportType: 'product' as const,
+        expandedContent: {
+          summary: 'HubSpot\'s new AI capabilities represent a direct challenge to our market position in ML-driven insights.',
+          keyFindings: [
+            'AI-powered lead scoring with 90%+ accuracy claims',
+            'Content generation tool for emails, social posts, and landing pages',
+            'Integration with existing HubSpot CRM and marketing tools',
+            'Free tier includes basic AI features for user acquisition'
+          ],
+          impact: 'Direct competition to our core ML insights offering, potentially impacting new customer acquisition and existing customer retention.',
+          technicalDetails: {
+            'AI Models': 'GPT-4 integration, proprietary lead scoring algorithms',
+            'Features': 'Lead scoring, content generation, automated workflows',
+            'Pricing': 'Included in Professional tier ($800/month), free basic features',
+            'Integration': 'Native CRM integration, API access available'
+          },
+          recommendations: [
+            'Accelerate our AI feature roadmap to match or exceed capabilities',
+            'Emphasize unique value props of our ML approach vs generic AI',
+            'Monitor customer feedback and churn in competitive segments',
+            'Consider strategic partnerships for enhanced AI capabilities'
+          ],
+          confidence: 89
+        }
+      },
+      {
+        id: 'market-2',
+        title: 'Pipedrive SMB Campaign Analysis',
+        summary: 'Pipedrive launched aggressive SMB marketing campaign with 50% first-year discount, targeting our core customer segment.',
+        competitor: 'Pipedrive',
+        category: 'Marketing Strategy',
+        time: '6 hours ago',
+        confidence: 76,
+        status: 'reviewed',
+        reportType: 'market' as const,
+        expandedContent: {
+          summary: 'Analysis of Pipedrive\'s targeted SMB acquisition campaign and competitive response strategies.',
+          campaignDetails: {
+            'Target Segment': 'SMB companies (10-100 employees)',
+            'Discount Offer': '50% off first year subscription',
+            'Campaign Budget': 'Estimated $1.2M across Q1',
+            'Channels': 'Google Ads, LinkedIn, industry publications'
+          },
+          keyFindings: [
+            'Targeting exact customer profile as our core segment',
+            'Free migration services and dedicated onboarding',
+            'Content marketing focused on "simple CRM" messaging',
+            'Partner referral program with 20% commission'
+          ],
+          impact: 'Could capture 3-5% of our target SMB market if successful, particularly price-sensitive prospects.',
+          recommendations: [
+            'Launch competitive SMB retention campaign',
+            'Enhance value demonstration for existing SMB customers',
+            'Review our SMB pricing strategy and incentive structure',
+            'Develop SMB-specific case studies and success stories'
+          ],
+          confidence: 76
+        }
+      },
+      {
+        id: 'product-2',
+        title: 'Zendesk Engineering Expansion',
+        summary: 'Zendesk posted 25+ new engineering positions, indicating major product development initiative likely focused on AI integration.',
+        competitor: 'Zendesk',
+        category: 'Team Changes',
+        time: '8 hours ago',
+        confidence: 82,
+        status: 'new',
+        reportType: 'product' as const
+        // Note: No expandedContent for this report to test conditional Show More display
+      },
+      {
+        id: 'market-3',
+        title: 'Industry Trend: CRM Consolidation',
+        summary: 'Market analysis shows 34% increase in CRM platform consolidation among mid-market companies, favoring integrated solutions.',
+        competitor: 'Market Analysis',
+        category: 'Industry Trends',
+        time: '12 hours ago',
+        confidence: 91,
+        status: 'reviewed',
+        reportType: 'market' as const
+      },
+      {
+        id: 'product-3',
+        title: 'Salesforce Einstein AI Enhancement',
+        summary: 'Salesforce released major Einstein AI updates including predictive analytics and automated workflow suggestions.',
+        competitor: 'Salesforce',
+        category: 'AI Features',
+        time: '1 day ago',
+        confidence: 87,
+        status: 'new',
+        reportType: 'product' as const
+      },
+      {
+        id: 'market-4',
+        title: 'Customer Churn Analysis Alert',
+        summary: 'Detected 15% increase in competitor mentions in negative customer feedback, suggesting potential churn risk.',
+        competitor: 'Cross-Platform',
+        category: 'Customer Sentiment',
+        time: '1 day ago',
+        confidence: 73,
+        status: 'new',
+        reportType: 'market' as const
+      },
+      {
+        id: 'product-4',
+        title: 'HubSpot Integration Marketplace Expansion',
+        summary: 'HubSpot added 50+ new integrations to their marketplace, strengthening ecosystem appeal for enterprise customers.',
+        competitor: 'HubSpot',
+        category: 'Platform Updates',
+        time: '2 days ago',
+        confidence: 85,
+        status: 'reviewed',
+        reportType: 'product' as const
+      }
+    ];
+
+    // Apply filters
+    return allReports.filter(report => {
+      if (reportFilters.status !== 'all') {
+        if (reportFilters.status === 'reviewed' && !reviewedReports.includes(report.id)) return false;
+        if (reportFilters.status === 'unreviewed' && reviewedReports.includes(report.id)) return false;
+      }
+      
+      if (reportFilters.category !== 'all') {
+        if (reportFilters.category !== report.reportType) return false;
+      }
+      
+      if (reportFilters.priority !== 'all') {
+        const priority = report.confidence >= 85 ? 'high' : report.confidence >= 70 ? 'medium' : 'low';
+        if (reportFilters.priority !== priority) return false;
+      }
+      
+      return true;
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
@@ -1032,83 +1230,10 @@ export default function CompetitorIntelligencePage() {
             </div>
           </div>
 
-          {/* Tab Navigation */}
-          <div className="mb-8">
-            <div className="border-b border-gray-200">
-              <nav className="flex space-x-8">
-                <button
-                  onClick={() => setActiveTab('overview')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'overview'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Building className="w-4 h-4" />
-                    <span>Overview</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setActiveTab('market-insights')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'market-insights'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <LineChart className="w-4 h-4" />
-                    <span>Market Insights</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setActiveTab('product-intelligence')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'product-intelligence'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Package className="w-4 h-4" />
-                    <span>Product Intelligence</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setActiveTab('sales-marketing')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'sales-marketing'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Target className="w-4 h-4" />
-                    <span>Sales & Marketing</span>
-                  </div>
-                </button>
-                <button
-                  onClick={() => setActiveTab('alerts')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'alerts'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <BellRing className="w-4 h-4" />
-                    <span>Alerts Center</span>
-                  </div>
-                </button>
-              </nav>
-            </div>
-          </div>
 
-          {/* Tab Content */}
-          {activeTab === 'overview' && (
-            <>
-              {/* Dashboard Swimlanes */}
+          {/* Unified Competitive Intelligence Dashboard */}
+          <div className="space-y-8">
+            {/* Dashboard Swimlanes */}
           {/* High Priority Competitors Swimlane */}
           <div className="mb-8">
             <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
@@ -1195,7 +1320,11 @@ export default function CompetitorIntelligencePage() {
                     };
 
                     return (
-                      <div key={competitor.id} className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[220px] flex flex-col">
+                      <div 
+                        key={competitor.id} 
+                        onClick={() => router.push(`/competitor-intelligence/competitors/${competitor.id}`)}
+                        className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[220px] flex flex-col cursor-pointer"
+                      >
                         <div className="p-4 flex-1 flex flex-col">
                           <div className="flex items-center space-x-3 mb-3">
                             <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 flex-shrink-0 overflow-hidden">
@@ -1427,1257 +1556,318 @@ export default function CompetitorIntelligencePage() {
               </div>
             </div>
           </div>
-            </>
-          )}
 
-          {/* Market Insights Tab */}
-          {activeTab === 'market-insights' && (
-            <div className="space-y-6">
-              {/* Intelligence Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Bot className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Agent Reports</h3>
-                      <p className="text-2xl font-bold text-blue-600">23</p>
-                      <p className="text-xs text-gray-500">last 24 hours</p>
-                    </div>
-                  </div>
+          {/* Intelligence Reports Section */}
+          <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Intelligence Reports</h2>
+                  <p className="text-sm text-gray-600">Actionable insights from your AI agents</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                <span className="text-sm text-gray-500">Live monitoring</span>
+              </div>
+            </div>
+
+            {/* Filters Row */}
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Reviewed/Unreviewed Filter */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, status: 'all'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 border ${ 
+                      reportFilters.status === 'all'
+                        ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    All Reports
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, status: 'reviewed'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 border ${
+                      reportFilters.status === 'reviewed'
+                        ? 'bg-green-100 text-green-800 border-green-300'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    ✓ Reviewed
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, status: 'unreviewed'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 border ${
+                      reportFilters.status === 'unreviewed' 
+                        ? 'bg-amber-100 text-amber-800 border-amber-300'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    ⏳ Unreviewed
+                  </button>
                 </div>
 
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
-                      <AlertTriangle className="w-5 h-5 text-red-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">High Priority</h3>
-                      <p className="text-2xl font-bold text-red-600">5</p>
-                      <p className="text-xs text-gray-500">urgent findings</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                      <Eye className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Sources Monitored</h3>
-                      <p className="text-2xl font-bold text-green-600">147</p>
-                      <p className="text-xs text-gray-500">websites & feeds</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <Activity className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Actions Taken</h3>
-                      <p className="text-2xl font-bold text-purple-600">12</p>
-                      <p className="text-xs text-gray-500">auto-responses</p>
-                    </div>
-                  </div>
+                {/* Report Type Filter */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, category: 'all'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 border ${
+                      reportFilters.category === 'all'
+                        ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    All Types
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, category: 'market'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 border ${
+                      reportFilters.category === 'market'
+                        ? 'bg-blue-100 text-blue-800 border-blue-300'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    📊 Market
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, category: 'product'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 border ${
+                      reportFilters.category === 'product'
+                        ? 'bg-purple-100 text-purple-800 border-purple-300'
+                        : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    📦 Product
+                  </button>
                 </div>
               </div>
 
-              {/* Recent Agent Findings */}
-              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <Bot className="w-5 h-5 text-indigo-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Latest Intelligence Reports</h3>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
-                    <span className="text-sm text-gray-500">Live monitoring</span>
-                  </div>
-                </div>
-                
-                {/* Bulk Actions Bar */}
-                {selectedReports.length > 0 && (
-                  <div className="mb-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-sm font-medium text-indigo-900">
-                          {selectedReports.length} report{selectedReports.length > 1 ? 's' : ''} selected
-                        </span>
-                        <button
-                          onClick={() => setSelectedReports([])}
-                          className="text-xs text-indigo-600 hover:text-indigo-800 underline"
-                        >
-                          Clear Selection
-                        </button>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button
-                          onClick={bulkMarkAsReviewed}
-                          className="text-xs px-3 py-1 bg-green-100 border border-green-300 rounded hover:bg-green-200 transition-colors text-green-700 font-medium"
-                        >
-                          Mark as Reviewed
-                        </button>
-                        <select
-                          onChange={(e) => bulkUpdateStatus(e.target.value as any)}
-                          value=""
-                          className="text-xs px-3 py-1 border border-indigo-300 bg-white rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
-                        >
-                          <option value="">Update Status</option>
-                          <option value="new">New</option>
-                          <option value="in-review">In Review</option>
-                          <option value="action-taken">Action Taken</option>
-                          <option value="resolved">Resolved</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Report Filters */}
-                <div className="flex flex-wrap items-center gap-4 mb-6 p-4 bg-white/90 backdrop-blur-md rounded-xl shadow-sm border border-gray-200/50">
-                  <div className="flex items-center space-x-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedReports.length === 4}
-                      onChange={toggleSelectAll}
-                      className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-sm text-gray-700 font-medium">Select All</span>
-                  </div>
-                  <div className="w-px h-6 bg-gray-200"></div>
-                  <select
-                    value={reportFilters.competitor}
-                    onChange={(e) => setReportFilters({...reportFilters, competitor: e.target.value})}
-                    className="text-sm px-3 py-2 border border-gray-200 bg-white/90 backdrop-blur-md rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 shadow-sm hover:shadow-md transition-all duration-200"
-                  >
-                    <option value="all">All Competitors</option>
-                    <option value="HubSpot">HubSpot</option>
-                    <option value="Salesforce">Salesforce</option>
-                    <option value="Pipedrive">Pipedrive</option>
-                    <option value="Zendesk">Zendesk</option>
-                  </select>
-                  
-                  <select
-                    value={reportFilters.priority}
-                    onChange={(e) => setReportFilters({...reportFilters, priority: e.target.value})}
-                    className="text-sm px-3 py-2 border border-gray-200 bg-white/90 backdrop-blur-md rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 shadow-sm hover:shadow-md transition-all duration-200"
-                  >
-                    <option value="all">All Priorities</option>
-                    <option value="high">High Priority</option>
-                    <option value="medium">Medium Priority</option>
-                    <option value="low">Low Priority</option>
-                  </select>
-                  
-                  <select
-                    value={reportFilters.status}
-                    onChange={(e) => setReportFilters({...reportFilters, status: e.target.value})}
-                    className="text-sm px-3 py-2 border border-gray-200 bg-white/90 backdrop-blur-md rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 shadow-sm hover:shadow-md transition-all duration-200"
-                  >
-                    <option value="all">All Status</option>
-                    <option value="new">New</option>
-                    <option value="in-review">In Review</option>
-                    <option value="action-taken">Action Taken</option>
-                    <option value="resolved">Resolved</option>
-                  </select>
-                  
-                  <select
-                    value={reportFilters.category}
-                    onChange={(e) => setReportFilters({...reportFilters, category: e.target.value})}
-                    className="text-sm px-3 py-2 border border-gray-200 bg-white/90 backdrop-blur-md rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 shadow-sm hover:shadow-md transition-all duration-200"
-                  >
-                    <option value="all">All Categories</option>
-                    <option value="Product Launch">Product Launch</option>
-                    <option value="Pricing">Pricing</option>
-                    <option value="Technology">Technology</option>
-                    <option value="Marketing">Marketing</option>
-                  </select>
-
-                  <select
-                    value={reportFilters.timeRange}
-                    onChange={(e) => setReportFilters({...reportFilters, timeRange: e.target.value})}
-                    className="text-sm px-3 py-2 border border-gray-200 bg-white/90 backdrop-blur-md rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 shadow-sm hover:shadow-md transition-all duration-200"
-                  >
-                    <option value="all">All Time</option>
-                    <option value="today">Today</option>
-                    <option value="week">This Week</option>
-                    <option value="month">This Month</option>
-                  </select>
-
+              {/* Actions */}
+              <div className="flex items-center space-x-3">
+                <select
+                  value={reportFilters.priority}
+                  onChange={(e) => setReportFilters({...reportFilters, priority: e.target.value})}
+                  className="text-sm px-3 py-2 border border-gray-200 bg-white rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-gray-900"
+                >
+                  <option value="all">All Priorities</option>
+                  <option value="high">🔴 High</option>
+                  <option value="medium">🟡 Medium</option>
+                  <option value="low">🟢 Low</option>
+                </select>
+                {(reportFilters.status !== 'all' || reportFilters.category !== 'all' || reportFilters.priority !== 'all') && (
                   <button
                     onClick={() => setReportFilters({competitor: 'all', priority: 'all', status: 'all', category: 'all', timeRange: 'all'})}
-                    className="text-sm px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 transition-all duration-200 text-gray-700 font-medium shadow-sm hover:shadow-md"
+                    className="text-sm px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 transition-all duration-200 text-gray-700 font-medium"
                   >
                     Clear Filters
                   </button>
-                </div>
+                )}
+              </div>
+            </div>
+
+            {/* Reports List */}
+            <div className="space-y-4">
+              {getPaginatedReports().map((report) => {
+                const isExpanded = expandedReports.has(report.id);
                 
-                <div className="space-y-4">
-                  {[
-                    {
-                      id: 'report-1',
-                      priority: 'high',
-                      title: 'HubSpot Major Product Launch',
-                      category: 'Product Launch',
-                      icon: AlertTriangle,
-                      color: 'red',
-                      competitor: 'HubSpot',
-                      time: '2 hours ago',
-                      summary: 'HubSpot announced "Service Hub AI" - advanced automation and predictive analytics for customer service teams. Directly competes with our core features.',
-                      sources: ['HubSpot Blog', 'Product Hunt', 'TechCrunch', 'LinkedIn'],
-                      impact: 'High threat - overlaps 70% of our feature set',
-                      confidence: 95,
-                      details: {
-                        keyFeatures: [
-                          'AI-powered ticket routing and prioritization',
-                          'Predictive customer satisfaction scoring',
-                          'Automated response suggestions',
-                          'Advanced analytics dashboard'
-                        ],
-                        pricing: '$120/month per user (Enterprise tier)',
-                        targetMarket: 'Mid-market to enterprise customer service teams',
-                        launchDate: 'March 15, 2024',
-                        competitiveAdvantage: 'Deep integration with existing HubSpot CRM ecosystem'
-                      },
-                      recommendedActions: [
-                        'Review pricing strategy for competitive response',
-                        'Accelerate roadmap for advanced AI features',
-                        'Prepare competitive battlecards for sales team',
-                        'Analyze feature gaps and prioritize development',
-                        'Consider strategic partnerships to match ecosystem depth'
-                      ]
-                    },
-                    {
-                      id: 'report-2',
-                      priority: 'medium',
-                      title: 'Salesforce Pricing Changes',
-                      category: 'Pricing',
-                      icon: TrendingUp,
-                      color: 'yellow',
-                      competitor: 'Salesforce',
-                      time: '4 hours ago',
-                      summary: 'Salesforce increased pricing for Enterprise plans by 12% effective March 1st. Mid-market customers expressing dissatisfaction on Reddit and LinkedIn.',
-                      sources: ['Reddit r/salesforce', 'LinkedIn discussions', 'Salesforce.com', 'G2 Reviews'],
-                      impact: 'Market opportunity - customer acquisition potential',
-                      confidence: 88,
-                      details: {
-                        priceChanges: [
-                          'Enterprise: $150 → $168/user/month',
-                          'Professional: $80 → $89/user/month',
-                          'Unlimited: $300 → $336/user/month'
-                        ],
-                        customerSentiment: 'Negative - 67% of comments express frustration',
-                        affectedMarket: '~15,000 mid-market customers',
-                        competitorResponse: 'HubSpot and Pipedrive holding current pricing'
-                      },
-                      recommendedActions: [
-                        'Launch "Switch & Save" campaign targeting mid-market segment',
-                        'Create Salesforce migration toolkit and guides',
-                        'Offer 3-month discount for displaced customers',
-                        'Target social media ads to frustrated Salesforce users'
-                      ]
-                    },
-                    {
-                      id: 'report-3',
-                      priority: 'low',
-                      title: 'Pipedrive Integration Expansion',
-                      category: 'Technology',
-                      icon: Zap,
-                      color: 'blue',
-                      competitor: 'Pipedrive',
-                      time: '6 hours ago',
-                      summary: 'Pipedrive launched marketplace with 200+ integrations, including deep Zapier and Microsoft Teams connections. Strong developer adoption signals.',
-                      sources: ['Pipedrive Blog', 'Developer Forums', 'App Store Analytics'],
-                      impact: 'Strategic insight - ecosystem building trend',
-                      confidence: 79,
-                      details: {
-                        integrations: ['Zapier (1000+ workflows)', 'Microsoft Teams', 'Slack', 'QuickBooks', 'Mailchimp'],
-                        developerMetrics: '150+ third-party developers, 45% monthly growth',
-                        userAdoption: 'Average 3.2 integrations per customer'
-                      },
-                      recommendedActions: [
-                        'Audit our integration ecosystem gaps',
-                        'Partner with key integration platforms',
-                        'Launch developer program and API improvements'
-                      ]
-                    },
-                    {
-                      id: 'report-4',
-                      priority: 'medium',
-                      title: 'Zendesk Content Strategy Shift',
-                      category: 'Marketing',
-                      icon: MessageSquare,
-                      color: 'green',
-                      competitor: 'Zendesk',
-                      time: '8 hours ago',
-                      summary: 'Zendesk tripled content production focused on "AI customer service" keywords. 15 new whitepapers, webinar series, and influencer partnerships launched.',
-                      sources: ['Zendesk.com', 'SEMrush Analytics', 'Content Analysis', 'Social Media'],
-                      impact: 'SEO and thought leadership competition increase',
-                      confidence: 84,
-                      details: {
-                        contentVolume: '3x increase in blog posts, 15 whitepapers, 8 webinars',
-                        keywordStrategy: 'AI customer service, automated support, intelligent ticketing',
-                        influencerNetwork: '12 customer service thought leaders, 500K+ combined reach',
-                        seoImpact: 'Ranking improvements for 45+ target keywords'
-                      },
-                      recommendedActions: [
-                        'Accelerate our content marketing in AI space',
-                        'Identify and partner with complementary thought leaders',
-                        'Create differentiated content on AI ethics and transparency'
-                      ]
-                    }
-                  ].filter((report) => {
-                    const matchesCompetitor = reportFilters.competitor === 'all' || report.competitor === reportFilters.competitor;
-                    const matchesPriority = reportFilters.priority === 'all' || report.priority === reportFilters.priority;
-                    const matchesCategory = reportFilters.category === 'all' || report.category === reportFilters.category;
-                    const currentStatus = reportStatuses[report.id] || 'new';
-                    const matchesStatus = reportFilters.status === 'all' || currentStatus === reportFilters.status;
-                    
-                    return matchesCompetitor && matchesPriority && matchesCategory && matchesStatus;
-                  }).map((report) => {
-                    const isExpanded = expandedReports.includes(report.id);
-                    const currentStatus = reportStatuses[report.id] || 'new';
-                    const Icon = report.icon;
-                    
-                    return (
-                      <div key={report.id} className={`border-l-4 rounded-lg transition-all duration-200 bg-white/90 backdrop-blur-md shadow-lg border border-gray-200/50 ${
-                        isExpanded ? 'shadow-xl' : 'hover:shadow-lg'
-                      } ${
-                        report.color === 'red' ? 'border-l-red-500' :
-                        report.color === 'yellow' ? 'border-l-yellow-500' :
-                        report.color === 'blue' ? 'border-l-blue-500' :
-                        report.color === 'green' ? 'border-l-green-500' :
-                        'border-l-gray-500'
-                      }`}>
-                        <div className="p-4">
-                          {/* Header */}
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex items-center space-x-3 flex-1">
-                              <input
-                                type="checkbox"
-                                checked={selectedReports.includes(report.id)}
-                                onChange={() => toggleReportSelected(report.id)}
-                                className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                              />
-                              <Icon className={`w-4 h-4 ${
-                                report.color === 'red' ? 'text-red-600' :
-                                report.color === 'yellow' ? 'text-yellow-600' :
-                                report.color === 'blue' ? 'text-blue-600' :
-                                report.color === 'green' ? 'text-green-600' :
-                                'text-gray-600'
-                              }`} />
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-1">
-                                  <span className={`font-medium ${
-                                    report.color === 'red' ? 'text-red-900' :
-                                    report.color === 'yellow' ? 'text-yellow-900' :
-                                    report.color === 'blue' ? 'text-blue-900' :
-                                    report.color === 'green' ? 'text-green-900' :
-                                    'text-gray-900'
-                                  }`}>{report.title}</span>
-                                  <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                                    report.priority === 'high' ? 'bg-red-100 text-red-800' :
-                                    report.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                                    'bg-blue-100 text-blue-800'
-                                  }`}>
-                                    {report.priority === 'high' ? 'High Priority' : 
-                                     report.priority === 'medium' ? 'Medium Priority' : 'Low Priority'}
-                                  </span>
-                                  <span className={`px-2 py-1 text-xs rounded border ${getReportStatusColor(currentStatus)}`}>
-                                    {currentStatus === 'new' ? 'New' :
-                                     currentStatus === 'in-review' ? 'In Review' :
-                                     currentStatus === 'action-taken' ? 'Action Taken' : 'Resolved'}
-                                  </span>
-                                </div>
-                                <div className="flex items-center space-x-4 text-xs text-gray-600">
-                                  <span>{report.category}</span>
-                                  <span>•</span>
-                                  <span>{report.time}</span>
-                                  <span>•</span>
-                                  <span>{report.confidence}% confidence</span>
-                                  {reviewedReports.includes(report.id) && (
-                                    <>
-                                      <span>•</span>
-                                      <span className="flex items-center space-x-1 text-green-600 font-medium">
-                                        <CheckCircle className="w-3 h-3" />
-                                        <span>Reviewed</span>
-                                      </span>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
+                return (
+                  <div key={report.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-lg hover:border-gray-300 transition-all duration-200">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="font-semibold text-gray-900">{report.title}</h3>
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                            report.reportType === 'market' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {report.reportType === 'market' ? '📊 Market' : '📦 Product'}
+                          </span>
+                          <span className="px-2 py-1 text-xs rounded border bg-gray-50 text-gray-700">
+                            {report.status === 'new' ? '🆕 New' : report.status === 'reviewed' ? '✅ Reviewed' : '⏳ Pending'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                          <span>{report.competitor}</span>
+                          <span>•</span>
+                          <span>{report.category}</span>
+                          <span>•</span>
+                          <span>{report.time}</span>
+                          <span>•</span>
+                          <span className={`font-medium ${
+                            report.confidence >= 80 ? 'text-green-600' : 
+                            report.confidence >= 60 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {report.confidence}% confidence
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-900 mb-3">{report.summary}</p>
+                        
+                        {/* Expanded Content */}
+                        {isExpanded && report.expandedContent && (
+                          <div className="mt-4 border-t border-gray-100 pt-4 space-y-4">
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
+                              <p className="text-gray-700 text-sm">{report.expandedContent.summary}</p>
                             </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => toggleReportExpansion(report.id)}
-                                className="p-1 hover:bg-white rounded transition-colors"
-                                title={isExpanded ? 'Collapse' : 'Expand'}
-                              >
-                                {isExpanded ? 
-                                  <ChevronUp className="w-4 h-4 text-gray-500" /> : 
-                                  <ChevronDown className="w-4 h-4 text-gray-500" />
-                                }
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Summary */}
-                          <p className="text-sm mb-3 text-gray-900">{report.summary}</p>
-
-                          {/* Quick Actions */}
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-2">
-                              <select
-                                value={currentStatus}
-                                onChange={(e) => updateReportStatus(report.id, e.target.value as any)}
-                                className="text-xs px-3 py-1 border border-gray-300 bg-gray-50 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white text-gray-700 font-medium"
-                              >
-                                <option value="new">New</option>
-                                <option value="in-review">In Review</option>
-                                <option value="action-taken">Action Taken</option>
-                                <option value="resolved">Resolved</option>
-                              </select>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <button
-                                onClick={() => toggleReportReviewed(report.id)}
-                                className={`text-xs px-3 py-1 border rounded hover:bg-opacity-80 transition-colors font-medium ${
-                                  reviewedReports.includes(report.id)
-                                    ? 'bg-green-100 border-green-300 text-green-700'
-                                    : 'bg-yellow-100 border-yellow-300 text-yellow-700 hover:bg-yellow-200'
-                                }`}
-                                title={reviewedReports.includes(report.id) ? 'Mark as unreviewed' : 'Mark as reviewed'}
-                              >
-                                <CheckCircle className="w-3 h-3" />
-                              </button>
-                              <button
-                                className="text-xs px-3 py-1 bg-gray-100 border border-gray-300 rounded hover:bg-gray-200 transition-colors text-gray-700"
-                                title="Share report"
-                              >
-                                <Share2 className="w-3 h-3" />
-                              </button>
-                              <button
-                                className="text-xs px-3 py-1 bg-indigo-100 border border-indigo-300 rounded hover:bg-indigo-200 transition-colors text-indigo-700 font-medium"
-                                title="Create task"
-                              >
-                                <Plus className="w-3 h-3" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Expanded Details */}
-                          {isExpanded && (
-                            <div className="mt-4 pt-4 border-t border-white/50 space-y-4">
-                              {/* Sources */}
+                            
+                            {report.expandedContent.keyFindings && (
                               <div>
-                                <h5 className={`text-sm font-medium mb-2 ${
-                                  report.color === 'red' ? 'text-red-900' :
-                                  report.color === 'yellow' ? 'text-yellow-900' :
-                                  report.color === 'blue' ? 'text-blue-900' :
-                                  report.color === 'green' ? 'text-green-900' :
-                                  'text-gray-900'
-                                }`}>Sources</h5>
-                                <div className="flex flex-wrap gap-2">
-                                  {report.sources.map((source, index) => (
-                                    <span key={index} className="px-2 py-1 bg-white rounded text-xs text-gray-700 border">
-                                      <Link2 className="w-3 h-3 inline mr-1" />
-                                      {source}
-                                    </span>
+                                <h4 className="font-medium text-gray-900 mb-2">Key Findings</h4>
+                                <ul className="space-y-1">
+                                  {report.expandedContent.keyFindings.map((finding, index) => (
+                                    <li key={index} className="flex items-start space-x-2 text-sm text-gray-700">
+                                      <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></span>
+                                      <span>{finding}</span>
+                                    </li>
                                   ))}
-                                </div>
+                                </ul>
                               </div>
-
-                              {/* Impact Assessment */}
+                            )}
+                            
+                            {report.expandedContent.technicalDetails && (
                               <div>
-                                <h5 className={`text-sm font-medium mb-2 ${
-                                  report.color === 'red' ? 'text-red-900' :
-                                  report.color === 'yellow' ? 'text-yellow-900' :
-                                  report.color === 'blue' ? 'text-blue-900' :
-                                  report.color === 'green' ? 'text-green-900' :
-                                  'text-gray-900'
-                                }`}>Impact Assessment</h5>
-                                <p className={`text-xs ${
-                                  report.color === 'red' ? 'text-red-700' :
-                                  report.color === 'yellow' ? 'text-yellow-700' :
-                                  report.color === 'blue' ? 'text-blue-700' :
-                                  report.color === 'green' ? 'text-green-700' :
-                                  'text-gray-700'
-                                }`}>{report.impact}</p>
-                              </div>
-
-                              {/* Detailed Information */}
-                              {report.details && (
-                                <div>
-                                  <h5 className={`text-sm font-medium mb-2 ${
-                                    report.color === 'red' ? 'text-red-900' :
-                                    report.color === 'yellow' ? 'text-yellow-900' :
-                                    report.color === 'blue' ? 'text-blue-900' :
-                                    report.color === 'green' ? 'text-green-900' :
-                                    'text-gray-900'
-                                  }`}>Detailed Analysis</h5>
-                                  <div className="bg-white/60 rounded p-3 space-y-2">
-                                    {Object.entries(report.details).map(([key, value]) => (
-                                      <div key={key} className="text-xs">
-                                        <span className="font-medium text-gray-900 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                                        {Array.isArray(value) ? (
-                                          <ul className="mt-1 ml-3 list-disc text-gray-700">
-                                            {value.map((item, index) => (
-                                              <li key={index}>{item}</li>
-                                            ))}
-                                          </ul>
-                                        ) : (
-                                          <span className="text-gray-700 ml-1">{value}</span>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Recommended Actions */}
-                              <div>
-                                <h5 className={`text-sm font-medium mb-2 ${
-                                  report.color === 'red' ? 'text-red-900' :
-                                  report.color === 'yellow' ? 'text-yellow-900' :
-                                  report.color === 'blue' ? 'text-blue-900' :
-                                  report.color === 'green' ? 'text-green-900' :
-                                  'text-gray-900'
-                                }`}>Recommended Actions</h5>
-                                <div className="space-y-2">
-                                  {report.recommendedActions.map((action, index) => (
-                                    <div key={index} className="flex items-start space-x-2 text-xs">
-                                      <CheckCircle2 className={`w-3 h-3 mt-0.5 ${
-                                        report.color === 'red' ? 'text-red-600' :
-                                        report.color === 'yellow' ? 'text-yellow-600' :
-                                        report.color === 'blue' ? 'text-blue-600' :
-                                        report.color === 'green' ? 'text-green-600' :
-                                        'text-gray-600'
-                                      }`} />
-                                      <span className={`${
-                                        report.color === 'red' ? 'text-red-700' :
-                                        report.color === 'yellow' ? 'text-yellow-700' :
-                                        report.color === 'blue' ? 'text-blue-700' :
-                                        report.color === 'green' ? 'text-green-700' :
-                                        'text-gray-700'
-                                      }`}>{action}</span>
+                                <h4 className="font-medium text-gray-900 mb-2">Technical Details</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {Object.entries(report.expandedContent.technicalDetails).map(([key, value]) => (
+                                    <div key={key} className="bg-gray-50 rounded-lg p-3">
+                                      <div className="text-xs font-medium text-gray-600">{key}</div>
+                                      <div className="text-sm font-semibold text-gray-900">{value}</div>
                                     </div>
                                   ))}
                                 </div>
                               </div>
+                            )}
+                            
+                            {report.expandedContent.campaignDetails && (
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-2">Campaign Details</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {Object.entries(report.expandedContent.campaignDetails).map(([key, value]) => (
+                                    <div key={key} className="bg-gray-50 rounded-lg p-3">
+                                      <div className="text-xs font-medium text-gray-600">{key}</div>
+                                      <div className="text-sm font-semibold text-gray-900">{value}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-2">Impact</h4>
+                              <p className="text-sm text-gray-700 bg-yellow-50 border border-yellow-200 rounded-lg p-3">{report.expandedContent.impact}</p>
                             </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Agent Performance & Sources */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Agent Performance</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Web Scraping Agent</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-900">98.3%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Social Media Monitor</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-900">95.7%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">News & Blog Tracker</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-yellow-400 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-900">87.2%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Job Posting Analyzer</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-900">92.1%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-gray-600">Patent & IP Monitor</span>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
-                        <span className="text-sm font-medium text-gray-900">100%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Top Intelligence Sources</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Globe className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-700">Company Blogs</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">34 updates</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <MessageSquare className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-700">Social Media</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">28 mentions</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Users className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-700">Job Boards</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">19 postings</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <BarChart3 className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-700">News & PR</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">15 articles</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Shield className="w-4 h-4 text-gray-500" />
-                        <span className="text-sm text-gray-700">Patent Filings</span>
-                      </div>
-                      <span className="text-sm font-medium text-gray-900">3 new</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Product Intelligence Tab */}
-          {activeTab === 'product-intelligence' && (
-            <div className="space-y-6">
-              {/* Product Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
-                      <Package className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Products Tracked</h3>
-                      <p className="text-2xl font-bold text-blue-600">24</p>
-                      <p className="text-xs text-gray-500">across competitors</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
-                      <Layers className="w-5 h-5 text-green-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Feature Updates</h3>
-                      <p className="text-2xl font-bold text-green-600">18</p>
-                      <p className="text-xs text-gray-500">this month</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
-                      <DollarSign className="w-5 h-5 text-purple-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Pricing Changes</h3>
-                      <p className="text-2xl font-bold text-purple-600">7</p>
-                      <p className="text-xs text-gray-500">recent updates</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center">
-                      <Rocket className="w-5 h-5 text-orange-600" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold text-gray-900">New Launches</h3>
-                      <p className="text-2xl font-bold text-orange-600">3</p>
-                      <p className="text-xs text-gray-500">last 30 days</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Feature Comparison Matrix */}
-              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center space-x-3">
-                    <GitCompare className="w-5 h-5 text-indigo-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Feature Comparison Matrix</h3>
-                  </div>
-                  <button className="text-sm text-indigo-600 hover:text-indigo-800">View Full Matrix</button>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-semibold text-gray-900">Feature Category</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-900">Your Product</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-900">HubSpot</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-900">Salesforce</th>
-                        <th className="text-center py-3 px-4 font-semibold text-gray-900">Pipedrive</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-100">
-                        <td className="py-3 px-4 font-medium text-gray-900">AI/ML Capabilities</td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ Advanced
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            ⚠ Basic
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ Advanced
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            ✗ None
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100">
-                        <td className="py-3 px-4 font-medium text-gray-900">Mobile App</td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ iOS/Android
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ iOS/Android
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ iOS/Android
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ iOS/Android
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100">
-                        <td className="py-3 px-4 font-medium text-gray-900">API Access</td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ REST + GraphQL
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            ⚠ REST Only
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ REST + GraphQL
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            ⚠ REST Only
-                          </span>
-                        </td>
-                      </tr>
-                      <tr className="border-b border-gray-100">
-                        <td className="py-3 px-4 font-medium text-gray-900">Enterprise SSO</td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ SAML/OAuth
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ SAML/OAuth
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                            ✓ SAML/OAuth
-                          </span>
-                        </td>
-                        <td className="text-center py-3 px-4">
-                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            ⚠ Limited
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Pricing Intelligence */}
-              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Pricing Intelligence</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900">HubSpot CRM</h4>
-                      <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">↗ +15%</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">$50/mo</p>
-                    <p className="text-sm text-gray-600">Starter Plan • Per Seat</p>
-                    <div className="mt-2 text-xs text-gray-500">
-                      Last changed: Jan 15, 2024
-                    </div>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900">Salesforce</h4>
-                      <span className="text-xs bg-gray-100 text-gray-800 px-2 py-1 rounded">→ No Change</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">$25/mo</p>
-                    <p className="text-sm text-gray-600">Essentials • Per User</p>
-                    <div className="mt-2 text-xs text-gray-500">
-                      Last changed: Oct 2023
-                    </div>
-                  </div>
-
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-medium text-gray-900">Pipedrive</h4>
-                      <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">↘ -10%</span>
-                    </div>
-                    <p className="text-2xl font-bold text-gray-900">$14.90/mo</p>
-                    <p className="text-sm text-gray-600">Essential Plan • Per User</p>
-                    <div className="mt-2 text-xs text-gray-500">
-                      Last changed: Dec 15, 2023
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Sales & Marketing Intelligence Tab */}
-          {activeTab === 'sales-marketing' && (
-            <div className="space-y-8">
-              {/* Go-to-Market Strategy Analysis */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Sales Strategy */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Target className="w-5 h-5 text-indigo-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Sales Strategy Analysis</h3>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-blue-900">Sales Cycle Length</span>
-                        <span className="text-sm text-blue-700">HubSpot: 89 days</span>
-                      </div>
-                      <div className="w-full bg-blue-200 rounded-full h-2">
-                        <div className="bg-blue-600 h-2 rounded-full" style={{width: '75%'}}></div>
-                      </div>
-                      <p className="text-xs text-blue-700 mt-1">Our average: 67 days (23% faster)</p>
-                    </div>
-                    
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-green-900">Deal Size (Average)</span>
-                        <span className="text-sm text-green-700">Salesforce: $45K</span>
-                      </div>
-                      <div className="w-full bg-green-200 rounded-full h-2">
-                        <div className="bg-green-600 h-2 rounded-full" style={{width: '60%'}}></div>
-                      </div>
-                      <p className="text-xs text-green-700 mt-1">Our average: $38K (16% lower)</p>
-                    </div>
-                    
-                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="font-medium text-purple-900">Win Rate</span>
-                        <span className="text-sm text-purple-700">Pipedrive: 28%</span>
-                      </div>
-                      <div className="w-full bg-purple-200 rounded-full h-2">
-                        <div className="bg-purple-600 h-2 rounded-full" style={{width: '85%'}}></div>
-                      </div>
-                      <p className="text-xs text-purple-700 mt-1">Our rate: 35% (25% higher)</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Marketing Strategy */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <MessageSquare className="w-5 h-5 text-purple-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Marketing Strategy</h3>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-blue-700">$2.4M</p>
-                          <p className="text-xs text-blue-600">Monthly Ad Spend</p>
-                          <p className="text-xs text-blue-500 mt-1">HubSpot (est.)</p>
-                        </div>
-                      </div>
-                      <div className="p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
-                        <div className="text-center">
-                          <p className="text-2xl font-bold text-green-700">847K</p>
-                          <p className="text-xs text-green-600">Blog Visitors/Mo</p>
-                          <p className="text-xs text-green-500 mt-1">Zendesk</p>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <h4 className="font-medium text-yellow-900 mb-2">Content Strategy Focus</h4>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-yellow-700">Educational Content</span>
-                          <span className="text-yellow-600">45%</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-yellow-700">Product Features</span>
-                          <span className="text-yellow-600">30%</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-yellow-700">Industry Insights</span>
-                          <span className="text-yellow-600">25%</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Competitive Positioning Map */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <BarChart3 className="w-5 h-5 text-green-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Market Positioning Analysis</h3>
-                </div>
-                
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Competitive Quadrant */}
-                  <div className="lg:col-span-2">
-                    <div className="relative h-80 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 p-4">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="w-full h-full relative">
-                          {/* Axes */}
-                          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-300 transform -translate-x-px"></div>
-                          <div className="absolute top-1/2 left-0 right-0 h-px bg-gray-300 transform -translate-y-px"></div>
-                          
-                          {/* Labels */}
-                          <div className="absolute top-2 left-1/2 transform -translate-x-1/2 text-xs text-gray-600">High Market Share</div>
-                          <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 text-xs text-gray-600">Low Market Share</div>
-                          <div className="absolute left-2 top-1/2 transform -translate-y-1/2 rotate-90 text-xs text-gray-600 origin-center">High Growth</div>
-                          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 -rotate-90 text-xs text-gray-600 origin-center">Low Growth</div>
-                          
-                          {/* Competitors positioned on the map */}
-                          <div className="absolute" style={{top: '20%', left: '70%'}}>
-                            <div className="flex flex-col items-center">
-                              <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                              <span className="text-xs text-gray-700 mt-1">HubSpot</span>
+                            
+                            {report.expandedContent.recommendations && (
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
+                                <ul className="space-y-1">
+                                  {report.expandedContent.recommendations.map((rec, index) => (
+                                    <li key={index} className="flex items-start space-x-2 text-sm text-gray-700">
+                                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                      <span>{rec}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                              <div className="flex items-center space-x-4 text-xs text-gray-500">
+                                <span>Confidence: {report.expandedContent.confidence}%</span>
+                                {report.expandedContent.sources && (
+                                  <span>Sources: {report.expandedContent.sources.length}</span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                          
-                          <div className="absolute" style={{top: '35%', left: '75%'}}>
-                            <div className="flex flex-col items-center">
-                              <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
-                              <span className="text-xs text-gray-700 mt-1">Salesforce</span>
-                            </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center space-x-3">
+                            {report.expandedContent && (
+                              <button
+                                onClick={() => toggleReportExpansion(report.id)}
+                                className="flex items-center space-x-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                              >
+                                <span>{isExpanded ? 'Show Less' : 'Show More'}</span>
+                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              </button>
+                            )}
                           </div>
-                          
-                          <div className="absolute" style={{top: '45%', left: '35%'}}>
-                            <div className="flex flex-col items-center">
-                              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                              <span className="text-xs text-gray-700 mt-1">Pipedrive</span>
-                            </div>
-                          </div>
-                          
-                          <div className="absolute" style={{top: '60%', left: '45%'}}>
-                            <div className="flex flex-col items-center">
-                              <div className="w-3 h-3 bg-indigo-500 rounded-full border-2 border-indigo-700"></div>
-                              <span className="text-xs font-medium text-indigo-700 mt-1">Our Product</span>
-                            </div>
-                          </div>
+                          <button
+                            onClick={() => toggleReportReviewed(report.id)}
+                            className={`px-3 py-1 text-xs border rounded-md transition-all duration-200 ${
+                              reviewedReports.includes(report.id)
+                                ? 'bg-green-100 text-green-800 border-green-300'
+                                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                            }`}
+                          >
+                            {reviewedReports.includes(report.id) ? '✓ Reviewed' : 'Mark as Reviewed'}
+                          </button>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  {/* Key Insights */}
-                  <div className="space-y-4">
-                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Award className="w-4 h-4 text-blue-600" />
-                        <h4 className="font-medium text-blue-900">Market Leaders</h4>
-                      </div>
-                      <p className="text-sm text-blue-700">HubSpot and Salesforce dominate with high market share and strong growth rates.</p>
+                );
+              })}
+              
+              {/* Pagination */}
+              {getReportsTotalPages() > 1 && (
+                <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                  <div className="text-sm text-gray-600">
+                    Showing {Math.min((reportsCurrentPage - 1) * reportsPerPage + 1, getFilteredReports().length)} to {Math.min(reportsCurrentPage * reportsPerPage, getFilteredReports().length)} of {getFilteredReports().length} reports
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setReportsCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={reportsCurrentPage === 1}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    
+                    <div className="flex space-x-1">
+                      {Array.from({ length: getReportsTotalPages() }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setReportsCurrentPage(page)}
+                          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                            reportsCurrentPage === page
+                              ? 'bg-indigo-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
                     </div>
                     
-                    <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Target className="w-4 h-4 text-green-600" />
-                        <h4 className="font-medium text-green-900">Our Opportunity</h4>
-                      </div>
-                      <p className="text-sm text-green-700">Positioned well to capture market share with competitive pricing and focused features.</p>
-                    </div>
-                    
-                    <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <TrendingUp className="w-4 h-4 text-yellow-600" />
-                        <h4 className="font-medium text-yellow-900">Growth Vector</h4>
-                      </div>
-                      <p className="text-sm text-yellow-700">Focus on SMB segment where enterprise solutions are over-engineered.</p>
-                    </div>
+                    <button
+                      onClick={() => setReportsCurrentPage(prev => Math.min(getReportsTotalPages(), prev + 1))}
+                      disabled={reportsCurrentPage === getReportsTotalPages()}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
                   </div>
                 </div>
-              </div>
-
-              {/* Channel & Partnership Intelligence */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Sales Channels */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Share2 className="w-5 h-5 text-orange-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Sales Channels</h3>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-                      <span className="font-medium text-orange-900">Direct Sales</span>
-                      <span className="text-sm text-orange-700">60%</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
-                      <span className="font-medium text-blue-900">Partner Channel</span>
-                      <span className="text-sm text-blue-700">25%</span>
-                    </div>
-                    <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-                      <span className="font-medium text-green-900">Self-Service/PLG</span>
-                      <span className="text-sm text-green-700">15%</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Recent Partnerships */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Users className="w-5 h-5 text-indigo-600" />
-                    <h3 className="text-lg font-semibold text-gray-900">Partnership Activity</h3>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <CheckCircle className="w-4 h-4 text-green-600 mt-1" />
-                      <div>
-                        <p className="text-sm font-medium text-green-900">Salesforce AppExchange</p>
-                        <p className="text-xs text-green-700">HubSpot expanded integration capabilities</p>
-                        <p className="text-xs text-green-600">2 weeks ago</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <Activity className="w-4 h-4 text-blue-600 mt-1" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-900">Microsoft Partnership</p>
-                        <p className="text-xs text-blue-700">Zendesk announces Teams integration</p>
-                        <p className="text-xs text-blue-600">1 month ago</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                      <Rocket className="w-4 h-4 text-purple-600 mt-1" />
-                      <div>
-                        <p className="text-sm font-medium text-purple-900">API Partnership</p>
-                        <p className="text-xs text-purple-700">Pipedrive launches marketplace</p>
-                        <p className="text-xs text-purple-600">6 weeks ago</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sales Process Intelligence */}
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Activity className="w-5 h-5 text-pink-600" />
-                  <h3 className="text-lg font-semibold text-gray-900">Sales Process Comparison</h3>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-medium text-gray-900">Stage</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-900">Our Process</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-900">HubSpot</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-900">Salesforce</th>
-                        <th className="text-center py-3 px-4 font-medium text-gray-900">Advantage</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr className="border-b border-gray-100 bg-green-50">
-                        <td className="py-3 px-4 font-medium text-gray-900">Lead Qualification</td>
-                        <td className="py-3 px-4 text-center text-sm">2 days</td>
-                        <td className="py-3 px-4 text-center text-sm">5 days</td>
-                        <td className="py-3 px-4 text-center text-sm">7 days</td>
-                        <td className="py-3 px-4 text-center text-sm text-green-700">✓ Us</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 bg-red-50">
-                        <td className="py-3 px-4 font-medium text-gray-900">Demo to Proposal</td>
-                        <td className="py-3 px-4 text-center text-sm">14 days</td>
-                        <td className="py-3 px-4 text-center text-sm">10 days</td>
-                        <td className="py-3 px-4 text-center text-sm">12 days</td>
-                        <td className="py-3 px-4 text-center text-sm text-red-700">⚠ Them</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 bg-green-50">
-                        <td className="py-3 px-4 font-medium text-gray-900">Contract Negotiation</td>
-                        <td className="py-3 px-4 text-center text-sm">8 days</td>
-                        <td className="py-3 px-4 text-center text-sm">15 days</td>
-                        <td className="py-3 px-4 text-center text-sm">21 days</td>
-                        <td className="py-3 px-4 text-center text-sm text-green-700">✓ Us</td>
-                      </tr>
-                      <tr className="border-b border-gray-100 bg-yellow-50">
-                        <td className="py-3 px-4 font-medium text-gray-900">Onboarding</td>
-                        <td className="py-3 px-4 text-center text-sm">21 days</td>
-                        <td className="py-3 px-4 text-center text-sm">30 days</td>
-                        <td className="py-3 px-4 text-center text-sm">45 days</td>
-                        <td className="py-3 px-4 text-center text-sm text-green-700">✓ Us</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
+              )}
             </div>
-          )}
 
-          {/* Alerts Center Tab */}
-          {activeTab === 'alerts' && (
-            <div className="space-y-6">
-              {/* Alert Summary Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                    <div>
-                      <p className="text-lg font-bold text-red-700">3</p>
-                      <p className="text-xs text-red-600">Critical Alerts</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <BellRing className="w-5 h-5 text-amber-600" />
-                    <div>
-                      <p className="text-lg font-bold text-amber-700">12</p>
-                      <p className="text-xs text-amber-600">New Alerts</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <Activity className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <p className="text-lg font-bold text-blue-700">28</p>
-                      <p className="text-xs text-blue-600">This Week</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <div>
-                      <p className="text-lg font-bold text-green-700">45</p>
-                      <p className="text-xs text-green-600">Resolved</p>
-                    </div>
-                  </div>
-                </div>
+            {/* View All Reports Button */}
+            {getReportsTotalPages() === 1 && (
+              <div className="mt-6 text-center">
+                <button className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium">
+                  View All Reports ({getFilteredReports().length})
+                </button>
               </div>
-
-              {/* Recent Alerts */}
-              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Recent Alerts</h3>
-                  <button className="text-sm text-indigo-600 hover:text-indigo-800">View All</button>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-start space-x-3 p-3 bg-red-50 rounded-lg border-l-4 border-red-400">
-                    <AlertTriangle className="w-4 h-4 text-red-600 mt-1" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-red-900">HubSpot launches new AI pricing model</h4>
-                        <span className="text-xs text-red-600">2 min ago</span>
-                      </div>
-                      <p className="text-sm text-red-700 mt-1">Significant pricing restructure could impact market positioning</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-start space-x-3 p-3 bg-amber-50 rounded-lg border-l-4 border-amber-400">
-                    <BellRing className="w-4 h-4 text-amber-600 mt-1" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-amber-900">Salesforce acquires DataVision Inc</h4>
-                        <span className="text-xs text-amber-600">1 hour ago</span>
-                      </div>
-                      <p className="text-sm text-amber-700 mt-1">Strategic acquisition in the analytics space - monitor integration timeline</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
-                    <Activity className="w-4 h-4 text-blue-600 mt-1" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-blue-900">Pipedrive hiring surge detected</h4>
-                        <span className="text-xs text-blue-600">3 hours ago</span>
-                      </div>
-                      <p className="text-sm text-blue-700 mt-1">50+ new engineering positions posted - possible product expansion</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg border-l-4 border-green-400">
-                    <TrendingUp className="w-4 h-4 text-green-600 mt-1" />
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-green-900">InsightFlow positive review trend</h4>
-                        <span className="text-xs text-green-600">6 hours ago</span>
-                      </div>
-                      <p className="text-sm text-green-700 mt-1">G2 ratings improved 15% - investigate recent feature releases</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
+            )}
+          </div>
+        </div>
         </div>
       </div>
     </div>
