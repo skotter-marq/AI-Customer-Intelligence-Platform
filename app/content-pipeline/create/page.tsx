@@ -193,6 +193,11 @@ export default function CreateContentPage() {
 
   // Publish status - will be set based on content data
   const [publishStatus, setPublishStatus] = useState<'draft' | 'published'>('draft');
+  
+  // Track original publish status and changes made
+  const [originalPublishStatus, setOriginalPublishStatus] = useState<'draft' | 'published'>('draft');
+  const [hasChanges, setHasChanges] = useState(false);
+  const [isInitialContentLoad, setIsInitialContentLoad] = useState(true);
 
   // Track if page is still initializing (kept for potential future use)
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -200,6 +205,16 @@ export default function CreateContentPage() {
   // Auto-save richContent to localStorage whenever it changes
   useEffect(() => {
     if (richContent && editingId && selectedLayout) {
+      // Mark that changes have been made (only in edit mode and after initial load)
+      if (editingId && !isInitialContentLoad) {
+        setHasChanges(true);
+        console.log('📝 CHANGES DETECTED: Content has been modified');
+      } else if (isInitialContentLoad) {
+        // Mark initial content load as complete
+        setIsInitialContentLoad(false);
+        console.log('📖 INITIAL LOAD: Initial content loaded, future changes will be tracked');
+      }
+      
       // Use unified key for all content saves
       const unifiedKey = `content_${editingId}_latest`;
       const legacyKey = `content_${editingId}_${selectedLayout.id}`;
@@ -297,9 +312,24 @@ export default function CreateContentPage() {
         step3: true
       });
 
-      // Set initial publish status - for now defaulting to draft in edit mode
-      // In a real app, this would come from the content data
-      setPublishStatus('draft');
+      // Set initial publish status - check localStorage first, then default to draft
+      const statusKey = `content_status_${editId}`;
+      const savedStatus = localStorage.getItem(statusKey);
+      let initialStatus: 'draft' | 'published' = 'draft';
+      
+      if (savedStatus) {
+        try {
+          const statusData = JSON.parse(savedStatus);
+          initialStatus = statusData.status || 'draft';
+          console.log('📖 EDIT MODE: Found saved status:', initialStatus, 'for ID:', editId);
+        } catch (error) {
+          console.warn('Error parsing saved status:', error);
+        }
+      }
+      
+      setPublishStatus(initialStatus);
+      setOriginalPublishStatus(initialStatus);
+      console.log('📊 ORIGINAL STATUS SET:', initialStatus);
       
       // Auto-select template based on content type
       if (contentType) {
@@ -1905,49 +1935,41 @@ export default function CreateContentPage() {
                     {/* Publish Button */}
                     <button
                       onClick={() => {
-                        console.log('🚀 PUBLISH: Publishing content');
+                        console.log(editingId ? '🚀 PUBLISH CHANGES: Publishing updated content' : '🚀 PUBLISH: Publishing content');
                         setPublishStatus('published');
+                        
+                        // Save published status to localStorage for Content Pipeline
+                        if (editingId) {
+                          const statusKey = `content_status_${editingId}`;
+                          const statusData = {
+                            status: 'published',
+                            publishedAt: new Date().toISOString(),
+                            title: richContent?.title,
+                            type: selectedTemplate?.type || 'blog'
+                          };
+                          localStorage.setItem(statusKey, JSON.stringify(statusData));
+                          console.log('💾 STATUS SAVED: Content status saved to localStorage', statusKey);
+                          
+                          // Reset changes flag after publishing
+                          setHasChanges(false);
+                          console.log('🔄 CHANGES RESET: hasChanges set to false after publishing');
+                        }
+                        
+                        // Export content and redirect to dashboard
                         exportForPreview();
+                        
+                        // Redirect to Content Pipeline dashboard after a short delay
+                        setTimeout(() => {
+                          console.log('🔄 REDIRECT: Navigating back to Content Pipeline dashboard');
+                          router.push('/content-pipeline');
+                        }, 500);
                       }}
                       className="flex items-center space-x-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                     >
                       <CheckCircle className="w-4 h-4" />
-                      <span>Publish</span>
+                      <span>{editingId && originalPublishStatus === 'published' && hasChanges ? 'Publish Changes' : 'Publish'}</span>
                     </button>
 
-                    {/* Preview Button */}
-                    <button
-                      onClick={() => {
-                        console.log('🚀 PREVIEW BUTTON: Force exporting latest content...');
-                        console.log('🔍 PREVIEW DEBUG: Current richContent state:');
-                        console.log('- Title:', richContent?.title);
-                        console.log('- Sections:', richContent?.sections?.length);
-                        console.log('- All sections:', richContent?.sections?.map(s => ({ type: s.type, content: s.content?.substring(0, 30) + '...' })));
-                        exportForPreview();
-                        // Delay to ensure export completes and all state updates are captured
-                        setTimeout(() => {
-                          // Map editingId to the correct content slug
-                          const contentSlugMap: { [key: string]: string } = {
-                            '1': 'future-data-analytics-industry-trends',
-                            '2': 'techcorp-digital-transformation-journey', 
-                            '3': 'next-generation-security-framework-launch',
-                            '4': 'platform-vs-competitors-feature-analysis',
-                            '5': 'product-spotlight-revolutionary-features',
-                            '7': 'behind-code-mobile-first-architecture',
-                            '8': 'roi-analysis-enterprise-value-impact'
-                          };
-                          
-                          const previewSlug = contentSlugMap[editingId || ''] || 'next-generation-security-framework-launch';
-                          const previewUrl = `/content/${previewSlug}`;
-                          console.log('🔗 PREVIEW URL: Opening', previewUrl, 'for editingId:', editingId);
-                          window.open(previewUrl, '_blank');
-                        }, 100);
-                      }}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Preview</span>
-                    </button>
                   </div>
                 </>
               ) : (
@@ -1957,48 +1979,41 @@ export default function CreateContentPage() {
                     {/* Publish Button */}
                     <button
                       onClick={() => {
-                        console.log('🚀 PUBLISH: Publishing content');
+                        console.log(editingId ? '🚀 PUBLISH CHANGES: Publishing updated content' : '🚀 PUBLISH: Publishing content');
                         setPublishStatus('published');
+                        
+                        // Save published status to localStorage for Content Pipeline
+                        if (editingId) {
+                          const statusKey = `content_status_${editingId}`;
+                          const statusData = {
+                            status: 'published',
+                            publishedAt: new Date().toISOString(),
+                            title: richContent?.title,
+                            type: selectedTemplate?.type || 'blog'
+                          };
+                          localStorage.setItem(statusKey, JSON.stringify(statusData));
+                          console.log('💾 STATUS SAVED: Content status saved to localStorage', statusKey);
+                          
+                          // Reset changes flag after publishing
+                          setHasChanges(false);
+                          console.log('🔄 CHANGES RESET: hasChanges set to false after publishing');
+                        }
+                        
+                        // Export content and redirect to dashboard
                         exportForPreview();
+                        
+                        // Redirect to Content Pipeline dashboard after a short delay
+                        setTimeout(() => {
+                          console.log('🔄 REDIRECT: Navigating back to Content Pipeline dashboard');
+                          router.push('/content-pipeline');
+                        }, 500);
                       }}
                       className="flex items-center space-x-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                     >
                       <CheckCircle className="w-4 h-4" />
-                      <span>Publish</span>
+                      <span>{editingId && originalPublishStatus === 'published' && hasChanges ? 'Publish Changes' : 'Publish'}</span>
                     </button>
 
-                    {/* Preview Button */}
-                    <button
-                      onClick={() => {
-                        console.log('🚀 PREVIEW BUTTON: Force exporting latest content...');
-                        console.log('🔍 PREVIEW DEBUG: Current richContent state:');
-                        console.log('- Title:', richContent?.title);
-                        console.log('- Sections:', richContent?.sections?.length);
-                        console.log('- All sections:', richContent?.sections?.map(s => ({ type: s.type, content: s.content?.substring(0, 30) + '...' })));
-                        exportForPreview();
-                        setTimeout(() => {
-                          // Map editingId to the correct content slug
-                          const contentSlugMap: { [key: string]: string } = {
-                            '1': 'future-data-analytics-industry-trends',
-                            '2': 'techcorp-digital-transformation-journey', 
-                            '3': 'next-generation-security-framework-launch',
-                            '4': 'platform-vs-competitors-feature-analysis',
-                            '5': 'product-spotlight-revolutionary-features',
-                            '7': 'behind-code-mobile-first-architecture',
-                            '8': 'roi-analysis-enterprise-value-impact'
-                          };
-                          
-                          const previewSlug = contentSlugMap[editingId || ''] || 'next-generation-security-framework-launch';
-                          const previewUrl = `/content/${previewSlug}`;
-                          console.log('🔗 PREVIEW URL: Opening', previewUrl, 'for editingId:', editingId);
-                          window.open(previewUrl, '_blank');
-                        }, 100);
-                      }}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                    >
-                      <Eye className="w-4 h-4" />
-                      <span>Preview</span>
-                    </button>
                   </div>
                 )
               )}

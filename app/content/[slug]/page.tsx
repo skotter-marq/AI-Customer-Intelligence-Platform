@@ -57,6 +57,41 @@ export default function PublishedContentPage() {
     try {
       setLoading(true);
       
+      // First, check for updated content in localStorage (from editor)
+      let updatedHTML: string | null = null;
+      let updatedContentData: any = null;
+      
+      // Find the content ID based on slug
+      const slugToIdMap: { [key: string]: string } = {
+        'future-data-analytics-industry-trends': '1',
+        'techcorp-digital-transformation-journey': '2',
+        'next-generation-security-framework-launch': '3',
+        'step-by-step-real-time-analytics-guide': '4',
+        'platform-vs-competitors-feature-analysis': '6',
+        'product-spotlight-revolutionary-features': '5',
+        'behind-code-mobile-first-architecture': '7',  
+        'roi-analysis-enterprise-value-impact': '8'
+      };
+      
+      const contentId = slugToIdMap[slug];
+      if (contentId) {
+        // Check for updated HTML content
+        const htmlKey = `preview_html_${contentId}_latest`;
+        updatedHTML = localStorage.getItem(htmlKey);
+        
+        // Check for updated content metadata
+        const contentKey = `rich_content_${contentId}_latest`;
+        const storedContent = localStorage.getItem(contentKey);
+        if (storedContent) {
+          try {
+            updatedContentData = JSON.parse(storedContent);
+            console.log('📖 CONTENT DISPLAY: Found updated content in localStorage for ID:', contentId);
+          } catch (e) {
+            console.warn('Failed to parse updated content data:', e);
+          }
+        }
+      }
+      
       // Mock content items from content pipeline - systematically generated
       const mockContentItems = [
         {
@@ -396,23 +431,30 @@ export default function PublishedContentPage() {
       // Convert to PublishedContent format
       const publishedContent: PublishedContent = {
         id: enrichedItem.id,
-        title: enrichedItem.title,
-        content: enrichedItem.htmlContent || generateContentHTML(enrichedItem),
+        title: updatedContentData?.title || enrichedItem.title,
+        content: updatedHTML || enrichedItem.htmlContent || generateContentHTML(enrichedItem),
         type: enrichedItem.type,
         slug: enrichedItem.slug,
         author: enrichedItem.author,
         published_date: enrichedItem.published_date,
         created_date: enrichedItem.created_date,
-        feature_title: enrichedItem.feature_title,
-        feature_category: enrichedItem.feature_category,
+        feature_title: updatedContentData?.feature_title || enrichedItem.feature_title,
+        feature_category: updatedContentData?.feature_category || enrichedItem.feature_category,
         reading_time: enrichedItem.reading_time,
         tags: enrichedItem.tags,
-        excerpt: enrichedItem.excerpt,
-        featured_image: enrichedItem.featured_image,
+        excerpt: updatedContentData?.description || enrichedItem.excerpt,
+        featured_image: updatedContentData?.coverImage || enrichedItem.featured_image,
         selected_layout: enrichedItem.selected_layout,
         layout_completed: enrichedItem.layout_completed,
         generated_content: enrichedItem.generated_content
       };
+      
+      // Log if using updated content
+      if (updatedHTML || updatedContentData) {
+        console.log('📖 CONTENT DISPLAY: Using updated content from localStorage');
+        console.log('- Updated HTML:', !!updatedHTML);
+        console.log('- Updated metadata:', !!updatedContentData);
+      }
 
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 500));

@@ -1,0 +1,2312 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { 
+  TrendingUp,
+  TrendingDown,
+  Target,
+  Eye,
+  Search,
+  Filter,
+  Calendar,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Star,
+  ExternalLink,
+  BarChart3,
+  Users,
+  DollarSign,
+  Activity,
+  Globe,
+  MessageSquare,
+  Send,
+  Bell,
+  Settings,
+  Download,
+  Share2,
+  Plus,
+  Edit,
+  FileText,
+  LineChart,
+  PieChart,
+  Zap,
+  BellRing,
+  Trash2,
+  Building,
+  MapPin,
+  Shield,
+  Award,
+  Briefcase,
+  X,
+  ArrowLeft,
+  ArrowRight,
+  Package,
+  Layers,
+  GitCompare,
+  Rocket,
+  Bot,
+  ChevronDown,
+  ChevronUp,
+  MoreHorizontal,
+  FileText,
+  Link2,
+  CheckCircle2,
+  AlertCircle
+} from 'lucide-react';
+
+interface CompetitorNews {
+  id: string;
+  title: string;
+  summary: string;
+  date: string;
+  source: string;
+  url: string;
+  sentiment: 'positive' | 'neutral' | 'negative';
+}
+
+interface FinancialMetrics {
+  revenue: string;
+  profit_margin: number;
+  revenue_growth: number;
+  burn_rate?: string;
+  runway?: string;
+}
+
+interface SocialMetrics {
+  linkedin_followers: number;
+  twitter_followers: number;
+  glassdoor_rating: number;
+  employee_sentiment: 'positive' | 'neutral' | 'negative';
+}
+
+interface MarketTrend {
+  period: string;
+  value: number;
+  competitor_id: string;
+  metric_type: 'market_share' | 'revenue' | 'growth_rate' | 'employee_count';
+}
+
+interface SlackNotification {
+  id: string;
+  type: 'insight' | 'alert' | 'report';
+  title: string;
+  message: string;
+  channels: string[];
+  scheduled_time?: string;
+  sent: boolean;
+  created_at: string;
+}
+
+interface IntelligenceAgent {
+  id: string;
+  name: string;
+  type: 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding' | 'products';
+  status: 'active' | 'paused' | 'error' | 'stopped';
+  competitor_ids: string[];
+  schedule: 'hourly' | 'daily' | 'weekly' | 'monthly' | 'on_trigger';
+  last_run: string;
+  next_run: string;
+  success_rate: number;
+  total_insights: number;
+  configuration: AgentConfiguration;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AgentConfiguration {
+  sources: string[]; // websites, APIs, social media, etc.
+  keywords: string[];
+  price_threshold?: number;
+  sentiment_tracking?: boolean;
+  deep_analysis?: boolean;
+  notification_triggers: string[];
+  data_retention_days: number;
+}
+
+interface AgentResult {
+  id: string;
+  agent_id: string;
+  competitor_id: string;
+  data_type: string;
+  raw_data: any;
+  processed_insights: string[];
+  confidence_score: number;
+  timestamp: string;
+  source_url?: string;
+}
+
+interface CompetitorProfile {
+  id: string;
+  name: string;
+  logo: string;
+  industry: string;
+  marketCap: string;
+  employees: string;
+  founded: string;
+  status: 'active' | 'monitoring' | 'inactive';
+  threat_level: 'high' | 'medium' | 'low';
+  last_updated: string;
+  website: string;
+  location: string;
+  description: string;
+  recent_funding: string;
+  valuation: string;
+  growth_rate: number;
+  market_share: number;
+  key_products: string[];
+  strengths: string[];
+  weaknesses: string[];
+  recent_news: CompetitorNews[];
+  financial_metrics: FinancialMetrics;
+  social_metrics: SocialMetrics;
+}
+
+interface CompetitorInsight {
+  id: string;
+  competitor: string;
+  type: 'pricing' | 'feature' | 'marketing' | 'hiring' | 'funding';
+  title: string;
+  description: string;
+  impact: 'high' | 'medium' | 'low';
+  timestamp: string;
+  source: string;
+  url?: string;
+}
+
+interface IntelligenceMetrics {
+  total_competitors: number;
+  active_monitoring: number;
+  high_threat: number;
+  new_insights: number;
+  market_share_change: number;
+}
+
+export default function CompetitorIntelligencePage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [competitors, setCompetitors] = useState<CompetitorProfile[]>([]);
+  const [insights, setInsights] = useState<CompetitorInsight[]>([]);
+  const [agents, setAgents] = useState<IntelligenceAgent[]>([]);
+  const [marketTrends, setMarketTrends] = useState<MarketTrend[]>([]);
+  const [slackNotifications, setSlackNotifications] = useState<SlackNotification[]>([]);
+  const [metrics, setMetrics] = useState<IntelligenceMetrics>({
+    total_competitors: 0,
+    active_monitoring: 0,
+    high_threat: 0,
+    new_insights: 0,
+    market_share_change: 0
+  });
+  const [selectedFilter, setSelectedFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [insightFilter, setInsightFilter] = useState<'all' | 'pricing' | 'feature' | 'marketing' | 'hiring' | 'funding'>('all');
+  const [selectedCompetitor, setSelectedCompetitor] = useState<CompetitorProfile | null>(null);
+  
+  // Agent search and filtering state
+  const [agentSearchQuery, setAgentSearchQuery] = useState('');
+  const [agentTypeFilter, setAgentTypeFilter] = useState<'all' | 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding'>('all');
+  const [agentStatusFilter, setAgentStatusFilter] = useState<'all' | 'active' | 'paused' | 'error'>('all');
+  const [agentGrouping, setAgentGrouping] = useState<'type' | 'status' | 'performance' | 'none'>('none');
+  
+  // CSV export states
+  const [csvDateRange, setCsvDateRange] = useState({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+    end: new Date()
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Competitor search and filtering state
+  const [competitorSearchQuery, setCompetitorSearchQuery] = useState('');
+  const [competitorThreatFilter, setCompetitorThreatFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
+  const [competitorStatusFilter, setCompetitorStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [competitorGrouping, setCompetitorGrouping] = useState<'threat' | 'industry' | 'size' | 'none'>('none');
+  const [loading, setLoading] = useState(true);
+  const [showDatabaseSetupNotice, setShowDatabaseSetupNotice] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'profiles' | 'agents' | 'reports' | 'changelog'>('overview');
+  const [reportStatuses, setReportStatuses] = useState<Record<string, 'new' | 'in-review' | 'action-taken' | 'resolved'>>({});
+  const [reviewedReports, setReviewedReports] = useState<string[]>([]);
+  const [selectedReports, setSelectedReports] = useState<string[]>([]);
+  const [reportFilters, setReportFilters] = useState({
+    competitor: 'all',
+    priority: 'all',
+    status: 'all',
+    category: 'all',
+    timeRange: 'all'
+  });
+  const [expandedReports, setExpandedReports] = useState<Set<string>>(new Set());
+  const [reportsCurrentPage, setReportsCurrentPage] = useState(1);
+  const reportsPerPage = 5;
+
+  const toggleReportExpansion = (reportId: string) => {
+    setExpandedReports(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(reportId)) {
+        newSet.delete(reportId);
+      } else {
+        newSet.add(reportId);
+      }
+      return newSet;
+    });
+  };
+
+  const exportReportsToCSV = () => {
+    const allReports = getCombinedIntelligenceReports();
+    
+    // Filter reports by date range
+    const filteredReports = allReports.filter(report => {
+      // Parse the time string to a date (simplified parsing)
+      const timeMap: { [key: string]: Date } = {
+        'just now': new Date(),
+        '1 hour ago': new Date(Date.now() - 60 * 60 * 1000),
+        '2 hours ago': new Date(Date.now() - 2 * 60 * 60 * 1000),
+        '3 hours ago': new Date(Date.now() - 3 * 60 * 60 * 1000),
+        '6 hours ago': new Date(Date.now() - 6 * 60 * 60 * 1000),
+        '1 day ago': new Date(Date.now() - 24 * 60 * 60 * 1000),
+        '2 days ago': new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+        '3 days ago': new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+      };
+      
+      const reportDate = timeMap[report.time] || new Date();
+      return reportDate >= csvDateRange.start && reportDate <= csvDateRange.end;
+    });
+
+    // Create CSV headers
+    const headers = [
+      'Date',
+      'Title',
+      'Type',
+      'Competitor',
+      'Category',
+      'Confidence',
+      'Status',
+      'Summary',
+      'Key Findings',
+      'Impact'
+    ];
+
+    // Convert reports to CSV rows
+    const csvRows = filteredReports.map(report => [
+      report.time,
+      `"${report.title.replace(/"/g, '""')}"`,
+      report.reportType,
+      report.competitor,
+      report.category,
+      `${report.confidence}%`,
+      report.status,
+      `"${report.summary.replace(/"/g, '""')}"`,
+      report.expandedContent?.keyFindings ? `"${report.expandedContent.keyFindings.join('; ').replace(/"/g, '""')}"` : '',
+      report.expandedContent?.impact ? `"${report.expandedContent.impact.replace(/"/g, '""')}"` : ''
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `intelligence-reports-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    setShowDatePicker(false);
+  };
+
+  const getFilteredReports = () => {
+    const allReports = getCombinedIntelligenceReports();
+    
+    return allReports.filter(report => {
+      // Status filter
+      if (reportFilters.status !== 'all') {
+        const reportStatus = report.status === 'reviewed' ? 'reviewed' : 'unreviewed';
+        if (reportStatus !== reportFilters.status) return false;
+      }
+      
+      // Category filter
+      if (reportFilters.category !== 'all') {
+        if (report.reportType !== reportFilters.category) return false;
+      }
+      
+      // Time range filter
+      if (reportFilters.timeRange !== 'all') {
+        const now = new Date();
+        const timeMap: { [key: string]: Date } = {
+          'just now': new Date(),
+          '1 hour ago': new Date(Date.now() - 60 * 60 * 1000),
+          '2 hours ago': new Date(Date.now() - 2 * 60 * 60 * 1000),
+          '3 hours ago': new Date(Date.now() - 3 * 60 * 60 * 1000),
+          '6 hours ago': new Date(Date.now() - 6 * 60 * 60 * 1000),
+          '1 day ago': new Date(Date.now() - 24 * 60 * 60 * 1000),
+          '2 days ago': new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+          '3 days ago': new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+        };
+        
+        const reportDate = timeMap[report.time] || new Date();
+        
+        switch (reportFilters.timeRange) {
+          case 'today':
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (reportDate < today) return false;
+            break;
+          case 'week':
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+            if (reportDate < weekAgo) return false;
+            break;
+          case 'month':
+            const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+            if (reportDate < monthAgo) return false;
+            break;
+        }
+      }
+      
+      return true;
+    });
+  };
+
+  const getPaginatedReports = () => {
+    const filtered = getFilteredReports();
+    const startIndex = (reportsCurrentPage - 1) * reportsPerPage;
+    return filtered.slice(startIndex, startIndex + reportsPerPage);
+  };
+
+  const getReportsTotalPages = () => {
+    return Math.ceil(getFilteredReports().length / reportsPerPage);
+  };
+
+  const updateReportStatus = (reportId: string, status: 'new' | 'in-review' | 'action-taken' | 'resolved') => {
+    setReportStatuses(prev => ({
+      ...prev,
+      [reportId]: status
+    }));
+  };
+
+  const toggleReportReviewed = (reportId: string) => {
+    setReviewedReports(prev => 
+      prev.includes(reportId) 
+        ? prev.filter(id => id !== reportId)
+        : [...prev, reportId]
+    );
+  };
+
+  const toggleReportSelected = (reportId: string) => {
+    setSelectedReports(prev => 
+      prev.includes(reportId) 
+        ? prev.filter(id => id !== reportId)
+        : [...prev, reportId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    const allReportIds = [
+      'report-1', 'report-2', 'report-3', 'report-4'
+    ];
+    if (selectedReports.length === allReportIds.length) {
+      setSelectedReports([]);
+    } else {
+      setSelectedReports(allReportIds);
+    }
+  };
+
+  const bulkUpdateStatus = (status: 'new' | 'in-review' | 'action-taken' | 'resolved') => {
+    const updates: Record<string, 'new' | 'in-review' | 'action-taken' | 'resolved'> = {};
+    selectedReports.forEach(id => {
+      updates[id] = status;
+    });
+    setReportStatuses(prev => ({ ...prev, ...updates }));
+    setSelectedReports([]); // Clear selection
+  };
+
+  const bulkMarkAsReviewed = () => {
+    setReviewedReports(prev => Array.from(new Set([...prev, ...selectedReports])));
+    setSelectedReports([]); // Clear selection
+  };
+
+  const getReportStatusColor = (status: string) => {
+    switch (status) {
+      case 'new': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'in-review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'action-taken': return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'resolved': return 'bg-green-100 text-green-800 border-green-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+    }
+  };
+
+  const fetchCompetitorData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch real competitor data from API
+      const competitorsResponse = await fetch('/api/competitors');
+      let competitorsData = [];
+      
+      if (competitorsResponse.ok) {
+        const result = await competitorsResponse.json();
+        competitorsData = result.competitors.map((competitor: any) => ({
+          id: competitor.id,
+          name: competitor.name,
+          logo: `https://logo.clearbit.com/${competitor.domain || 'example.com'}`,
+          industry: competitor.industry || 'Technology',
+          marketCap: competitor.annual_revenue ? `$${(competitor.annual_revenue / 1e9).toFixed(1)}B` : 'N/A',
+          employees: competitor.employee_count?.toLocaleString() || 'N/A',
+          founded: competitor.last_funding_date?.split('-')[0] || 'N/A',
+          status: competitor.status,
+          threat_level: competitor.threat_level,
+          last_updated: competitor.updated_at,
+          website: competitor.domain,
+          location: competitor.location || 'N/A',
+          description: competitor.description || 'No description available',
+          recent_funding: competitor.funding_stage || 'Unknown',
+          valuation: competitor.annual_revenue ? `$${(competitor.annual_revenue / 1e9).toFixed(1)}B` : 'N/A',
+          growth_rate: Math.random() * 50, // Placeholder - would come from actual metrics
+          market_share: Math.random() * 30, // Placeholder - would come from actual metrics
+          key_products: competitor.key_differentiators || [],
+          strengths: competitor.key_differentiators || [],
+          weaknesses: [], // Would extract from notes or separate field
+          recent_news: [] // Would fetch from signals API
+        }));
+        console.log(`✅ Successfully fetched ${competitorsData.length} competitors from database`);
+      } else {
+        console.warn('⚠️ Database not yet configured - using mock data. To use real data:');
+        console.warn('   1. Go to Supabase SQL Editor');
+        console.warn('   2. Execute: database/03_competitive_intelligence_schema.sql');
+        console.warn('   3. Refresh the page');
+      }
+      
+      // If no data from API, fall back to mock data
+      const usingMockData = competitorsData.length === 0;
+      const mockCompetitors: CompetitorProfile[] = competitorsData.length > 0 ? competitorsData : [
+        {
+          id: '1',
+          name: 'Salesforce',
+          logo: 'https://logo.clearbit.com/salesforce.com',
+          industry: 'CRM & Sales',
+          marketCap: '$248B',
+          employees: '79,000',
+          founded: '1999',
+          status: 'active',
+          threat_level: 'high',
+          last_updated: '2024-01-15T10:30:00Z',
+          website: 'salesforce.com',
+          location: 'San Francisco, CA',
+          description: 'Leading cloud-based CRM platform with AI-powered sales and marketing tools',
+          recent_funding: 'IPO 2004',
+          valuation: '$248B',
+          growth_rate: 24.3,
+          market_share: 23.8,
+          key_products: ['Sales Cloud', 'Service Cloud', 'Marketing Cloud', 'Einstein AI'],
+          strengths: ['Market leader', 'Comprehensive platform', 'Strong AI integration'],
+          weaknesses: ['High complexity', 'Expensive for SMBs', 'Steep learning curve'],
+          recent_news: [
+            {
+              id: 'n1',
+              title: 'Salesforce announces new AI features for Sales Cloud',
+              summary: 'Enhanced predictive analytics and automated lead scoring capabilities',
+              date: '2024-01-15',
+              source: 'TechCrunch',
+              url: 'https://techcrunch.com/salesforce-ai',
+              sentiment: 'positive'
+            }
+          ],
+          financial_metrics: {
+            revenue: '$31.4B',
+            profit_margin: 2.1,
+            revenue_growth: 11.2
+          },
+          social_metrics: {
+            linkedin_followers: 1200000,
+            twitter_followers: 890000,
+            glassdoor_rating: 4.4,
+            employee_sentiment: 'positive'
+          }
+        },
+        {
+          id: '2',
+          name: 'HubSpot',
+          logo: 'https://logo.clearbit.com/hubspot.com',
+          industry: 'Marketing & Sales',
+          marketCap: '$31B',
+          employees: '7,000',
+          founded: '2006',
+          status: 'active',
+          threat_level: 'high',
+          last_updated: '2024-01-15T09:15:00Z',
+          website: 'hubspot.com',
+          location: 'Cambridge, MA',
+          description: 'Inbound marketing, sales, and customer service platform with integrated CRM',
+          recent_funding: 'IPO 2014',
+          valuation: '$31B',
+          growth_rate: 32.1,
+          market_share: 12.4,
+          key_products: ['Marketing Hub', 'Sales Hub', 'Service Hub', 'CMS Hub'],
+          strengths: ['User-friendly interface', 'Strong inbound methodology', 'Integrated platform'],
+          weaknesses: ['Limited enterprise features', 'Pricing complexity', 'Reporting limitations'],
+          recent_news: [
+            {
+              id: 'n2',
+              title: 'HubSpot launches AI-powered content assistant',
+              summary: 'New AI writing tools integrated across marketing and sales workflows',
+              date: '2024-01-14',
+              source: 'MarTech Today',
+              url: 'https://martech.hubspot.com/ai-content',
+              sentiment: 'positive'
+            }
+          ],
+          financial_metrics: {
+            revenue: '$1.7B',
+            profit_margin: -2.3,
+            revenue_growth: 25.1
+          },
+          social_metrics: {
+            linkedin_followers: 980000,
+            twitter_followers: 455000,
+            glassdoor_rating: 4.3,
+            employee_sentiment: 'positive'
+          }
+        },
+        {
+          id: '3',
+          name: 'Pipedrive',
+          logo: 'https://logo.clearbit.com/pipedrive.com',
+          industry: 'Sales CRM',
+          marketCap: '$2.1B',
+          employees: '1,000',
+          founded: '2010',
+          status: 'monitoring',
+          threat_level: 'medium',
+          last_updated: '2024-01-14T14:22:00Z',
+          website: 'pipedrive.com',
+          location: 'Tallinn, Estonia',
+          description: 'Sales-focused CRM designed for small to medium businesses.',
+          recent_funding: '$90M Series B',
+          valuation: '$2.1B',
+          growth_rate: 15.2,
+          market_share: 8.5,
+          key_products: ['Sales CRM', 'Pipeline Management', 'Email Sync', 'Mobile App'],
+          strengths: ['Simple interface', 'Visual pipeline', 'Affordable pricing'],
+          weaknesses: ['Limited marketing features', 'Basic reporting', 'Fewer integrations'],
+          recent_news: [
+            {
+              id: 'p1',
+              title: 'Pipedrive Launches New AI Features',
+              summary: 'Enhanced sales forecasting and lead scoring capabilities.',
+              date: '2024-01-12T00:00:00Z',
+              source: 'TechCrunch',
+              url: '#',
+              sentiment: 'positive'
+            }
+          ],
+          financial_metrics: {
+            revenue: '$142M ARR',
+            profit_margin: 18.5,
+            revenue_growth: 22.8
+          },
+          social_metrics: {
+            linkedin_followers: 75000,
+            twitter_followers: 45000,
+            glassdoor_rating: 4.1,
+            employee_sentiment: 'positive'
+          }
+        },
+        {
+          id: '4',
+          name: 'Zendesk',
+          logo: 'https://logo.clearbit.com/zendesk.com',
+          industry: 'Customer Support',
+          marketCap: '$13B',
+          employees: '6,000',
+          founded: '2007',
+          status: 'active',
+          threat_level: 'medium',
+          last_updated: '2024-01-14T11:45:00Z',
+          website: 'zendesk.com',
+          location: 'San Francisco, CA',
+          description: 'Customer service platform with ticketing, knowledge base, and chat support.',
+          recent_funding: 'Public Company',
+          valuation: '$13B',
+          growth_rate: 12.1,
+          market_share: 18.3,
+          key_products: ['Support Suite', 'Guide', 'Chat', 'Talk', 'Explore'],
+          strengths: ['Market leader', 'Comprehensive platform', 'Strong integrations', 'Scalable'],
+          weaknesses: ['Complex pricing', 'Steep learning curve', 'Expensive for SMBs'],
+          recent_news: [
+            {
+              id: 'z1',
+              title: 'Zendesk Expands AI Capabilities',
+              summary: 'New Answer Bot features and improved automation tools.',
+              date: '2024-01-10T00:00:00Z',
+              source: 'Business Wire',
+              url: '#',
+              sentiment: 'positive'
+            }
+          ],
+          financial_metrics: {
+            revenue: '$1.67B ARR',
+            profit_margin: 14.2,
+            revenue_growth: 16.8
+          },
+          social_metrics: {
+            linkedin_followers: 320000,
+            twitter_followers: 185000,
+            glassdoor_rating: 4.2,
+            employee_sentiment: 'positive'
+          }
+        }
+      ];
+
+      const mockInsights: CompetitorInsight[] = [
+        {
+          id: '1',
+          competitor: 'Salesforce',
+          type: 'pricing',
+          title: 'New Enterprise Tier Pricing Released',
+          description: 'Salesforce introduced a new enterprise pricing tier with advanced AI features at $300/user/month',
+          impact: 'high',
+          timestamp: '2024-01-15T08:30:00Z',
+          source: 'Salesforce.com',
+          url: 'https://salesforce.com/pricing'
+        },
+        {
+          id: '2',
+          competitor: 'HubSpot',
+          type: 'feature',
+          title: 'AI-Powered Lead Scoring Launch',
+          description: 'HubSpot launched advanced AI lead scoring capabilities, competing directly with our ML features',
+          impact: 'high',
+          timestamp: '2024-01-14T15:45:00Z',
+          source: 'HubSpot Blog',
+          url: 'https://blog.hubspot.com'
+        },
+        {
+          id: '3',
+          competitor: 'Pipedrive',
+          type: 'marketing',
+          title: 'Aggressive SMB Marketing Campaign',
+          description: 'Pipedrive launched a major marketing campaign targeting small businesses with 50% off first year',
+          impact: 'medium',
+          timestamp: '2024-01-13T12:20:00Z',
+          source: 'LinkedIn Ads',
+        },
+        {
+          id: '4',
+          competitor: 'Zendesk',
+          type: 'hiring',
+          title: 'Engineering Team Expansion',
+          description: 'Zendesk posted 25+ new engineering positions, suggesting major product development',
+          impact: 'medium',
+          timestamp: '2024-01-12T09:10:00Z',
+          source: 'LinkedIn Jobs',
+        }
+      ];
+
+      // Mock AI Agents data
+      const mockAgents: IntelligenceAgent[] = [
+        {
+          id: 'agent1',
+          name: 'Pricing Monitor',
+          type: 'pricing',
+          status: 'active',
+          competitor_ids: ['1', '2'],
+          schedule: 'daily',
+          last_run: '2024-01-15T08:00:00Z',
+          next_run: '2024-01-16T08:00:00Z',
+          success_rate: 94.2,
+          total_insights: 127,
+          configuration: {
+            sources: ['competitor websites', 'pricing pages', 'product demos'],
+            keywords: ['pricing', 'cost', 'subscription', 'enterprise'],
+            price_threshold: 10,
+            sentiment_tracking: false,
+            deep_analysis: true,
+            notification_triggers: ['price_change', 'new_tier'],
+            data_retention_days: 90
+          },
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-15T10:30:00Z'
+        },
+        {
+          id: 'agent2',
+          name: 'Feature Tracker',
+          type: 'features',
+          status: 'active',
+          competitor_ids: ['1', '2', '3', '4'],
+          schedule: 'weekly',
+          last_run: '2024-01-14T12:00:00Z',
+          next_run: '2024-01-21T12:00:00Z',
+          success_rate: 89.1,
+          total_insights: 84,
+          configuration: {
+            sources: ['product pages', 'release notes', 'changelogs', 'documentation'],
+            keywords: ['new feature', 'update', 'launch', 'beta', 'AI'],
+            sentiment_tracking: true,
+            deep_analysis: true,
+            notification_triggers: ['new_feature', 'major_update'],
+            data_retention_days: 120
+          },
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-14T15:00:00Z'
+        },
+        {
+          id: 'agent3',
+          name: 'News & Social Monitor',
+          type: 'news',
+          status: 'active',
+          competitor_ids: ['1', '2'],
+          schedule: 'hourly',
+          last_run: '2024-01-15T10:00:00Z',
+          next_run: '2024-01-15T11:00:00Z',
+          success_rate: 96.8,
+          total_insights: 312,
+          configuration: {
+            sources: ['tech news sites', 'social media', 'press releases', 'blogs'],
+            keywords: ['acquisition', 'funding', 'partnership', 'executive'],
+            sentiment_tracking: true,
+            deep_analysis: false,
+            notification_triggers: ['negative_news', 'major_announcement'],
+            data_retention_days: 60
+          },
+          created_at: '2024-01-01T00:00:00Z',
+          updated_at: '2024-01-15T10:00:00Z'
+        }
+      ];
+
+      // Mock Market Trends data
+      const mockMarketTrends: MarketTrend[] = [
+        { period: '2024-01', value: 23.8, competitor_id: '1', metric_type: 'market_share' },
+        { period: '2024-02', value: 23.5, competitor_id: '1', metric_type: 'market_share' },
+        { period: '2024-03', value: 24.1, competitor_id: '1', metric_type: 'market_share' },
+        { period: '2024-01', value: 12.1, competitor_id: '2', metric_type: 'market_share' },
+        { period: '2024-02', value: 12.3, competitor_id: '2', metric_type: 'market_share' },
+        { period: '2024-03', value: 12.4, competitor_id: '2', metric_type: 'market_share' },
+        { period: '2024-01', value: 24.1, competitor_id: '1', metric_type: 'growth_rate' },
+        { period: '2024-02', value: 23.8, competitor_id: '1', metric_type: 'growth_rate' },
+        { period: '2024-03', value: 24.3, competitor_id: '1', metric_type: 'growth_rate' },
+        { period: '2024-01', value: 31.2, competitor_id: '2', metric_type: 'growth_rate' },
+        { period: '2024-02', value: 32.5, competitor_id: '2', metric_type: 'growth_rate' },
+        { period: '2024-03', value: 32.1, competitor_id: '2', metric_type: 'growth_rate' }
+      ];
+
+      // Mock Slack Notifications data
+      const mockSlackNotifications: SlackNotification[] = [
+        {
+          id: 'slack1',
+          type: 'alert',
+          title: 'Salesforce Price Increase Alert',
+          message: 'Salesforce increased Enterprise tier pricing by 15% - immediate competitor analysis recommended',
+          channels: ['#competitive-intel', '#sales-team'],
+          sent: true,
+          created_at: '2024-01-15T08:30:00Z'
+        },
+        {
+          id: 'slack2',
+          type: 'insight',
+          title: 'Weekly Competitive Intelligence Report',
+          message: 'HubSpot launched new AI features, Pipedrive acquired new integration partner',
+          channels: ['#competitive-intel', '#product-team'],
+          scheduled_time: '2024-01-16T09:00:00Z',
+          sent: false,
+          created_at: '2024-01-15T10:00:00Z'
+        }
+      ];
+
+      setCompetitors(competitorsData.length > 0 ? competitorsData : mockCompetitors);
+      setInsights(mockInsights);
+      setAgents(mockAgents);
+      setMarketTrends(mockMarketTrends);
+      setSlackNotifications(mockSlackNotifications);
+      setShowDatabaseSetupNotice(usingMockData);
+      
+      // Calculate metrics
+      const finalCompetitors = competitorsData.length > 0 ? competitorsData : mockCompetitors;
+      const newMetrics: IntelligenceMetrics = {
+        total_competitors: finalCompetitors.length,
+        active_monitoring: finalCompetitors.filter(c => c.status === 'active').length,
+        high_threat: finalCompetitors.filter(c => c.threat_level === 'high').length,
+        new_insights: mockInsights.filter(i => new Date(i.timestamp) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)).length,
+        market_share_change: -2.3 // Mock percentage change
+      };
+      
+      setMetrics(newMetrics);
+    } catch (error) {
+      console.error('Error fetching competitor data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompetitorData();
+    
+    // Handle tab parameter from URL
+    const tab = searchParams?.get('tab');
+    if (tab && ['overview', 'profiles', 'agents', 'reports', 'changelog'].includes(tab)) {
+      setActiveTab(tab as 'overview' | 'profiles' | 'agents' | 'reports' | 'changelog');
+    }
+  }, [searchParams]);
+
+
+  const filteredInsights = insightFilter === 'all' ? insights : insights.filter(i => i.type === insightFilter);
+  
+  // Competitor filtering logic
+  const filteredCompetitors = competitors.filter(competitor => {
+    // Search filter
+    if (competitorSearchQuery) {
+      const query = competitorSearchQuery.toLowerCase();
+      if (!competitor.name.toLowerCase().includes(query) && 
+          !competitor.industry.toLowerCase().includes(query) &&
+          !competitor.description.toLowerCase().includes(query)) {
+        return false;
+      }
+    }
+    
+    // Threat level filter
+    if (competitorThreatFilter !== 'all' && competitor.threat_level !== competitorThreatFilter) {
+      return false;
+    }
+    
+    // Status filter (based on monitoring status)
+    if (competitorStatusFilter !== 'all') {
+      const isActive = competitor.status === 'active'; // Assuming status field exists
+      if (competitorStatusFilter === 'active' && !isActive) return false;
+      if (competitorStatusFilter === 'inactive' && isActive) return false;
+    }
+    
+    return true;
+  });
+
+  // Competitor grouping logic
+  const groupedCompetitors = React.useMemo(() => {
+    if (competitorGrouping === 'none') {
+      return [{ title: '', competitors: filteredCompetitors }];
+    }
+    
+    const groups: { title: string; competitors: CompetitorProfile[] }[] = [];
+    
+    if (competitorGrouping === 'threat') {
+      const threats = Array.from(new Set(filteredCompetitors.map(c => c.threat_level)));
+      threats.forEach(threat => {
+        const threatCompetitors = filteredCompetitors.filter(c => c.threat_level === threat);
+        groups.push({
+          title: threat.charAt(0).toUpperCase() + threat.slice(1) + ' Threat',
+          competitors: threatCompetitors
+        });
+      });
+    } else if (competitorGrouping === 'industry') {
+      const industries = Array.from(new Set(filteredCompetitors.map(c => c.industry)));
+      industries.forEach(industry => {
+        const industryCompetitors = filteredCompetitors.filter(c => c.industry === industry);
+        groups.push({
+          title: industry,
+          competitors: industryCompetitors
+        });
+      });
+    } else if (competitorGrouping === 'size') {
+      // Group by company size based on employee count
+      const large = filteredCompetitors.filter(c => c.employees && parseInt(c.employees.replace(/,/g, '')) > 1000);
+      const medium = filteredCompetitors.filter(c => c.employees && parseInt(c.employees.replace(/,/g, '')) > 100 && parseInt(c.employees.replace(/,/g, '')) <= 1000);
+      const small = filteredCompetitors.filter(c => !c.employees || parseInt(c.employees.replace(/,/g, '')) <= 100);
+      
+      if (large.length > 0) groups.push({ title: 'Large Companies (1000+ employees)', competitors: large });
+      if (medium.length > 0) groups.push({ title: 'Medium Companies (100-1000 employees)', competitors: medium });
+      if (small.length > 0) groups.push({ title: 'Small Companies (<100 employees)', competitors: small });
+    }
+    
+    return groups;
+  }, [filteredCompetitors, competitorGrouping]);
+  
+  // Agent filtering logic
+  const filteredAgents = agents.filter(agent => {
+    // Search filter
+    if (agentSearchQuery) {
+      const query = agentSearchQuery.toLowerCase();
+      if (!agent.name.toLowerCase().includes(query) && 
+          !agent.type.toLowerCase().includes(query)) {
+        return false;
+      }
+    }
+    
+    // Type filter
+    if (agentTypeFilter !== 'all' && agent.type !== agentTypeFilter) {
+      return false;
+    }
+    
+    // Status filter
+    if (agentStatusFilter !== 'all' && agent.status !== agentStatusFilter) {
+      return false;
+    }
+    
+    return true;
+  });
+
+  // Agent grouping logic
+  const groupedAgents = React.useMemo(() => {
+    if (agentGrouping === 'none') {
+      return [{ title: '', agents: filteredAgents }];
+    }
+    
+    const groups: { title: string; agents: IntelligenceAgent[] }[] = [];
+    
+    if (agentGrouping === 'type') {
+      const types = Array.from(new Set(filteredAgents.map(a => a.type)));
+      types.forEach(type => {
+        const typeAgents = filteredAgents.filter(a => a.type === type);
+        groups.push({
+          title: type.charAt(0).toUpperCase() + type.slice(1) + ' Agents',
+          agents: typeAgents
+        });
+      });
+    } else if (agentGrouping === 'status') {
+      const statuses = Array.from(new Set(filteredAgents.map(a => a.status)));
+      statuses.forEach(status => {
+        const statusAgents = filteredAgents.filter(a => a.status === status);
+        groups.push({
+          title: status.charAt(0).toUpperCase() + status.slice(1) + ' Agents',
+          agents: statusAgents
+        });
+      });
+    } else if (agentGrouping === 'performance') {
+      const highPerf = filteredAgents.filter(a => a.success_rate >= 95);
+      const mediumPerf = filteredAgents.filter(a => a.success_rate >= 85 && a.success_rate < 95);
+      const lowPerf = filteredAgents.filter(a => a.success_rate < 85);
+      
+      if (highPerf.length > 0) groups.push({ title: 'High Performance (95%+)', agents: highPerf });
+      if (mediumPerf.length > 0) groups.push({ title: 'Medium Performance (85-94%)', agents: mediumPerf });
+      if (lowPerf.length > 0) groups.push({ title: 'Low Performance (<85%)', agents: lowPerf });
+    }
+    
+    return groups;
+  }, [filteredAgents, agentGrouping]);
+
+  const getThreatColor = (level: string) => {
+    switch (level) {
+      case 'high': return 'bg-red-100 text-red-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'monitoring': return 'bg-blue-100 text-blue-800';
+      case 'inactive': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getImpactColor = (impact: string) => {
+    switch (impact) {
+      case 'high': return 'text-red-600';
+      case 'medium': return 'text-yellow-600';
+      case 'low': return 'text-green-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'pricing': return DollarSign;
+      case 'feature': return Target;
+      case 'marketing': return TrendingUp;
+      case 'hiring': return Users;
+      case 'funding': return BarChart3;
+      default: return Eye;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  // Generate company-specific brand colors and patterns
+  const getBrandColors = (companyName: string) => {
+    const brandPalettes: Record<string, any> = {
+      'salesforce': {
+        primary: '#00A1E0',
+        secondary: '#032E61',
+        accent: '#FF6B35',
+        gradient: 'from-blue-500 via-blue-600 to-blue-700',
+        pattern: 'salesforce'
+      },
+      'hubspot': {
+        primary: '#FF5C35',
+        secondary: '#FF7A59',
+        accent: '#FFA07A',
+        gradient: 'from-orange-500 via-orange-600 to-red-600',
+        pattern: 'hubspot'
+      },
+      'pipedrive': {
+        primary: '#00AC69',
+        secondary: '#009F5F',
+        accent: '#7ED321',
+        gradient: 'from-green-500 via-green-600 to-emerald-600',
+        pattern: 'pipedrive'
+      },
+      'zendesk': {
+        primary: '#17494D',
+        secondary: '#03363D',
+        accent: '#F79A3E',
+        gradient: 'from-teal-700 via-slate-700 to-gray-800',
+        pattern: 'zendesk'
+      },
+    };
+
+    const key = companyName.toLowerCase();
+    if (brandPalettes[key]) {
+      return brandPalettes[key];
+    }
+
+    // Fallback: generate colors based on company name hash
+    const hash = companyName.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    
+    const hue = Math.abs(hash) % 360;
+    return {
+      primary: `hsl(${hue}, 70%, 50%)`,
+      secondary: `hsl(${hue}, 80%, 40%)`,
+      accent: `hsl(${(hue + 60) % 360}, 60%, 60%)`,
+      gradient: `from-blue-500 via-purple-600 to-indigo-700`,
+      pattern: 'default'
+    };
+  };
+
+  const getBrandPattern = (patternType: string, colors: any) => {
+    const patterns = {
+      salesforce: (
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 opacity-20">
+            <svg width="100%" height="100%" viewBox="0 0 100 100" className="absolute inset-0">
+              <defs>
+                <pattern id="salesforce-clouds" x="0" y="0" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <circle cx="20" cy="20" r="8" fill="white" opacity="0.1"/>
+                  <circle cx="32" cy="12" r="6" fill="white" opacity="0.15"/>
+                  <circle cx="8" cy="28" r="5" fill="white" opacity="0.1"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#salesforce-clouds)"/>
+            </svg>
+          </div>
+        </div>
+      ),
+      hubspot: (
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 opacity-30">
+            <div className="absolute top-4 right-8 w-8 h-8 border-2 border-white/20 rounded-full"></div>
+            <div className="absolute top-12 left-12 w-6 h-6 bg-white/10 rounded-full"></div>
+            <div className="absolute bottom-8 right-16 w-4 h-4 bg-white/15 rounded-full"></div>
+            <div className="absolute bottom-16 left-8 w-12 h-12 border border-white/10 rounded-full"></div>
+          </div>
+        </div>
+      ),
+      pipedrive: (
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 opacity-25">
+            <svg width="100%" height="100%" viewBox="0 0 100 100" className="absolute inset-0">
+              <defs>
+                <pattern id="pipedrive-pipeline" x="0" y="0" width="20" height="40" patternUnits="userSpaceOnUse">
+                  <rect x="8" y="0" width="4" height="40" fill="white" opacity="0.1"/>
+                  <circle cx="10" cy="10" r="3" fill="white" opacity="0.2"/>
+                  <circle cx="10" cy="30" r="3" fill="white" opacity="0.2"/>
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#pipedrive-pipeline)"/>
+            </svg>
+          </div>
+        </div>
+      ),
+      zendesk: (
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-6 left-6 w-3 h-3 bg-white/20 transform rotate-45"></div>
+            <div className="absolute top-4 right-12 w-2 h-2 bg-white/15 transform rotate-45"></div>
+            <div className="absolute bottom-8 left-16 w-4 h-4 bg-white/10 transform rotate-45"></div>
+            <div className="absolute bottom-12 right-6 w-3 h-3 bg-white/25 transform rotate-45"></div>
+            <div className="absolute top-16 left-1/2 w-2 h-2 bg-white/15 transform rotate-45"></div>
+          </div>
+        </div>
+      ),
+      default: (
+        <div className="absolute inset-0">
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute top-4 right-6 w-6 h-6 border border-white/20 rounded"></div>
+            <div className="absolute bottom-6 left-4 w-4 h-4 bg-white/15 rounded"></div>
+            <div className="absolute top-12 left-8 w-3 h-3 bg-white/10 rounded-full"></div>
+          </div>
+        </div>
+      )
+    };
+
+    return patterns[patternType as keyof typeof patterns] || patterns.default;
+  };
+
+  // Combined Intelligence Reports Function
+  const getCombinedIntelligenceReports = () => {
+    const allReports = [
+      {
+        id: 'market-1',
+        title: 'Salesforce Pricing Strategy Update',
+        summary: 'Salesforce introduced a new enterprise pricing tier with advanced AI features at $300/user/month, representing a 25% increase from previous pricing.',
+        competitor: 'Salesforce',
+        category: 'Pricing Changes',
+        time: '2 hours ago',
+        confidence: 94,
+        status: 'new',
+        reportType: 'market' as const,
+        expandedContent: {
+          summary: 'Comprehensive analysis of Salesforce\'s new enterprise pricing strategy and its competitive implications.',
+          keyFindings: [
+            'New Enterprise AI tier priced at $300/user/month (+25% from previous top tier)',
+            'Advanced Einstein features now require enterprise subscription',
+            'Competitive pricing analysis shows 15-20% premium over similar offerings',
+            'Bundle strategy removes individual AI feature purchases'
+          ],
+          impact: 'This pricing change may force enterprise customers to evaluate alternatives, creating opportunities for competitive displacement in price-sensitive accounts.',
+          recommendations: [
+            'Develop competitive response pricing for enterprise AI features',
+            'Target Salesforce enterprise accounts with value-based pricing proposals',
+            'Enhance our AI feature positioning against new Salesforce offerings',
+            'Create migration incentives for price-sensitive Salesforce customers'
+          ],
+          confidence: 94,
+          sources: ['Salesforce pricing page', 'Customer feedback', 'Sales team reports', 'Competitive analysis']
+        }
+      },
+      {
+        id: 'product-1',
+        title: 'HubSpot AI Features Launch',
+        summary: 'HubSpot launched comprehensive AI-powered lead scoring and content generation tools, directly competing with our ML-driven insights platform.',
+        competitor: 'HubSpot',
+        category: 'Product Updates',
+        time: '4 hours ago',
+        confidence: 89,
+        status: 'new',
+        reportType: 'product' as const,
+        expandedContent: {
+          summary: 'HubSpot\'s new AI capabilities represent a direct challenge to our market position in ML-driven insights.',
+          keyFindings: [
+            'AI-powered lead scoring with 90%+ accuracy claims',
+            'Content generation tool for emails, social posts, and landing pages',
+            'Integration with existing HubSpot CRM and marketing tools',
+            'Free tier includes basic AI features for user acquisition'
+          ],
+          impact: 'Direct competition to our core ML insights offering, potentially impacting new customer acquisition and existing customer retention.',
+          technicalDetails: {
+            'AI Models': 'GPT-4 integration, proprietary lead scoring algorithms',
+            'Features': 'Lead scoring, content generation, automated workflows',
+            'Pricing': 'Included in Professional tier ($800/month), free basic features',
+            'Integration': 'Native CRM integration, API access available'
+          },
+          recommendations: [
+            'Accelerate our AI feature roadmap to match or exceed capabilities',
+            'Emphasize unique value props of our ML approach vs generic AI',
+            'Monitor customer feedback and churn in competitive segments',
+            'Consider strategic partnerships for enhanced AI capabilities'
+          ],
+          confidence: 89
+        }
+      },
+      {
+        id: 'market-2',
+        title: 'Pipedrive SMB Campaign Analysis',
+        summary: 'Pipedrive launched aggressive SMB marketing campaign with 50% first-year discount, targeting our core customer segment.',
+        competitor: 'Pipedrive',
+        category: 'Marketing Strategy',
+        time: '6 hours ago',
+        confidence: 76,
+        status: 'reviewed',
+        reportType: 'market' as const,
+        expandedContent: {
+          summary: 'Analysis of Pipedrive\'s targeted SMB acquisition campaign and competitive response strategies.',
+          campaignDetails: {
+            'Target Segment': 'SMB companies (10-100 employees)',
+            'Discount Offer': '50% off first year subscription',
+            'Campaign Budget': 'Estimated $1.2M across Q1',
+            'Channels': 'Google Ads, LinkedIn, industry publications'
+          },
+          keyFindings: [
+            'Targeting exact customer profile as our core segment',
+            'Free migration services and dedicated onboarding',
+            'Content marketing focused on "simple CRM" messaging',
+            'Partner referral program with 20% commission'
+          ],
+          impact: 'Could capture 3-5% of our target SMB market if successful, particularly price-sensitive prospects.',
+          recommendations: [
+            'Launch competitive SMB retention campaign',
+            'Enhance value demonstration for existing SMB customers',
+            'Review our SMB pricing strategy and incentive structure',
+            'Develop SMB-specific case studies and success stories'
+          ],
+          confidence: 76
+        }
+      },
+      {
+        id: 'product-2',
+        title: 'Zendesk Engineering Expansion',
+        summary: 'Zendesk posted 25+ new engineering positions, indicating major product development initiative likely focused on AI integration.',
+        competitor: 'Zendesk',
+        category: 'Team Changes',
+        time: '8 hours ago',
+        confidence: 82,
+        status: 'new',
+        reportType: 'product' as const
+        // Note: No expandedContent for this report to test conditional Show More display
+      },
+      {
+        id: 'market-3',
+        title: 'Industry Trend: CRM Consolidation',
+        summary: 'Market analysis shows 34% increase in CRM platform consolidation among mid-market companies, favoring integrated solutions.',
+        competitor: 'Market Analysis',
+        category: 'Industry Trends',
+        time: '12 hours ago',
+        confidence: 91,
+        status: 'reviewed',
+        reportType: 'market' as const
+      },
+      {
+        id: 'product-3',
+        title: 'Salesforce Einstein AI Enhancement',
+        summary: 'Salesforce released major Einstein AI updates including predictive analytics and automated workflow suggestions.',
+        competitor: 'Salesforce',
+        category: 'AI Features',
+        time: '1 day ago',
+        confidence: 87,
+        status: 'new',
+        reportType: 'product' as const
+      },
+      {
+        id: 'market-4',
+        title: 'Customer Churn Analysis Alert',
+        summary: 'Detected 15% increase in competitor mentions in negative customer feedback, suggesting potential churn risk.',
+        competitor: 'Cross-Platform',
+        category: 'Customer Sentiment',
+        time: '1 day ago',
+        confidence: 73,
+        status: 'new',
+        reportType: 'market' as const
+      },
+      {
+        id: 'product-4',
+        title: 'HubSpot Integration Marketplace Expansion',
+        summary: 'HubSpot added 50+ new integrations to their marketplace, strengthening ecosystem appeal for enterprise customers.',
+        competitor: 'HubSpot',
+        category: 'Platform Updates',
+        time: '2 days ago',
+        confidence: 85,
+        status: 'reviewed',
+        reportType: 'product' as const
+      }
+    ];
+
+    // Apply filters
+    return allReports.filter(report => {
+      if (reportFilters.status !== 'all') {
+        if (reportFilters.status === 'reviewed' && !reviewedReports.includes(report.id)) return false;
+        if (reportFilters.status === 'unreviewed' && reviewedReports.includes(report.id)) return false;
+      }
+      
+      if (reportFilters.category !== 'all') {
+        if (reportFilters.category !== report.reportType) return false;
+      }
+      
+      if (reportFilters.priority !== 'all') {
+        const priority = report.confidence >= 85 ? 'high' : report.confidence >= 70 ? 'medium' : 'low';
+        if (reportFilters.priority !== priority) return false;
+      }
+      
+      return true;
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading competitor intelligence...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-20">
+      <div className="p-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Competitor Intelligence</h1>
+                <p className="text-gray-600">Monitor competitive landscape and market insights</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Tab Navigation */}
+          <div className="mb-8">
+            <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-2">
+              <div className="flex space-x-1">
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'overview'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Overview</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('profiles')}
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'profiles'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Building className="w-4 h-4" />
+                  <span>Competitors</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('agents')}
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'agents'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Bot className="w-4 h-4" />
+                  <span>AI Agents</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('reports')}
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'reports'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <FileText className="w-4 h-4" />
+                  <span>Intelligence Reports</span>
+                </button>
+                <button
+                  onClick={() => setActiveTab('changelog')}
+                  className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    activeTab === 'changelog'
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  }`}
+                >
+                  <Calendar className="w-4 h-4" />
+                  <span>Changelog</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+
+          {/* Tab Content */}
+          {activeTab === 'overview' && (
+            <div className="space-y-8">
+            {/* Dashboard Swimlanes */}
+          {/* High Priority Competitors Swimlane */}
+          <div className="mb-8">
+            <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center">
+                    <Building className="w-5 h-5 text-red-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Competitors</h2>
+                    <div className="flex items-center space-x-6 mt-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">{competitors.filter(c => c.threat_level === 'high').length} High Threat</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">{competitors.filter(c => c.threat_level === 'medium').length} Medium</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
+                        <span className="text-sm text-gray-600">{competitors.filter(c => c.status === 'active').length} Monitoring</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  {/* Key Metrics - Compact Visual Cards */}
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-red-50 to-red-100 rounded-lg border border-red-200 w-32 h-16">
+                    <AlertTriangle className="w-5 h-5 text-red-600 flex-shrink-0" />
+                    <div className="w-16 text-center">
+                      <div className="text-lg font-bold text-red-700">{competitors.filter(c => c.threat_level === 'high').length}</div>
+                      <div className="text-xs text-red-600">Threats</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200 w-32 h-16">
+                    <Activity className="w-5 h-5 text-green-600 flex-shrink-0" />
+                    <div className="w-16 text-center">
+                      <div className="text-lg font-bold text-green-700">{competitors.filter(c => c.status === 'active').length}</div>
+                      <div className="text-xs text-green-600">Active</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 w-32 h-16">
+                    <Clock className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    <div className="w-16 text-center">
+                      <div className="text-lg font-bold text-blue-700">{insights.filter(i => i.source?.includes('competitor')).length}</div>
+                      <div className="text-xs text-blue-600">Updates</div>
+                    </div>
+                  </div>
+
+                  <div className="h-8 w-px bg-gray-300"></div>
+                  
+                  <button 
+                    onClick={() => router.push('/competitor-intelligence/add-competitor')}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Add Competitor</span>
+                  </button>
+                  <button 
+                    onClick={() => router.push('/competitor-intelligence/competitors')}
+                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <span>View All ({competitors.length})</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              {/* High Priority Competitor Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {competitors
+                  .filter(c => c.threat_level === 'high' || c.threat_level === 'medium')
+                  .slice(0, 6)
+                  .map((competitor) => {
+                    const getThreatColor = (level: string) => {
+                      switch (level) {
+                        case 'high': return 'bg-red-100 text-red-800 border-red-200';
+                        case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+                        case 'low': return 'bg-green-100 text-green-800 border-green-200';
+                        default: return 'bg-gray-100 text-gray-800 border-gray-200';
+                      }
+                    };
+
+                    return (
+                      <div 
+                        key={competitor.id} 
+                        onClick={() => router.push(`/competitor-intelligence/competitors/${competitor.id}`)}
+                        className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[220px] flex flex-col cursor-pointer"
+                      >
+                        <div className="p-4 flex-1 flex flex-col">
+                          <div className="flex items-center space-x-3 mb-3">
+                            <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 flex-shrink-0 overflow-hidden">
+                              {competitor.logo && competitor.logo.startsWith('http') ? (
+                                <img 
+                                  src={competitor.logo} 
+                                  alt={`${competitor.name} logo`}
+                                  className="w-full h-full object-contain"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                    target.parentElement!.innerHTML = `<span class="text-lg font-semibold text-gray-600">${competitor.name.charAt(0)}</span>`;
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-lg font-semibold text-gray-600">
+                                  {competitor.name.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-gray-900 text-sm truncate">{competitor.name}</h3>
+                              <p className="text-xs text-gray-500 truncate">{competitor.industry}</p>
+                            </div>
+                            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getThreatColor(competitor.threat_level)}`}>
+                              {competitor.threat_level.toUpperCase()}
+                            </span>
+                          </div>
+                          
+                          {/* Recent Activity */}
+                          <div className="mb-3 p-3 bg-amber-50/50 rounded-lg border-l-2 border-amber-200">
+                            <p className="text-xs font-medium text-amber-700 mb-1">Recent Activity</p>
+                            <p className="text-xs text-gray-700 leading-relaxed">
+                              {competitor.recent_news && competitor.recent_news.length > 0 
+                                ? competitor.recent_news[0].title
+                                : competitor.valuation 
+                                  ? `Valued at ${competitor.valuation} • ${competitor.growth_rate}% growth`
+                                  : 'No recent activity detected • Monitoring for updates'
+                              }
+                            </p>
+                          </div>
+
+                          {/* Spacer to push actions to bottom */}
+                          <div className="flex-1"></div>
+
+                          {/* Quick Actions */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-2">
+                              {/* Website Link */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(competitor.website?.startsWith('http') ? competitor.website : `https://${competitor.website}`, '_blank');
+                                }}
+                                className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+                                title="Visit website"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                <span>Visit</span>
+                              </button>
+                              
+                              {/* Agent Insights */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  // TODO: Navigate to agent insights for this competitor
+                                  console.log('View agent insights for', competitor.name);
+                                }}
+                                className="flex items-center space-x-1 px-2 py-1 text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-md transition-colors"
+                                title="View AI agent insights"
+                              >
+                                <Zap className="w-3 h-3" />
+                                <span>Insights</span>
+                              </button>
+                            </div>
+
+                            {/* Monitoring Status */}
+                            <div className="flex items-center space-x-2">
+                              <div className={`w-2 h-2 rounded-full ${competitor.status === 'active' ? 'bg-green-400' : 'bg-gray-300'}`}></div>
+                              <span className="text-xs text-gray-600">
+                                {competitor.status === 'active' ? 'Monitoring' : 'Paused'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+          </div>
+
+          {/* AI Agents Swimlane */}
+          <div className="mb-8">
+            <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+                    <Zap className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">AI Agents</h2>
+                    <div className="flex items-center space-x-6 mt-2">
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">{agents?.filter(a => a.status === 'active').length || 0} Active</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">{agents?.reduce((sum, agent) => sum + agent.total_insights, 0) || 0} Insights</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <span className="text-sm text-gray-600">{agents?.reduce((sum, agent) => sum + (agent.competitor_ids?.length || 0), 0) || 0} Monitoring</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-4">
+                  {/* Key Metrics - Compact Visual Cards */}
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-green-50 to-green-100 rounded-lg border border-green-200 w-32 h-16">
+                    <Zap className="w-5 h-5 text-green-600 flex-shrink-0" />
+                    <div className="w-16 text-center">
+                      <div className="text-lg font-bold text-green-700">{agents?.filter(a => a.status === 'active').length || 0}</div>
+                      <div className="text-xs text-green-600">Active</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-purple-50 to-purple-100 rounded-lg border border-purple-200 w-32 h-16">
+                    <Star className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                    <div className="w-16 text-center">
+                      <div className="text-lg font-bold text-purple-700">{agents?.reduce((sum, agent) => sum + agent.total_insights, 0) || 0}</div>
+                      <div className="text-xs text-purple-600">Insights</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg border border-blue-200 w-32 h-16">
+                    <Eye className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                    <div className="w-16 text-center">
+                      <div className="text-lg font-bold text-blue-700">{agents?.reduce((sum, agent) => sum + (agent.competitor_ids?.length || 0), 0) || 0}</div>
+                      <div className="text-xs text-blue-600">Tracking</div>
+                    </div>
+                  </div>
+
+                  <div className="h-8 w-px bg-gray-300"></div>
+                  
+                  <button 
+                    onClick={() => router.push('/competitor-intelligence/create-agent')}
+                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Create Agent</span>
+                  </button>
+                  <button 
+                    onClick={() => router.push('/competitor-intelligence/agents')}
+                    className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:text-indigo-600 hover:bg-gray-50 rounded-lg transition-colors"
+                  >
+                    <span>Manage All ({agents?.length || 0})</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+              {/* Active Agent Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {(agents || [])
+                  .filter(agent => agent.status === 'active')
+                  .slice(0, 4)
+                  .map((agent) => (
+                    <div 
+                      key={agent.id} 
+                      onClick={() => router.push(`/agents/${agent.id}`)}
+                      className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[180px] flex flex-col cursor-pointer"
+                    >
+                      <div className="p-4 flex-1">
+                        <div className="flex items-center space-x-3 mb-3">
+                          <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-100 flex-shrink-0">
+                            <Zap className="w-5 h-5 text-indigo-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold text-gray-900 text-sm truncate">{agent.name}</h3>
+                            <p className="text-xs text-gray-500 truncate">{agent.description}</p>
+                          </div>
+                          <span className={`px-2 py-1 rounded-md text-xs font-medium border ${
+                            agent.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' :
+                            agent.status === 'paused' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
+                            'bg-gray-100 text-gray-800 border-gray-200'
+                          }`}>
+                            {agent.status.toUpperCase()}
+                          </span>
+                        </div>
+                        
+                        {/* Agent Metrics */}
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                          <div className="text-center p-2 bg-gray-50 rounded">
+                            <p className="text-sm font-bold text-indigo-600">{agent.total_insights}</p>
+                            <p className="text-xs text-gray-600">Insights</p>
+                          </div>
+                          <div className="text-center p-2 bg-gray-50 rounded">
+                            <p className="text-sm font-bold text-green-600">{agent.competitor_ids?.length || 0}</p>
+                            <p className="text-xs text-gray-600">Monitoring</p>
+                          </div>
+                        </div>
+                        
+                        {/* Agent Actions */}
+                        <div className="flex items-center justify-between mt-auto">
+                          <div className="flex items-center space-x-2">
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/competitor-intelligence/create-agent?edit=${agent.id}`);
+                              }}
+                              className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
+                            >
+                              <Edit className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/agents/${agent.id}`);
+                              }}
+                              className="flex items-center space-x-1 px-2 py-1 text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-md transition-colors"
+                            >
+                              <Eye className="w-3 h-3" />
+                              <span>View</span>
+                            </button>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <div className={`w-2 h-2 rounded-full ${agent.status === 'active' ? 'bg-green-400' : 'bg-gray-300'}`}></div>
+                            <span className="text-xs text-gray-600">Live</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Intelligence Reports Section */}
+          <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Intelligence Reports</h2>
+                  <p className="text-sm text-gray-600">Actionable insights from your AI agents</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-2">
+                  <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                  <span className="text-sm text-gray-500">Live monitoring</span>
+                </div>
+                <div className="relative">
+                  <button
+                    onClick={() => setShowDatePicker(!showDatePicker)}
+                    className="flex items-center space-x-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Export CSV</span>
+                  </button>
+                  
+                  {/* Date Picker Dropdown */}
+                  {showDatePicker && (
+                    <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-10 min-w-[320px]">
+                      <div className="mb-4">
+                        <h3 className="text-sm font-semibold text-gray-900 mb-2">Export Date Range</h3>
+                        <p className="text-xs text-gray-600 mb-3">Select the time period for your CSV export</p>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-4 h-4 text-gray-600" />
+                          <label className="text-sm font-medium text-gray-700 w-12">From:</label>
+                          <input
+                            type="date"
+                            value={csvDateRange.start.toISOString().split('T')[0]}
+                            max={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setCsvDateRange(prev => ({
+                              ...prev,
+                              start: new Date(e.target.value)
+                            }))}
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          />
+                        </div>
+                        
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-4 h-4 text-gray-600" />
+                          <label className="text-sm font-medium text-gray-700 w-12">To:</label>
+                          <input
+                            type="date"
+                            value={csvDateRange.end.toISOString().split('T')[0]}
+                            max={new Date().toISOString().split('T')[0]}
+                            onChange={(e) => setCsvDateRange(prev => ({
+                              ...prev,
+                              end: new Date(e.target.value)
+                            }))}
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
+                        <span className="text-xs text-gray-500">
+                          {getCombinedIntelligenceReports().filter(report => {
+                            const timeMap: { [key: string]: Date } = {
+                              'just now': new Date(),
+                              '1 hour ago': new Date(Date.now() - 60 * 60 * 1000),
+                              '2 hours ago': new Date(Date.now() - 2 * 60 * 60 * 1000),
+                              '3 hours ago': new Date(Date.now() - 3 * 60 * 60 * 1000),
+                              '6 hours ago': new Date(Date.now() - 6 * 60 * 60 * 1000),
+                              '1 day ago': new Date(Date.now() - 24 * 60 * 60 * 1000),
+                              '2 days ago': new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+                              '3 days ago': new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
+                            };
+                            const reportDate = timeMap[report.time] || new Date();
+                            return reportDate >= csvDateRange.start && reportDate <= csvDateRange.end;
+                          }).length} reports in range
+                        </span>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => setShowDatePicker(false)}
+                            className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            onClick={exportReportsToCSV}
+                            className="flex items-center space-x-1 px-3 py-1 bg-indigo-600 text-white hover:bg-indigo-700 rounded text-sm transition-colors"
+                          >
+                            <Download className="w-3 h-3" />
+                            <span>Download</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Filters Row */}
+            <div className="flex flex-wrap items-center gap-4 mb-6">
+              {/* Review Status Toggle */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 font-medium">Status:</span>
+                <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, status: 'all'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.status === 'all'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, status: 'reviewed'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.status === 'reviewed'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Reviewed
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, status: 'unreviewed'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.status === 'unreviewed'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Unreviewed
+                  </button>
+                </div>
+              </div>
+
+              {/* Report Type Toggle */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 font-medium">Type:</span>
+                <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, category: 'all'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.category === 'all'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    All
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, category: 'product'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.category === 'product'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Product
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, category: 'market'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.category === 'market'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Market
+                  </button>
+                </div>
+              </div>
+
+              {/* Date Filter */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 font-medium">Date:</span>
+                <div className="flex items-center bg-gray-100 rounded-lg p-1">
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, timeRange: 'today'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.timeRange === 'today'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Today
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, timeRange: 'week'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.timeRange === 'week'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    This Week
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, timeRange: 'month'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.timeRange === 'month'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    This Month
+                  </button>
+                  <button
+                    onClick={() => setReportFilters({...reportFilters, timeRange: 'all'})}
+                    className={`px-3 py-1 text-sm font-medium rounded-md transition-all duration-200 ${
+                      reportFilters.timeRange === 'all'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    All Time
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Reports List */}
+            <div className="space-y-4">
+              {getFilteredReports().length === 0 ? (
+                /* Zero State */
+                <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+                  <div className="max-w-md mx-auto">
+                    <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                      <Search className="w-8 h-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No reports found</h3>
+                    <p className="text-gray-600 mb-4">
+                      No intelligence reports match your current filters. Try adjusting your search criteria or check back later for new reports.
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-2 text-sm">
+                      <span className="text-gray-500">Try:</span>
+                      <button
+                        onClick={() => setReportFilters({competitor: 'all', priority: 'all', status: 'all', category: 'all', timeRange: 'all'})}
+                        className="text-indigo-600 hover:text-indigo-800 font-medium underline"
+                      >
+                        Clear all filters
+                      </button>
+                      <span className="text-gray-400">or</span>
+                      <button
+                        onClick={() => setReportFilters({...reportFilters, timeRange: 'all'})}
+                        className="text-indigo-600 hover:text-indigo-800 font-medium underline"
+                      >
+                        Show all time periods
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                getPaginatedReports().map((report) => {
+                const isExpanded = expandedReports.has(report.id);
+                
+                return (
+                  <div key={report.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-lg hover:border-gray-300 transition-all duration-200">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h3 className="font-semibold text-gray-900">{report.title}</h3>
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                            report.reportType === 'market' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {report.reportType === 'market' ? 'Market' : 'Product'}
+                          </span>
+                          <span className={`px-2 py-1 text-xs rounded-full font-medium ${
+                            report.status === 'reviewed' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {report.status === 'reviewed' ? 'Reviewed' : 'Unreviewed'}
+                          </span>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600 mb-3">
+                          <span>{report.competitor}</span>
+                          <span>•</span>
+                          <span>{report.category}</span>
+                          <span>•</span>
+                          <span>{report.time}</span>
+                          <span>•</span>
+                          <span className={`font-medium ${
+                            report.confidence >= 80 ? 'text-green-600' : 
+                            report.confidence >= 60 ? 'text-yellow-600' : 'text-red-600'
+                          }`}>
+                            {report.confidence}% confidence
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-900 mb-3">{report.summary}</p>
+                        
+                        {/* Expanded Content */}
+                        {isExpanded && report.expandedContent && (
+                          <div className="mt-4 border-t border-gray-100 pt-4 space-y-4">
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-2">Summary</h4>
+                              <p className="text-gray-700 text-sm">{report.expandedContent.summary}</p>
+                            </div>
+                            
+                            {report.expandedContent.keyFindings && (
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-2">Key Findings</h4>
+                                <ul className="space-y-1">
+                                  {report.expandedContent.keyFindings.map((finding, index) => (
+                                    <li key={index} className="flex items-start space-x-2 text-sm text-gray-700">
+                                      <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></span>
+                                      <span>{finding}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            {report.expandedContent.technicalDetails && (
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-2">Technical Details</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {Object.entries(report.expandedContent.technicalDetails).map(([key, value]) => (
+                                    <div key={key} className="bg-gray-50 rounded-lg p-3">
+                                      <div className="text-xs font-medium text-gray-600">{key}</div>
+                                      <div className="text-sm font-semibold text-gray-900">{value}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {report.expandedContent.campaignDetails && (
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-2">Campaign Details</h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                  {Object.entries(report.expandedContent.campaignDetails).map(([key, value]) => (
+                                    <div key={key} className="bg-gray-50 rounded-lg p-3">
+                                      <div className="text-xs font-medium text-gray-600">{key}</div>
+                                      <div className="text-sm font-semibold text-gray-900">{value}</div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                            
+                            <div>
+                              <h4 className="font-medium text-gray-900 mb-2">Impact</h4>
+                              <p className="text-sm text-gray-700 bg-yellow-50 border border-yellow-200 rounded-lg p-3">{report.expandedContent.impact}</p>
+                            </div>
+                            
+                            {report.expandedContent.recommendations && (
+                              <div>
+                                <h4 className="font-medium text-gray-900 mb-2">Recommendations</h4>
+                                <ul className="space-y-1">
+                                  {report.expandedContent.recommendations.map((rec, index) => (
+                                    <li key={index} className="flex items-start space-x-2 text-sm text-gray-700">
+                                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                      <span>{rec}</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                              <div className="flex items-center space-x-4 text-xs text-gray-500">
+                                <span>Confidence: {report.expandedContent.confidence}%</span>
+                                {report.expandedContent.sources && (
+                                  <span>Sources: {report.expandedContent.sources.length}</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center space-x-3">
+                            {report.expandedContent && (
+                              <button
+                                onClick={() => toggleReportExpansion(report.id)}
+                                className="flex items-center space-x-1 text-xs text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
+                              >
+                                <span>{isExpanded ? 'Show Less' : 'Show More'}</span>
+                                {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                              </button>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => toggleReportReviewed(report.id)}
+                            className={`px-3 py-1 text-xs border rounded-md transition-all duration-200 ${
+                              reviewedReports.includes(report.id)
+                                ? 'bg-green-100 text-green-800 border-green-300'
+                                : 'bg-gray-100 text-gray-700 border-gray-300 hover:bg-gray-200'
+                            }`}
+                          >
+                            {reviewedReports.includes(report.id) ? '✓ Reviewed' : 'Mark as Reviewed'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+                })
+              )}
+              
+              {/* Pagination */}
+              {getFilteredReports().length > 0 && getReportsTotalPages() > 1 && (
+                <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+                  <div className="text-sm text-gray-600">
+                    Showing {Math.min((reportsCurrentPage - 1) * reportsPerPage + 1, getFilteredReports().length)} to {Math.min(reportsCurrentPage * reportsPerPage, getFilteredReports().length)} of {getFilteredReports().length} reports
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setReportsCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={reportsCurrentPage === 1}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+                    
+                    <div className="flex space-x-1">
+                      {Array.from({ length: getReportsTotalPages() }, (_, i) => i + 1).map(page => (
+                        <button
+                          key={page}
+                          onClick={() => setReportsCurrentPage(page)}
+                          className={`px-3 py-1.5 text-sm rounded-lg transition-colors ${
+                            reportsCurrentPage === page
+                              ? 'bg-indigo-600 text-white'
+                              : 'border border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    
+                    <button
+                      onClick={() => setReportsCurrentPage(prev => Math.min(getReportsTotalPages(), prev + 1))}
+                      disabled={reportsCurrentPage === getReportsTotalPages()}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* View All Reports Button */}
+            {getReportsTotalPages() === 1 && (
+              <div className="mt-6 text-center">
+                <button className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg font-medium">
+                  View All Reports ({getFilteredReports().length})
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Competitors Tab */}
+          {activeTab === 'profiles' && (
+            <div className="space-y-6">
+              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Building className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">Competitor Profiles</h2>
+                      <p className="text-sm text-gray-600">Detailed analysis of competitive landscape</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center py-12">
+                  <Building className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Competitor Profiles</h3>
+                  <p className="text-gray-600 mb-4">Detailed competitor analysis and insights coming soon.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* AI Agents Tab */}
+          {activeTab === 'agents' && (
+            <div className="space-y-6">
+              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">AI Agents</h2>
+                      <p className="text-sm text-gray-600">Automated competitive intelligence gathering</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center py-12">
+                  <Bot className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">AI Agents Dashboard</h3>
+                  <p className="text-gray-600 mb-4">AI agent management and monitoring coming soon.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Intelligence Reports Tab */}
+          {activeTab === 'reports' && (
+            <div className="space-y-6">
+              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
+                      <FileText className="w-5 h-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">Intelligence Reports</h2>
+                      <p className="text-sm text-gray-600">AI-generated competitive intelligence reports</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="text-center py-12">
+                  <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Intelligence Reports</h3>
+                  <p className="text-gray-600 mb-4">Comprehensive intelligence reports coming soon.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Changelog Tab */}
+          {activeTab === 'changelog' && (
+            <div className="space-y-6">
+              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-6">
+                <div className="text-center py-12">
+                  <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Product Changelog</h3>
+                  <p className="text-gray-600 mb-4">Track product updates and releases.</p>
+                  <button 
+                    onClick={() => window.open('/changelog', '_blank')}
+                    className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                  >
+                    View Full Changelog
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

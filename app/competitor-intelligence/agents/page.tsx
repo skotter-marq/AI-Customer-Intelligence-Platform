@@ -269,7 +269,11 @@ export default function AllAgentsPage() {
           {/* Agent Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-8">
             {filteredAgents.map((agent) => (
-              <div key={agent.id} className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[200px] flex flex-col">
+              <div 
+                key={agent.id} 
+                onClick={() => router.push(`/agents/${agent.id}`)}
+                className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[200px] flex flex-col cursor-pointer"
+              >
                 <div className="p-4 flex-1">
                   <div className="flex items-center space-x-3 mb-3">
                     <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-100 flex-shrink-0">
@@ -301,14 +305,20 @@ export default function AllAgentsPage() {
                   <div className="flex items-center justify-between mt-auto">
                     <div className="flex items-center space-x-2">
                       <button 
-                        onClick={() => router.push(`/competitor-intelligence/create-agent?edit=${agent.id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/competitor-intelligence/create-agent?edit=${agent.id}`);
+                        }}
                         className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
                       >
                         <Edit className="w-3 h-3" />
                         <span>Edit</span>
                       </button>
                       <button
-                        onClick={() => console.log('View insights for', agent.name)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push(`/agents/${agent.id}`);
+                        }}
                         className="flex items-center space-x-1 px-2 py-1 text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-md transition-colors"
                       >
                         <Eye className="w-3 h-3" />

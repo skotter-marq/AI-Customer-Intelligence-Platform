@@ -529,8 +529,28 @@ export default function ContentPipelinePage() {
     }
   };
 
-  // Use displayOrderItems for current display, but apply filters
+  // Check localStorage for updated status
+  const getUpdatedStatus = (itemId: string, currentStatus: string) => {
+    try {
+      const statusKey = `content_status_${itemId}`;
+      const statusData = localStorage.getItem(statusKey);
+      if (statusData) {
+        const parsed = JSON.parse(statusData);
+        console.log(`📊 STATUS CHECK: Found updated status for ID ${itemId}:`, parsed.status);
+        return parsed.status;
+      }
+    } catch (error) {
+      console.warn('Error reading status from localStorage:', error);
+    }
+    return currentStatus;
+  };
+
+  // Use displayOrderItems for current display, but apply filters with updated status
   const filteredAndSortedItems = (displayOrderItems.length > 0 ? displayOrderItems : contentItems)
+    .map(item => ({
+      ...item,
+      status: getUpdatedStatus(item.id, item.status)
+    }))
     .filter(item => {
       const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            item.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));

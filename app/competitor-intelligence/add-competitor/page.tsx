@@ -91,6 +91,9 @@ export default function AddCompetitorPage() {
   const [showAllProducts, setShowAllProducts] = useState(false);
   const [showAllStrengths, setShowAllStrengths] = useState(false);
   const [showAllWeaknesses, setShowAllWeaknesses] = useState(false);
+  
+  // Research metadata
+  const [researchAge, setResearchAge] = useState<string>('');
 
   // Load competitor data if in edit mode
   useEffect(() => {
@@ -157,8 +160,38 @@ export default function AddCompetitorPage() {
           weaknesses: competitor.weaknesses
         });
         setResearchComplete(true);
-        // Mark fields as AI populated (for edit workflow compatibility)
-        setAiPopulatedFields(new Set(['key_products', 'strengths', 'weaknesses']));
+        
+        // Load AI research metadata from localStorage
+        const savedAIFields = localStorage.getItem(`ai_research_${competitorId}`);
+        const savedManualFields = localStorage.getItem(`manual_edits_${competitorId}`);
+        const researchTimestamp = localStorage.getItem(`research_timestamp_${competitorId}`);
+        
+        if (savedAIFields) {
+          setAiPopulatedFields(new Set(JSON.parse(savedAIFields)));
+        } else {
+          // Default for existing competitors without saved metadata
+          setAiPopulatedFields(new Set(['key_products', 'strengths', 'weaknesses']));
+        }
+        
+        if (savedManualFields) {
+          setManuallyEditedFields(new Set(JSON.parse(savedManualFields)));
+        }
+        
+        // Calculate research age
+        if (researchTimestamp) {
+          const researchDate = new Date(researchTimestamp);
+          const now = new Date();
+          const diffHours = Math.floor((now.getTime() - researchDate.getTime()) / (1000 * 60 * 60));
+          
+          if (diffHours < 1) {
+            setResearchAge('Less than 1 hour ago');
+          } else if (diffHours < 24) {
+            setResearchAge(`${diffHours} hour${diffHours === 1 ? '' : 's'} ago`);
+          } else {
+            const diffDays = Math.floor(diffHours / 24);
+            setResearchAge(`${diffDays} day${diffDays === 1 ? '' : 's'} ago`);
+          }
+        }
       }
     } catch (error) {
       console.error('Error loading competitor for edit:', error);
@@ -353,86 +386,62 @@ export default function AddCompetitorPage() {
   const addKeyProduct = (product?: string) => {
     const productToAdd = product || newProduct.trim();
     if (productToAdd && !newCompetitor.key_products.includes(productToAdd)) {
-      setNewCompetitor(prev => ({
-        ...prev,
-        key_products: [...prev.key_products, productToAdd]
-      }));
+      handleFieldChange('key_products', [...newCompetitor.key_products, productToAdd]);
       setNewProduct('');
       setShowProductSuggestions(false);
     }
   };
 
   const removeKeyProduct = (index: number) => {
-    setNewCompetitor(prev => ({
-      ...prev,
-      key_products: prev.key_products.filter((_, i) => i !== index)
-    }));
+    handleFieldChange('key_products', newCompetitor.key_products.filter((_, i) => i !== index));
   };
 
   const addStrength = (strength?: string) => {
     const strengthToAdd = strength || newStrength.trim();
     if (strengthToAdd && !newCompetitor.strengths.includes(strengthToAdd)) {
-      setNewCompetitor(prev => ({
-        ...prev,
-        strengths: [...prev.strengths, strengthToAdd]
-      }));
+      handleFieldChange('strengths', [...newCompetitor.strengths, strengthToAdd]);
       setNewStrength('');
       setShowStrengthSuggestions(false);
     }
   };
 
   const removeStrength = (index: number) => {
-    setNewCompetitor(prev => ({
-      ...prev,
-      strengths: prev.strengths.filter((_, i) => i !== index)
-    }));
+    handleFieldChange('strengths', newCompetitor.strengths.filter((_, i) => i !== index));
   };
 
   const addWeakness = (weakness?: string) => {
     const weaknessToAdd = weakness || newWeakness.trim();
     if (weaknessToAdd && !newCompetitor.weaknesses.includes(weaknessToAdd)) {
-      setNewCompetitor(prev => ({
-        ...prev,
-        weaknesses: [...prev.weaknesses, weaknessToAdd]
-      }));
+      handleFieldChange('weaknesses', [...newCompetitor.weaknesses, weaknessToAdd]);
       setNewWeakness('');
       setShowWeaknessSuggestions(false);
     }
   };
 
   const removeWeakness = (index: number) => {
-    setNewCompetitor(prev => ({
-      ...prev,
-      weaknesses: prev.weaknesses.filter((_, i) => i !== index)
-    }));
+    handleFieldChange('weaknesses', newCompetitor.weaknesses.filter((_, i) => i !== index));
   };
 
   // Toggle functions for checkbox libraries
   const toggleProduct = (product: string) => {
-    setNewCompetitor(prev => ({
-      ...prev,
-      key_products: prev.key_products.includes(product)
-        ? prev.key_products.filter(p => p !== product)
-        : [...prev.key_products, product]
-    }));
+    const newProducts = newCompetitor.key_products.includes(product)
+      ? newCompetitor.key_products.filter(p => p !== product)
+      : [...newCompetitor.key_products, product];
+    handleFieldChange('key_products', newProducts);
   };
 
   const toggleStrength = (strength: string) => {
-    setNewCompetitor(prev => ({
-      ...prev,
-      strengths: prev.strengths.includes(strength)
-        ? prev.strengths.filter(s => s !== strength)
-        : [...prev.strengths, strength]
-    }));
+    const newStrengths = newCompetitor.strengths.includes(strength)
+      ? newCompetitor.strengths.filter(s => s !== strength)
+      : [...newCompetitor.strengths, strength];
+    handleFieldChange('strengths', newStrengths);
   };
 
   const toggleWeakness = (weakness: string) => {
-    setNewCompetitor(prev => ({
-      ...prev,
-      weaknesses: prev.weaknesses.includes(weakness)
-        ? prev.weaknesses.filter(w => w !== weakness)
-        : [...prev.weaknesses, weakness]
-    }));
+    const newWeaknesses = newCompetitor.weaknesses.includes(weakness)
+      ? newCompetitor.weaknesses.filter(w => w !== weakness)
+      : [...newCompetitor.weaknesses, weakness];
+    handleFieldChange('weaknesses', newWeaknesses);
   };
 
   const handleSaveCompetitor = async () => {
@@ -508,8 +517,26 @@ export default function AddCompetitorPage() {
         console.log('✅ Competitor created successfully:', result.competitor);
       }
       
-      // Navigate back to competitor intelligence page - profiles tab
-      router.push('/competitor-intelligence?tab=profiles');
+      // Save AI research metadata to localStorage for edit mode compatibility
+      const competitorIdForStorage = isEditMode ? editId : result?.competitor?.id || Date.now().toString();
+      
+      if (competitorIdForStorage) {
+        // Save AI populated fields
+        localStorage.setItem(`ai_research_${competitorIdForStorage}`, JSON.stringify([...aiPopulatedFields]));
+        // Save manually edited fields
+        localStorage.setItem(`manual_edits_${competitorIdForStorage}`, JSON.stringify([...manuallyEditedFields]));
+        // Save research timestamp
+        localStorage.setItem(`research_timestamp_${competitorIdForStorage}`, new Date().toISOString());
+      }
+      
+      // Navigate back to appropriate page
+      if (isEditMode && editId) {
+        // Navigate back to the specific competitor profile page
+        router.push(`/competitor-intelligence/competitors/${editId}`);
+      } else {
+        // Navigate back to competitor intelligence page - profiles tab for new competitors
+        router.push('/competitor-intelligence?tab=profiles');
+      }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'creating'} competitor:`, error);
       // You could add a toast notification here
@@ -555,7 +582,10 @@ export default function AddCompetitorPage() {
         // Allow updating AI-populated fields that haven't been manually edited (for regeneration)
         const canRegenerateField = aiPopulatedFields.has(fieldKey) && !wasManuallyEdited;
         
-        const shouldPopulate = ((isEmptyField || isDefaultThreatLevel || canRegenerateField) && researchValue);
+        // In edit mode, show preference for preserving manual edits
+        const shouldPopulate = isEditMode 
+          ? ((isEmptyField || canRegenerateField) && researchValue && !wasManuallyEdited)
+          : ((isEmptyField || isDefaultThreatLevel || canRegenerateField) && researchValue);
           
         if (shouldPopulate) {
           (updatedCompetitor as any)[fieldKey] = researchValue;
@@ -1591,7 +1621,13 @@ export default function AddCompetitorPage() {
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
               <button 
-                onClick={() => router.push('/competitor-intelligence?tab=profiles')}
+                onClick={() => {
+                  if (isEditMode && editId) {
+                    router.push(`/competitor-intelligence/competitors/${editId}`);
+                  } else {
+                    router.push('/competitor-intelligence?tab=profiles');
+                  }
+                }}
                 className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
               >
                 <ArrowLeft className="w-6 h-6" />
@@ -1651,8 +1687,15 @@ export default function AddCompetitorPage() {
               <div className="flex items-center space-x-3">
                 <CheckCircle className="w-6 h-6 text-green-600" />
                 <div>
-                  <p className="font-semibold text-green-900">Research Complete!</p>
-                  <p className="text-sm text-green-700">Review and edit the generated competitor profile below</p>
+                  <p className="font-semibold text-green-900">
+                    {isEditMode ? 'Profile Loaded for Editing!' : 'Research Complete!'}
+                  </p>
+                  <p className="text-sm text-green-700">
+                    {isEditMode 
+                      ? `${researchAge ? `AI research from ${researchAge}. ` : ''}Review and edit the profile below. Manual edits will be preserved during re-research.`
+                      : 'Review and edit the generated competitor profile below'
+                    }
+                  </p>
                 </div>
               </div>
               <button
@@ -1709,7 +1752,7 @@ export default function AddCompetitorPage() {
                       <input
                         type="text"
                         value={newCompetitor.name}
-                        onChange={(e) => setNewCompetitor({...newCompetitor, name: e.target.value})}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="e.g., Salesforce"
                         disabled={isResearching}
@@ -1723,7 +1766,7 @@ export default function AddCompetitorPage() {
                       <input
                         type="url"
                         value={newCompetitor.website}
-                        onChange={(e) => setNewCompetitor({...newCompetitor, website: e.target.value})}
+                        onChange={(e) => handleFieldChange('website', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
                         placeholder="https://salesforce.com"
                         disabled={isResearching}

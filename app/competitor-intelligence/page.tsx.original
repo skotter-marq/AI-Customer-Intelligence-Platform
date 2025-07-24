@@ -214,7 +214,7 @@ export default function CompetitorIntelligencePage() {
   const [competitorGrouping, setCompetitorGrouping] = useState<'threat' | 'industry' | 'size' | 'none'>('none');
   const [loading, setLoading] = useState(true);
   const [showDatabaseSetupNotice, setShowDatabaseSetupNotice] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'competitors-agents' | 'market-insights' | 'product-intelligence' | 'sales-marketing' | 'alerts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'market-insights' | 'product-intelligence' | 'sales-marketing' | 'alerts'>('overview');
   const [expandedReports, setExpandedReports] = useState<string[]>([]);
   const [reportStatuses, setReportStatuses] = useState<Record<string, 'new' | 'in-review' | 'action-taken' | 'resolved'>>({});
   const [reviewedReports, setReviewedReports] = useState<string[]>([]);
@@ -297,13 +297,11 @@ export default function CompetitorIntelligencePage() {
     try {
       setLoading(true);
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Use mock data (API disabled for now)
+      // Fetch real competitor data from API
+      const competitorsResponse = await fetch('/api/competitors');
       let competitorsData = [];
       
-      if (false) {
+      if (competitorsResponse.ok) {
         const result = await competitorsResponse.json();
         competitorsData = result.competitors.map((competitor: any) => ({
           id: competitor.id,
@@ -693,7 +691,6 @@ export default function CompetitorIntelligencePage() {
     } catch (error) {
       console.error('Error fetching competitor data:', error);
     } finally {
-      console.log('🔄 Setting loading to false');
       setLoading(false);
     }
   };
@@ -702,53 +699,6 @@ export default function CompetitorIntelligencePage() {
     fetchCompetitorData();
   }, []);
 
-  // Intelligence Reports Function
-  const getFilteredReports = () => {
-    const mockReports = [
-      {
-        id: 'report-1',
-        title: 'Salesforce Enterprise Pricing Increase',
-        summary: 'Salesforce increased Enterprise tier pricing by 15%, creating opportunity for competitive positioning.',
-        priority: 'high',
-        category: 'Pricing',
-        competitor: 'Salesforce',
-        time: '2 hours ago',
-        confidence: 94
-      },
-      {
-        id: 'report-2',
-        title: 'HubSpot AI Content Assistant Launch',
-        summary: 'New AI-powered content generation tool launched, directly competing with our content intelligence features.',
-        priority: 'high',
-        category: 'Product',
-        competitor: 'HubSpot',
-        time: '4 hours ago',
-        confidence: 91
-      },
-      {
-        id: 'report-3',
-        title: 'Pipedrive Mobile App Performance Update',
-        summary: '40% faster load times and new offline functionality targeting sales teams in mobile-first SMB segment.',
-        priority: 'medium',
-        category: 'Technology',
-        competitor: 'Pipedrive',
-        time: '1 day ago',
-        confidence: 78
-      },
-      {
-        id: 'report-4',
-        title: 'Zendesk Customer Satisfaction Metrics',
-        summary: 'Q4 customer satisfaction scores show 12% improvement, indicating stronger retention capabilities.',
-        priority: 'low',
-        category: 'Market Intelligence',
-        competitor: 'Zendesk',
-        time: '2 days ago',
-        confidence: 85
-      }
-    ];
-    
-    return mockReports;
-  };
 
   const filteredInsights = insightFilter === 'all' ? insights : insights.filter(i => i.type === insightFilter);
   
@@ -1100,19 +1050,6 @@ export default function CompetitorIntelligencePage() {
                   </div>
                 </button>
                 <button
-                  onClick={() => setActiveTab('competitors-agents')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'competitors-agents'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4" />
-                    <span>Competitors & Agents</span>
-                  </div>
-                </button>
-                <button
                   onClick={() => setActiveTab('market-insights')}
                   className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'market-insights'
@@ -1170,467 +1107,7 @@ export default function CompetitorIntelligencePage() {
 
           {/* Tab Content */}
           {activeTab === 'overview' && (
-            <div className="space-y-8">
-              {/* Executive Dashboard */}
-              {/* Competitive Health Score */}
-              <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Competitive Health Score</h2>
-                    <p className="text-gray-600">Overall competitive position assessment</p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <div className="text-right">
-                      <div className="text-4xl font-bold text-indigo-600">8.4</div>
-                      <div className="text-sm text-gray-500">out of 10</div>
-                    </div>
-                    <div className="w-20 h-20 relative">
-                      <svg className="w-20 h-20 transform -rotate-90" viewBox="0 0 32 32">
-                        <circle cx="16" cy="16" r="14" fill="none" stroke="#e5e7eb" strokeWidth="2"/>
-                        <circle cx="16" cy="16" r="14" fill="none" stroke="#4f46e5" strokeWidth="2" 
-                                strokeDasharray={`${8.4 * 8.79} 87.9`} strokeLinecap="round"/>
-                      </svg>
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-lg font-bold text-indigo-600">84%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <div className="bg-white rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-green-600">Strong</div>
-                        <div className="text-sm text-gray-600">Market Position</div>
-                      </div>
-                      <TrendingUp className="w-8 h-8 text-green-500" />
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-blue-600">73%</div>
-                        <div className="text-sm text-gray-600">Feature Parity</div>
-                      </div>
-                      <Package className="w-8 h-8 text-blue-500" />
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-amber-600">Medium</div>
-                        <div className="text-sm text-gray-600">Threat Level</div>
-                      </div>
-                      <AlertTriangle className="w-8 h-8 text-amber-500" />
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl p-4 border border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-2xl font-bold text-purple-600">+12%</div>
-                        <div className="text-sm text-gray-600">Growth Rate</div>
-                      </div>
-                      <BarChart3 className="w-8 h-8 text-purple-500" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Strategic Threat Matrix */}
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Strategic Threat Matrix</h2>
-                    <p className="text-gray-600">Competitive positioning and threat assessment</p>
-                  </div>
-                </div>
-                
-                <div className="relative h-96 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl p-6">
-                  {/* Quadrant Labels */}
-                  <div className="absolute top-4 left-4 text-sm font-medium text-gray-700">Low Impact, High Probability</div>
-                  <div className="absolute top-4 right-4 text-sm font-medium text-gray-700">High Impact, High Probability</div>
-                  <div className="absolute bottom-4 left-4 text-sm font-medium text-gray-700">Low Impact, Low Probability</div>
-                  <div className="absolute bottom-4 right-4 text-sm font-medium text-gray-700">High Impact, Low Probability</div>
-                  
-                  {/* Grid Lines */}
-                  <div className="absolute inset-6 border-2 border-gray-300"></div>
-                  <div className="absolute top-1/2 left-6 right-6 border-t border-gray-300"></div>
-                  <div className="absolute left-1/2 top-6 bottom-6 border-l border-gray-300"></div>
-                  
-                  {/* Competitor Dots */}
-                  <div className="absolute" style={{top: '20%', right: '25%'}}>
-                    <div className="w-4 h-4 bg-red-500 rounded-full relative group cursor-pointer">
-                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        Salesforce
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute" style={{top: '45%', right: '40%'}}>
-                    <div className="w-4 h-4 bg-yellow-500 rounded-full relative group cursor-pointer">
-                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        HubSpot
-                      </div>
-                    </div>
-                  </div>
-                  <div className="absolute" style={{top: '60%', left: '30%'}}>
-                    <div className="w-4 h-4 bg-green-500 rounded-full relative group cursor-pointer">
-                      <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
-                        Pipedrive
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Priority Queue */}
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Action Priority Queue</h2>
-                    <p className="text-gray-600">Most important items requiring attention</p>
-                  </div>
-                  <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">3 High Priority</span>
-                </div>
-                
-                <div className="space-y-4">
-                  {[
-                    { id: 1, priority: 'high', title: 'Salesforce pricing change detected', description: '15% increase in Enterprise tier - opportunity for competitive response', time: '2 hours ago', action: 'Review pricing strategy' },
-                    { id: 2, priority: 'high', title: 'HubSpot AI feature launch', description: 'New content generation tool directly competes with our offering', time: '4 hours ago', action: 'Analyze feature gaps' },
-                    { id: 3, priority: 'medium', title: 'Pipedrive mobile update', description: 'Performance improvements may affect user satisfaction scores', time: '1 day ago', action: 'Update benchmarks' }
-                  ].map((item) => (
-                    <div key={item.id} className={`flex items-center justify-between p-4 rounded-xl border-2 ${
-                      item.priority === 'high' ? 'bg-red-50 border-red-200' : 'bg-yellow-50 border-yellow-200'
-                    }`}>
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-3 h-3 rounded-full ${
-                          item.priority === 'high' ? 'bg-red-500' : 'bg-yellow-500'
-                        }`}></div>
-                        <div>
-                          <h3 className="font-semibold text-gray-900">{item.title}</h3>
-                          <p className="text-sm text-gray-600 mt-1">{item.description}</p>
-                          <span className="text-xs text-gray-500">{item.time}</span>
-                        </div>
-                      </div>
-                      <button className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-                        {item.action}
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Market Intelligence Preview */}
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Market Intelligence</h2>
-                    <p className="text-gray-600">Real-time competitive market analysis</p>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab('market-insights')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-                  >
-                    <span>View Details</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <BarChart3 className="w-6 h-6 text-blue-600" />
-                      <h3 className="font-semibold text-blue-900">Market Share Trends</h3>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-blue-700">Our Position</span>
-                        <span className="font-bold text-blue-900">12.8%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-blue-700">Salesforce</span>
-                        <span className="font-bold text-blue-900">31.2%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-blue-700">HubSpot</span>
-                        <span className="font-bold text-blue-900">18.4%</span>
-                      </div>
-                      <div className="text-xs text-blue-600 mt-2">↗ +2.1% growth vs last quarter</div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <TrendingUp className="w-6 h-6 text-green-600" />
-                      <h3 className="font-semibold text-green-900">Growth Metrics</h3>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-green-700">Revenue Growth</span>
-                        <span className="font-bold text-green-900">+28%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-green-700">Customer Growth</span>
-                        <span className="font-bold text-green-900">+34%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-green-700">Market Expansion</span>
-                        <span className="font-bold text-green-900">+15%</span>
-                      </div>
-                      <div className="text-xs text-green-600 mt-2">Outpacing competitor average</div>
-                    </div>
-                  </div>
-                  
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
-                    <div className="flex items-center space-x-3 mb-4">
-                      <Target className="w-6 h-6 text-purple-600" />
-                      <h3 className="font-semibold text-purple-900">Competitive Position</h3>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-purple-700">Feature Parity</span>
-                        <span className="font-bold text-purple-900">73%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-purple-700">Price Competitive</span>
-                        <span className="font-bold text-purple-900">85%</span>
-                      </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm text-purple-700">Innovation Score</span>
-                        <span className="font-bold text-purple-900">8.2/10</span>
-                      </div>
-                      <div className="text-xs text-purple-600 mt-2">Strong competitive position</div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* High Priority Competitors Swimlane */}
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">High Priority Competitors</h2>
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        <span className="text-sm text-gray-600">{competitors.filter(c => c.threat_level === 'high').length} High Threat</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                        <span className="text-sm text-gray-600">{competitors.filter(c => c.threat_level === 'medium').length} Medium</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="text-sm text-gray-600">{competitors.filter(c => c.status === 'active').length} Monitoring</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab('competitors-agents')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-                  >
-                    <span>View All</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {competitors
-                    .filter(c => c.threat_level === 'high' || c.threat_level === 'medium')
-                    .slice(0, 4)
-                    .map((competitor) => {
-                      const getThreatColor = (level: string) => {
-                        switch (level) {
-                          case 'high': return 'bg-red-100 text-red-800 border-red-200';
-                          case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-                          case 'low': return 'bg-green-100 text-green-800 border-green-200';
-                          default: return 'bg-gray-100 text-gray-800 border-gray-200';
-                        }
-                      };
-
-                      return (
-                        <div 
-                          key={competitor.id} 
-                          onClick={() => router.push(`/competitor-intelligence/competitors/${competitor.id}`)}
-                          className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 p-4 cursor-pointer"
-                        >
-                          <div className="flex items-center space-x-3 mb-3">
-                            <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 flex-shrink-0 overflow-hidden">
-                              {competitor.logo && competitor.logo.startsWith('http') ? (
-                                <img 
-                                  src={competitor.logo} 
-                                  alt={`${competitor.name} logo`}
-                                  className="w-full h-full object-contain"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                    target.parentElement!.innerHTML = `<span class="text-lg font-semibold text-gray-600">${competitor.name.charAt(0)}</span>`;
-                                  }}
-                                />
-                              ) : (
-                                <span className="text-lg font-semibold text-gray-600">
-                                  {competitor.name.charAt(0)}
-                                </span>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-gray-900 text-sm truncate">{competitor.name}</h3>
-                              <p className="text-xs text-gray-500 truncate">{competitor.industry}</p>
-                            </div>
-                            <span className={`px-2 py-1 rounded-md text-xs font-medium border ${getThreatColor(competitor.threat_level)}`}>
-                              {competitor.threat_level.toUpperCase()}
-                            </span>
-                          </div>
-                          
-                          <div className="grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <span className="text-gray-500">Market Cap</span>
-                              <div className="font-semibold text-gray-900">{competitor.marketCap}</div>
-                            </div>
-                            <div>
-                              <span className="text-gray-500">Employees</span>
-                              <div className="font-semibold text-gray-900">{competitor.employees}</div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-
-              {/* AI Agents Swimlane */}
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">AI Intelligence Agents</h2>
-                    <div className="flex items-center space-x-6">
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-                        <span className="text-sm text-gray-600">{agents.filter(a => a.status === 'active').length} Active</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                        <span className="text-sm text-gray-600">{agents.filter(a => a.status === 'paused').length} Paused</span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Bot className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm text-gray-600">{agents.reduce((sum, a) => sum + a.insights, 0)} Total Insights</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab('competitors-agents')}
-                    className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
-                  >
-                    <span>Manage All</span>
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {agents
-                    .filter(agent => agent.status === 'active')
-                    .slice(0, 4)
-                    .map((agent) => (
-                      <div 
-                        key={agent.id} 
-                        onClick={() => router.push(`/agents/${agent.id}`)}
-                        className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 p-4 cursor-pointer"
-                      >
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-100 flex-shrink-0">
-                            <Bot className="w-5 h-5 text-indigo-600" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-gray-900 text-sm truncate">{agent.name}</h3>
-                            <p className="text-xs text-gray-500 truncate">{agent.description}</p>
-                          </div>
-                          <span className={`px-2 py-1 rounded-md text-xs font-medium border ${
-                            agent.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' :
-                            agent.status === 'paused' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                            'bg-gray-100 text-gray-800 border-gray-200'
-                          }`}>
-                            {agent.status.toUpperCase()}
-                          </span>
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <div>
-                            <span className="text-gray-500">Insights</span>
-                            <div className="font-semibold text-gray-900">{agent.insights}</div>
-                          </div>
-                          <div>
-                            <span className="text-gray-500">Frequency</span>
-                            <div className="font-semibold text-gray-900">{agent.frequency}</div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Recent Intelligence Reports Preview */}
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Latest Intelligence Reports</h2>
-                    <p className="text-gray-600">AI-powered competitive insights and analysis</p>
-                  </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                      {getFilteredReports().length} Active Reports
-                    </span>
-                    <button className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium">
-                      <span>View All Reports</span>
-                      <ExternalLink className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="space-y-4">
-                  {getFilteredReports().slice(0, 3).map((report) => (
-                    <div key={report.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-lg hover:border-gray-300 transition-all duration-200">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-3 mb-2">
-                            <div className={`w-2 h-2 rounded-full ${
-                              report.priority === 'high' ? 'bg-red-500' : 
-                              report.priority === 'medium' ? 'bg-yellow-500' : 'bg-green-500'
-                            }`}></div>
-                            <h3 className="font-semibold text-gray-900">{report.title}</h3>
-                            <span className={`px-2 py-1 text-xs rounded-full font-medium ${
-                              report.priority === 'high' ? 'bg-red-100 text-red-800' : 
-                              report.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                            }`}>
-                              {report.priority.toUpperCase()}
-                            </span>
-                            <span className="px-2 py-1 text-xs rounded border bg-gray-50 text-gray-700">{report.category}</span>
-                          </div>
-                          <p className="text-gray-700 text-sm mb-2">{report.summary}</p>
-                          <div className="flex items-center space-x-4 text-xs text-gray-500">
-                            <span>{report.time}</span>
-                            <span>•</span>
-                            <span>{report.competitor}</span>
-                            <span>•</span>
-                            <span>{report.confidence}% confidence</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <button className="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Competitors & Agents Tab */}
-          {activeTab === 'competitors-agents' && (
-            <div className="space-y-8">
+            <>
               {/* Dashboard Swimlanes */}
           {/* High Priority Competitors Swimlane */}
           <div className="mb-8">
@@ -1718,11 +1195,7 @@ export default function CompetitorIntelligencePage() {
                     };
 
                     return (
-                      <div 
-                        key={competitor.id} 
-                        onClick={() => router.push(`/competitor-intelligence/competitors/${competitor.id}`)}
-                        className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[220px] flex flex-col cursor-pointer"
-                      >
+                      <div key={competitor.id} className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[220px] flex flex-col">
                         <div className="p-4 flex-1 flex flex-col">
                           <div className="flex items-center space-x-3 mb-3">
                             <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 flex-shrink-0 overflow-hidden">
@@ -1891,11 +1364,7 @@ export default function CompetitorIntelligencePage() {
                   .filter(agent => agent.status === 'active')
                   .slice(0, 4)
                   .map((agent) => (
-                    <div 
-                      key={agent.id} 
-                      onClick={() => router.push(`/agents/${agent.id}`)}
-                      className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[180px] flex flex-col cursor-pointer"
-                    >
+                    <div key={agent.id} className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[180px] flex flex-col">
                       <div className="p-4 flex-1">
                         <div className="flex items-center space-x-3 mb-3">
                           <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-indigo-100 flex-shrink-0">
@@ -1958,7 +1427,7 @@ export default function CompetitorIntelligencePage() {
               </div>
             </div>
           </div>
-            </div>
+            </>
           )}
 
           {/* Market Insights Tab */}

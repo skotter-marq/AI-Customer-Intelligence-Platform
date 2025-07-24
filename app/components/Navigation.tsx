@@ -112,6 +112,7 @@ export default function Navigation() {
     { href: '/', label: 'Dashboard', icon: '🔍' },
     { href: '/content-pipeline', label: 'Content Pipeline', icon: '📋' },
     { href: '/competitor-intelligence', label: 'Competitor Intelligence', icon: '🎯' },
+    { href: '/changelog', label: 'Changelog', icon: '📝' },
     { href: '/integrations', label: 'Integrations', icon: '🔗' }
   ];
 

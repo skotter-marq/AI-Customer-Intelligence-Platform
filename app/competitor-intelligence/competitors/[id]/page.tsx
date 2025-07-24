@@ -51,15 +51,15 @@ import {
   ThumbsUp,
   ThumbsDown,
   Filter,
-  Search,
   Bell,
-  Download,
   Bookmark,
   Heart,
   Flame,
   TrendingUp as Trending,
   Info,
-  Minus
+  Minus,
+  Download,
+  Calendar as CalendarIcon
 } from 'lucide-react';
 
 interface AIGeneratedContent {
@@ -197,6 +197,13 @@ export default function CompetitorProfilePage() {
   const [feedFilter, setFeedFilter] = useState<'all' | 'ai_insight' | 'product_update' | 'competitive_action'>('all');
   const [bookmarked, setBookmarked] = useState(false);
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  
+  // CSV export states
+  const [csvDateRange, setCsvDateRange] = useState({
+    start: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+    end: new Date()
+  });
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const [isEditing, setIsEditing] = useState(false);
@@ -206,11 +213,8 @@ export default function CompetitorProfilePage() {
     weaknesses: [] as string[]
   });
   
+  
   // New section states
-  const [featureSearchQuery, setFeatureSearchQuery] = useState('');
-  const [selectedFeatureCategory, setSelectedFeatureCategory] = useState<'all' | 'core' | 'integration' | 'security' | 'pricing'>('all');
-  const [pricingViewMode, setPricingViewMode] = useState<'comparison' | 'calculator' | 'trends'>('comparison');
-  const [integrationFilter, setIntegrationFilter] = useState<'all' | 'native' | 'api' | 'third-party'>('all');
 
   useEffect(() => {
     fetchCompetitorProfile();
@@ -848,6 +852,59 @@ export default function CompetitorProfilePage() {
     }
   };
 
+  const exportToCSV = () => {
+    if (!competitor?.recentActivities) return;
+
+    // Filter activities by date range
+    const filteredActivities = competitor.recentActivities.filter(activity => {
+      const activityDate = new Date(activity.timestamp);
+      return activityDate >= csvDateRange.start && activityDate <= csvDateRange.end;
+    });
+
+    // Create CSV headers
+    const headers = [
+      'Date',
+      'Title',
+      'Type',
+      'Importance',
+      'Category',
+      'Description',
+      'Action Required',
+      'Source'
+    ];
+
+    // Convert activities to CSV rows
+    const csvRows = filteredActivities.map(activity => [
+      new Date(activity.timestamp).toLocaleDateString(),
+      `"${activity.title.replace(/"/g, '""')}"`,
+      activity.type,
+      activity.importance,
+      activity.category,
+      `"${activity.description.replace(/"/g, '""')}"`,
+      activity.actionRequired ? 'Yes' : 'No',
+      competitor.name
+    ]);
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${competitor.name.toLowerCase().replace(/\s+/g, '-')}-intelligence-feed-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    setShowDatePicker(false);
+  };
+
   const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-600 bg-green-100 border-green-200';
     if (score >= 80) return 'text-blue-600 bg-blue-100 border-blue-200';
@@ -1016,7 +1073,7 @@ export default function CompetitorProfilePage() {
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => router.back()}
+              onClick={() => router.push('/competitor-intelligence')}
               className="p-2 rounded-lg text-gray-800 hover:text-indigo-600 hover:bg-gray-100 transition-all duration-200"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -1078,9 +1135,12 @@ export default function CompetitorProfilePage() {
                       <ExternalLink className="w-4 h-4" />
                       <span>Visit Site</span>
                     </button>
-                    <button className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl">
-                      <Bot className="w-4 h-4" />
-                      <span>Generate Report</span>
+                    <button 
+                      onClick={() => router.push(`/competitor-intelligence/add-competitor?edit=${competitorId}`)}
+                      className="flex items-center space-x-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200 hover:scale-105 shadow-lg hover:shadow-xl"
+                    >
+                      <Edit3 className="w-4 h-4" />
+                      <span>Edit Competitor</span>
                     </button>
                   </div>
                 </div>
@@ -1093,37 +1153,7 @@ export default function CompetitorProfilePage() {
             </div>
           </div>
 
-          {/* Navigation Tabs */}
-          <div className="mb-8">
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-2">
-              <div className="flex space-x-1 overflow-x-auto">
-                {[
-                  { id: 'overview', label: 'Overview', icon: Eye },
-                  { id: 'features', label: 'Feature Comparison', icon: BarChart3 },
-                  { id: 'pricing', label: 'Pricing Strategy', icon: DollarSign },
-                  { id: 'integrations', label: 'Integrations', icon: Zap },
-                  { id: 'insights', label: 'Intelligence Reports', icon: Lightbulb },
-                  { id: 'feed', label: 'Activity Feed', icon: Activity }
-                ].map((section) => {
-                  const Icon = section.icon;
-                  return (
-                    <button
-                      key={section.id}
-                      onClick={() => setActiveSection(section.id as any)}
-                      className={`flex items-center space-x-2 px-4 py-2 rounded-xl font-medium transition-all duration-200 whitespace-nowrap ${
-                        activeSection === section.id
-                          ? 'bg-indigo-600 text-white shadow-lg'
-                          : 'text-gray-600 hover:text-indigo-600 hover:bg-indigo-50'
-                      }`}
-                    >
-                      <Icon className="w-4 h-4" />
-                      <span className="text-sm">{section.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
+          {/* Navigation Tabs - Hidden as only overview remains */}
 
           {/* Main Content */}
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
@@ -1156,10 +1186,81 @@ export default function CompetitorProfilePage() {
                       <option value="product_update">Product Updates</option>
                       <option value="competitive_action">Competitive Actions</option>
                     </select>
-                    <button className="flex items-center space-x-1 px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors">
-                      <Plus className="w-4 h-4" />
-                      <span>Add Update</span>
-                    </button>
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowDatePicker(!showDatePicker)}
+                        className="flex items-center space-x-2 px-3 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm font-medium"
+                      >
+                        <Download className="w-4 h-4" />
+                        <span>Export CSV</span>
+                      </button>
+                      
+                      {/* Date Picker Dropdown */}
+                      {showDatePicker && (
+                        <div className="absolute right-0 top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-200 p-4 z-10 min-w-[320px]">
+                          <div className="mb-4">
+                            <h3 className="text-sm font-semibold text-gray-900 mb-2">Export Date Range</h3>
+                            <p className="text-xs text-gray-600 mb-3">Select the time period for your CSV export</p>
+                          </div>
+                          
+                          <div className="space-y-3">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="w-4 h-4 text-gray-600" />
+                              <label className="text-sm font-medium text-gray-700 w-12">From:</label>
+                              <input
+                                type="date"
+                                value={csvDateRange.start.toISOString().split('T')[0]}
+                                max={new Date().toISOString().split('T')[0]}
+                                onChange={(e) => setCsvDateRange(prev => ({
+                                  ...prev,
+                                  start: new Date(e.target.value)
+                                }))}
+                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              />
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="w-4 h-4 text-gray-600" />
+                              <label className="text-sm font-medium text-gray-700 w-12">To:</label>
+                              <input
+                                type="date"
+                                value={csvDateRange.end.toISOString().split('T')[0]}
+                                max={new Date().toISOString().split('T')[0]}
+                                onChange={(e) => setCsvDateRange(prev => ({
+                                  ...prev,
+                                  end: new Date(e.target.value)
+                                }))}
+                                className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
+                            <span className="text-xs text-gray-500">
+                              {competitor?.recentActivities?.filter(activity => {
+                                const activityDate = new Date(activity.timestamp);
+                                return activityDate >= csvDateRange.start && activityDate <= csvDateRange.end;
+                              }).length || 0} activities in range
+                            </span>
+                            <div className="flex space-x-2">
+                              <button
+                                onClick={() => setShowDatePicker(false)}
+                                className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded text-sm transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={exportToCSV}
+                                className="flex items-center space-x-1 px-3 py-1 bg-indigo-600 text-white hover:bg-indigo-700 rounded text-sm transition-colors"
+                              >
+                                <Download className="w-3 h-3" />
+                                <span>Download</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -1572,889 +1673,7 @@ export default function CompetitorProfilePage() {
                 </>
               )}
 
-              {/* Features Section */}
-              {activeSection === 'features' && (
-                <>
-                  {/* Enhanced Feature Comparison Section */}
-                  <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="flex items-center space-x-3">
-                        <BarChart3 className="w-6 h-6 text-blue-600" />
-                        <div>
-                          <h2 className="text-3xl font-bold text-gray-900">Feature Comparison</h2>
-                          <p className="text-gray-600 mt-1">Comprehensive analysis of feature capabilities</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <div className="relative">
-                          <Search className="w-4 h-4 absolute left-3 top-3 text-gray-400" />
-                          <input
-                            type="text"
-                            placeholder="Search features..."
-                            value={featureSearchQuery}
-                            onChange={(e) => setFeatureSearchQuery(e.target.value)}
-                            className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                          />
-                        </div>
-                        <select
-                          value={selectedFeatureCategory}
-                          onChange={(e) => setSelectedFeatureCategory(e.target.value as any)}
-                          className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white"
-                        >
-                          <option value="all">All Categories</option>
-                          <option value="core">Core Platform</option>
-                          <option value="integration">Integration</option>
-                          <option value="security">Security</option>
-                          <option value="pricing">Pricing</option>
-                        </select>
-                        <button className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium">
-                          Export Comparison
-                        </button>
-                      </div>
-                    </div>
 
-                    {/* AI Feature Assistant */}
-                    {featureSearchQuery && (
-                      <div className="mb-8 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 border border-purple-200">
-                        <div className="flex items-start space-x-3">
-                          <Bot className="w-5 h-5 text-purple-600 mt-0.5" />
-                          <div>
-                            <h4 className="font-semibold text-purple-900 mb-2">AI Feature Analysis</h4>
-                            <p className="text-purple-800 text-sm">
-                              Based on your search for "{featureSearchQuery}", here's how this feature typically works:
-                            </p>
-                            <div className="mt-3 p-3 bg-white/50 rounded-lg">
-                              <p className="text-sm text-purple-700">
-                                This feature enables advanced functionality with seamless integration capabilities. 
-                                Our platform provides comprehensive support with enhanced customization options.
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Professional Feature Comparison Table */}
-                  <div className="bg-white rounded-2xl p-8 border border-gray-200 shadow-lg">
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="flex items-center space-x-3">
-                        <BarChart3 className="w-6 h-6 text-blue-600" />
-                        <h3 className="text-2xl font-bold text-gray-900">Feature Comparison</h3>
-                      </div>
-                      <button className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors text-sm font-medium">
-                        Export Comparison
-                      </button>
-                    </div>
-
-                    {/* Comparison Table Header */}
-                    <div className="grid grid-cols-3 gap-4 mb-6">
-                      <div className="text-center">
-                        <h4 className="text-lg font-bold text-gray-900">Features</h4>
-                      </div>
-                      <div className="bg-blue-50 rounded-lg p-4 text-center border border-blue-200">
-                        <h4 className="text-lg font-bold text-blue-900">Our Platform</h4>
-                        <p className="text-sm text-blue-700 mt-1">AI-First Intelligence</p>
-                      </div>
-                      <div className="bg-gray-50 rounded-lg p-4 text-center border border-gray-200">
-                        <h4 className="text-lg font-bold text-gray-900">{competitor.name}</h4>
-                        <p className="text-sm text-gray-700 mt-1">{competitor.category}</p>
-                      </div>
-                    </div>
-
-                    {/* Feature Categories */}
-                    <div className="space-y-8">
-                      {/* Core Platform Features */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                          <Package className="w-5 h-5 text-blue-600" />
-                          <span>Core Platform Features</span>
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          {/* AI & Intelligence */}
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900 flex items-center">
-                              <span>AI-Powered Insights</span>
-                              <div className="ml-2 group relative">
-                                <Info className="w-4 h-4 text-gray-400 cursor-help" />
-                                <div className="invisible group-hover:visible absolute z-10 w-48 p-2 bg-black text-white text-xs rounded-lg -top-8 left-4">
-                                  Automated analysis and recommendations
-                                </div>
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Advanced
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                {competitorId === '1' ? 'Einstein AI' : 'Basic'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Competitive Intelligence</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Native
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <X className="w-4 h-4 mr-1" />
-                                Limited
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Meeting Intelligence</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Full Transcription
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <Minus className="w-4 h-4 mr-1" />
-                                {competitorId === '1' ? 'Basic Recording' : 'Via Add-ons'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Real-time Alerts</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Multi-channel
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Email Only
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Integration & Connectivity */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                          <Zap className="w-5 h-5 text-indigo-600" />
-                          <span>Integration & Connectivity</span>
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">HubSpot Integration</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Deep Native
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                {competitorId === '1' ? 'Competitor' : 'Third-party'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">JIRA Integration</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Native
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <X className="w-4 h-4 mr-1" />
-                                Not Available
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">API Access</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                REST + Webhooks
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                {competitorId === '1' ? 'Comprehensive' : 'REST Only'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Third-party Apps</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <Zap className="w-4 h-4 mr-1" />
-                                20+
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <Zap className="w-4 h-4 mr-1" />
-                                {competitorId === '1' ? '1,000+' : '500+'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Pricing & Value */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                          <DollarSign className="w-5 h-5 text-purple-600" />
-                          <span>Pricing & Value</span>
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Starting Price</div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-purple-700">$49<span className="text-sm font-normal">/user/mo</span></div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-gray-700">
-                                {competitorId === '1' ? '$80' : competitorId === '2' ? '$50' : '$14'}
-                                <span className="text-sm font-normal">
-                                  {competitorId === '2' ? '/mo' : '/user/mo'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Enterprise Pricing</div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-purple-700">$199<span className="text-sm font-normal">/user/mo</span></div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-lg font-bold text-gray-700">
-                                {competitorId === '1' ? '$165' : competitorId === '2' ? '$3,200' : '$99'}
-                                <span className="text-sm font-normal">
-                                  {competitorId === '2' ? '/mo' : '/user/mo'}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Free Trial</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                14 Days
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                {competitorId === '1' ? '30 Days' : competitorId === '2' ? 'Forever Free' : '14 Days'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Contract Terms</div>
-                            <div className="text-center">
-                              <div className="text-sm text-purple-700 font-medium">Monthly/Annual</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm text-gray-700 font-medium">
-                                {competitorId === '1' ? 'Annual Required' : 'Monthly/Annual'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Enterprise & Security */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                          <Shield className="w-5 h-5 text-green-600" />
-                          <span>Enterprise & Security</span>
-                        </h4>
-                        
-                        <div className="space-y-3">
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">SOC 2 Compliance</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Type II
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                {competitorId === '1' ? 'Type II' : 'Type I'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Single Sign-On (SSO)</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                SAML/OAuth
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                Enterprise Only
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Data Residency</div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <Minus className="w-4 h-4 mr-1" />
-                                US/EU
-                              </div>
-                            </div>
-                            <div className="text-center">
-                              <div className="inline-flex items-center bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium">
-                                <CheckCircle className="w-4 h-4 mr-1" />
-                                {competitorId === '1' ? 'Global' : 'US/EU'}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-3 gap-4 p-3 bg-gray-50/50 rounded-lg hover:bg-gray-100/50 transition-colors">
-                            <div className="font-medium text-gray-900">Support Level</div>
-                            <div className="text-center">
-                              <div className="text-sm text-purple-700 font-medium">24/7 Chat + Phone</div>
-                            </div>
-                            <div className="text-center">
-                              <div className="text-sm text-gray-700 font-medium">
-                                {competitorId === '1' ? '24/7 Premium' : 'Business Hours'}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Competitive Advantage Summary */}
-                      <div className="border-t border-gray-200 pt-6">
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
-                          <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                            <Target className="w-5 h-5 text-blue-600" />
-                            <span>Competitive Advantage Summary</span>
-                          </h4>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                              <h5 className="font-semibold text-blue-900 mb-3">Where We Excel</h5>
-                              <div className="space-y-2">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  <span className="text-sm text-gray-700">Native competitive intelligence</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  <span className="text-sm text-gray-700">Deep HubSpot & JIRA integration</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  <span className="text-sm text-gray-700">AI-first meeting intelligence</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                  <span className="text-sm text-gray-700">Transparent, flexible pricing</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div>
-                              <h5 className="font-semibold text-red-900 mb-3">Growth Opportunities</h5>
-                              <div className="space-y-2">
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                  <span className="text-sm text-gray-700">Expand third-party app ecosystem</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                  <span className="text-sm text-gray-700">Enterprise-scale deployment history</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                  <span className="text-sm text-gray-700">Global data residency options</span>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                  <span className="text-sm text-gray-700">Brand recognition in established markets</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Pricing Section */}
-              {activeSection === 'pricing' && (
-                <>
-                  {/* Enhanced Pricing & Packaging Section */}
-                  <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="flex items-center space-x-3">
-                        <DollarSign className="w-6 h-6 text-green-600" />
-                        <div>
-                          <h2 className="text-3xl font-bold text-gray-900">Pricing Strategy</h2>
-                          <p className="text-gray-600 mt-1">Comprehensive pricing analysis and comparison</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <select
-                          value={pricingViewMode}
-                          onChange={(e) => setPricingViewMode(e.target.value as any)}
-                          className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white"
-                        >
-                          <option value="comparison">Side-by-Side</option>
-                          <option value="calculator">ROI Calculator</option>
-                          <option value="trends">Market Trends</option>
-                        </select>
-                        <button className="bg-green-100 text-green-700 px-4 py-2 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium">
-                          Export Analysis
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Pricing View Modes */}
-                    {pricingViewMode === 'calculator' && (
-                      <div className="mb-8 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
-                        <h4 className="font-semibold text-green-900 mb-4">ROI Calculator</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Team Size</label>
-                            <input type="number" className="w-full px-3 py-2 border border-gray-300 rounded-lg" placeholder="10" />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Contract Length</label>
-                            <select className="w-full px-3 py-2 border border-gray-300 rounded-lg">
-                              <option>12 months</option>
-                              <option>24 months</option>
-                              <option>36 months</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Estimated Savings</label>
-                            <div className="px-3 py-2 bg-green-100 text-green-800 rounded-lg font-semibold">$24,000/year</div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {pricingViewMode === 'trends' && (
-                      <div className="mb-8 bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-                        <h4 className="font-semibold text-purple-900 mb-4">Market Pricing Trends</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <h5 className="font-medium text-gray-900 mb-2">Industry Average</h5>
-                            <p className="text-sm text-gray-600">$75/user/month for similar platforms</p>
-                          </div>
-                          <div>
-                            <h5 className="font-medium text-gray-900 mb-2">Price Trend</h5>
-                            <p className="text-sm text-gray-600">↗️ 12% increase over past year</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Enhanced Pricing & Packaging */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                      <DollarSign className="w-5 h-5 text-green-600" />
-                      <span>Pricing & Packaging Strategy</span>
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-                        <h4 className="font-semibold text-green-900 mb-4">Our Pricing Strategy</h4>
-                        <div className="space-y-4">
-                          <div className="bg-white rounded-lg p-4 border border-green-100">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-gray-900">Starter</span>
-                              <span className="text-lg font-bold text-green-700">$49/user/month</span>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              <div className="flex items-center space-x-1 mb-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>Basic competitive intelligence</span>
-                              </div>
-                              <div className="flex items-center space-x-1 mb-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>5 competitors monitored</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>Email alerts & reports</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-white rounded-lg p-4 border border-green-100">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-gray-900">Professional</span>
-                              <span className="text-lg font-bold text-green-700">$99/user/month</span>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              <div className="flex items-center space-x-1 mb-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>Advanced AI insights</span>
-                              </div>
-                              <div className="flex items-center space-x-1 mb-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>Unlimited competitors</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>API access & integrations</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="bg-white rounded-lg p-4 border border-green-100">
-                            <div className="flex justify-between items-center mb-2">
-                              <span className="font-medium text-gray-900">Enterprise</span>
-                              <span className="text-lg font-bold text-green-700">$199/user/month</span>
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              <div className="flex items-center space-x-1 mb-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>Custom AI models</span>
-                              </div>
-                              <div className="flex items-center space-x-1 mb-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>Dedicated success manager</span>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <CheckCircle className="w-3 h-3 text-green-500" />
-                                <span>Priority support & SLA</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-4">{competitor.name} Pricing</h4>
-                        <div className="bg-white rounded-lg p-4 border border-gray-200 mb-4">
-                          <p className="text-sm text-gray-700 mb-3">{competitor.productIntelligence.pricingStrategy.content}</p>
-                          <div className="pt-3 border-t border-gray-100">
-                            <div className="flex items-center space-x-2 text-sm">
-                              <AlertTriangle className="w-4 h-4 text-amber-500" />
-                              <span className="font-medium text-gray-900">Competitive Insight:</span>
-                            </div>
-                            <p className="text-sm text-gray-600 mt-1">
-                              {competitor.name === 'Salesforce' ? 'Higher pricing creates opportunity for value-based positioning in mid-market.' :
-                               competitor.name === 'HubSpot' ? 'Freemium model attracts initial users but pricing scales quickly with usage.' :
-                               competitor.name === 'Pipedrive' ? 'Aggressive pricing in SMB segment requires competitive response.' :
-                               'Premium pricing creates opportunity for competitive displacement.'}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced Integration & Ecosystem */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-                      <Settings className="w-5 h-5 text-indigo-600" />
-                      <span>Integration & Ecosystem</span>
-                    </h3>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div className="bg-indigo-50 rounded-xl p-6 border border-indigo-200">
-                        <h4 className="font-semibold text-indigo-900 mb-4">Our Integration Ecosystem</h4>
-                        <div className="space-y-4">
-                          <div className="bg-white rounded-lg p-4 border border-indigo-100">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Settings className="w-4 h-4 text-indigo-600" />
-                              <span className="font-medium text-gray-900">Platform Integrations</span>
-                            </div>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <div>• 250+ native integrations</div>
-                              <div>• Salesforce, HubSpot, Pipedrive native connectors</div>
-                              <div>• Microsoft Teams, Slack, Discord</div>
-                              <div>• Zapier with 3,000+ app connections</div>
-                            </div>
-                          </div>
-                          <div className="bg-white rounded-lg p-4 border border-indigo-100">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Package className="w-4 h-4 text-indigo-600" />
-                              <span className="font-medium text-gray-900">Developer Tools</span>
-                            </div>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <div>• REST API with OpenAPI 3.0 spec</div>
-                              <div>• Webhooks for real-time updates</div>
-                              <div>• Python & JavaScript SDKs</div>
-                              <div>• GraphQL endpoint for custom queries</div>
-                            </div>
-                          </div>
-                          <div className="bg-white rounded-lg p-4 border border-indigo-100">
-                            <div className="flex items-center space-x-2 mb-2">
-                              <Shield className="w-4 h-4 text-indigo-600" />
-                              <span className="font-medium text-gray-900">Enterprise Security</span>
-                            </div>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <div>• SOC 2 Type II certified</div>
-                              <div>• SSO with SAML 2.0 & OAuth</div>
-                              <div>• Role-based access controls</div>
-                              <div>• Data encryption at rest & in transit</div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-4">{competitor.name} Integration</h4>
-                        <div className="bg-white rounded-lg p-4 border border-gray-200">
-                          <p className="text-sm text-gray-700 mb-4">{competitor.productIntelligence.integrations.content}</p>
-                          
-                          <div className="border-t border-gray-100 pt-3">
-                            <h5 className="font-medium text-gray-900 mb-2">Competitive Analysis</h5>
-                            <div className="space-y-2 text-sm">
-                              <div className="flex items-start space-x-2">
-                                <div className="w-2 h-2 bg-green-500 rounded-full mt-1.5"></div>
-                                <span className="text-gray-700">
-                                  <span className="font-medium">Advantage:</span> {competitor.name === 'Salesforce' ? 'Massive AppExchange ecosystem with 5,000+ apps' :
-                                   competitor.name === 'HubSpot' ? 'Strong marketplace with 1,000+ integrations' :
-                                   competitor.name === 'Pipedrive' ? 'Good coverage of essential business tools' :
-                                   'Comprehensive support ecosystem'}
-                                </span>
-                              </div>
-                              <div className="flex items-start space-x-2">
-                                <div className="w-2 h-2 bg-red-500 rounded-full mt-1.5"></div>
-                                <span className="text-gray-700">
-                                  <span className="font-medium">Weakness:</span> {competitor.name === 'Salesforce' ? 'Complex setup and high implementation costs' :
-                                   competitor.name === 'HubSpot' ? 'Limited enterprise-grade security options' :
-                                   competitor.name === 'Pipedrive' ? 'Smaller ecosystem, fewer specialized integrations' :
-                                   'Integration complexity for smaller businesses'}
-                                </span>
-                              </div>
-                              <div className="flex items-start space-x-2">
-                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-1.5"></div>
-                                <span className="text-gray-700">
-                                  <span className="font-medium">Opportunity:</span> Target customers frustrated with their integration complexity and costs
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Integrations Section */}
-              {activeSection === 'integrations' && (
-                <>
-                  {/* Enhanced Integration & Ecosystem Section */}
-                  <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                    <div className="flex items-center justify-between mb-8">
-                      <div className="flex items-center space-x-3">
-                        <Zap className="w-6 h-6 text-indigo-600" />
-                        <div>
-                          <h2 className="text-3xl font-bold text-gray-900">Integration & Ecosystem</h2>
-                          <p className="text-gray-600 mt-1">Comprehensive integration analysis and compatibility</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-3">
-                        <select
-                          value={integrationFilter}
-                          onChange={(e) => setIntegrationFilter(e.target.value as any)}
-                          className="border border-gray-300 rounded-lg px-3 py-2 text-gray-900 bg-white"
-                        >
-                          <option value="all">All Integrations</option>
-                          <option value="native">Native Only</option>
-                          <option value="api">API Based</option>
-                          <option value="third-party">Third-party</option>
-                        </select>
-                        <button className="bg-indigo-100 text-indigo-700 px-4 py-2 rounded-lg hover:bg-indigo-200 transition-colors text-sm font-medium">
-                          Integration Guide
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Integration Categories */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                      <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <Package className="w-5 h-5 text-blue-600" />
-                          <h3 className="font-semibold text-blue-900">CRM Platforms</h3>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>HubSpot</span>
-                            <span className="text-green-600 font-medium">Native</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Salesforce</span>
-                            <span className="text-blue-600 font-medium">API</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Pipedrive</span>
-                            <span className="text-blue-600 font-medium">API</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-purple-50 rounded-xl p-6 border border-purple-200">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <Briefcase className="w-5 h-5 text-purple-600" />
-                          <h3 className="font-semibold text-purple-900">Project Management</h3>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>JIRA</span>
-                            <span className="text-green-600 font-medium">Native</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Asana</span>
-                            <span className="text-yellow-600 font-medium">Zapier</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Monday.com</span>
-                            <span className="text-blue-600 font-medium">API</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="bg-green-50 rounded-xl p-6 border border-green-200">
-                        <div className="flex items-center space-x-3 mb-4">
-                          <MessageSquare className="w-5 h-5 text-green-600" />
-                          <h3 className="font-semibold text-green-900">Communication</h3>
-                        </div>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>Slack</span>
-                            <span className="text-green-600 font-medium">Native</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Microsoft Teams</span>
-                            <span className="text-blue-600 font-medium">API</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Discord</span>
-                            <span className="text-yellow-600 font-medium">Webhook</span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Integration Comparison */}
-                    <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
-                      <h4 className="font-semibold text-indigo-900 mb-4">Integration Capabilities Comparison</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                          <h5 className="font-medium text-gray-900 mb-3">Our Platform</h5>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span>20+ native integrations</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span>REST API + GraphQL</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span>Webhook support</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span>Custom integrations available</span>
-                            </div>
-                          </div>
-                        </div>
-                        <div>
-                          <h5 className="font-medium text-gray-900 mb-3">{competitor.name}</h5>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center space-x-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span>{competitorId === '1' ? '1,000+' : '500+'} integrations</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span>Comprehensive API</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              {competitorId === '1' ? (
-                                <CheckCircle className="w-4 h-4 text-green-500" />
-                              ) : (
-                                <X className="w-4 h-4 text-red-500" />
-                              )}
-                              <span>Advanced webhook system</span>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <AlertCircle className="w-4 h-4 text-yellow-500" />
-                              <span>Complex setup required</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-
-              {/* Insights Section */}
-              {activeSection === 'insights' && (
-                <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center space-x-3">
-                      <Lightbulb className="w-6 h-6 text-yellow-600" />
-                      <div>
-                        <h2 className="text-3xl font-bold text-gray-900">Intelligence Reports</h2>
-                        <p className="text-gray-600 mt-1">AI-generated competitive intelligence and insights</p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-gray-500 text-center py-12">Intelligence Reports content coming soon...</p>
-                </div>
-              )}
-
-              {/* Feed Section */}
-              {activeSection === 'feed' && (
-                <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-xl border border-gray-200/50 p-8">
-                  <div className="flex items-center justify-between mb-8">
-                    <div className="flex items-center space-x-3">
-                      <Activity className="w-6 h-6 text-indigo-600" />
-                      <div>
-                        <h2 className="text-3xl font-bold text-gray-900">Activity Feed</h2>
-                        <p className="text-gray-600 mt-1">Latest competitive activity and updates</p>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-gray-500 text-center py-12">Activity Feed content coming soon...</p>
-                </div>
-              )}
               
             </div>
 
@@ -2531,7 +1750,11 @@ export default function CompetitorProfilePage() {
                   {competitor.agents.map((agent) => {
                     const AgentIcon = getAgentIcon(agent.type);
                     return (
-                      <div key={agent.id} className="bg-gray-50 rounded-lg p-3 hover:bg-gray-100 transition-colors">
+                      <button 
+                        key={agent.id} 
+                        onClick={() => router.push(`/agents/${agent.id}`)}
+                        className="w-full bg-gray-50 rounded-lg p-3 hover:bg-gray-100 hover:shadow-md transition-all duration-200 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                      >
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <AgentIcon className="w-4 h-4 text-gray-600" />
@@ -2544,14 +1767,11 @@ export default function CompetitorProfilePage() {
                         <p className="text-xs text-gray-600 mb-2">{agent.description}</p>
                         <div className="flex items-center justify-between text-xs text-gray-500">
                           <span>{agent.insights} insights</span>
-                          <button
-                            onClick={() => router.push(`/agents/${agent.id}`)}
-                            className="text-indigo-600 hover:text-indigo-700 font-medium transition-colors"
-                          >
+                          <span className="text-indigo-600 font-medium">
                             View Details →
-                          </button>
+                          </span>
                         </div>
-                      </div>
+                      </button>
                     );
                   })}
                 </div>
@@ -2725,6 +1945,7 @@ export default function CompetitorProfilePage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }
