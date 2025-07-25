@@ -459,6 +459,47 @@ export default function CreateAgentPage() {
       // TODO: Replace with actual API call when backend is ready
       // For now, use the same mock data structure as the agent profile
       const mockAgents: Record<string, any> = {
+        'pricing-monitor': {
+          name: 'Pricing Monitor',
+          description: 'Tracks competitor pricing changes and promotional activities across multiple channels.',
+          type: 'pricing',
+          competitor_ids: ['salesforce', 'hubspot', 'pipedrive'],
+          schedule: 'daily',
+          sources: [
+            'Company websites',
+            'Pricing pages',
+            'Press releases',
+            'Product documentation',
+            'Marketing materials',
+            'Partner portals',
+            'Industry reports'
+          ],
+          keywords: [
+            'pricing',
+            'discount',
+            'promotion',
+            'free trial',
+            'cost',
+            'subscription',
+            'tier',
+            'plan',
+            'enterprise',
+            'professional',
+            'starter',
+            'premium'
+          ],
+          notification_triggers: [
+            'price_change',
+            'new_tier',
+            'discount_announcement',
+            'pricing_model_change',
+            'promotional_offer'
+          ],
+          sentiment_tracking: true,
+          deep_analysis: true,
+          data_retention_days: 90,
+          price_threshold: 5
+        },
         'sf-pricing-agent': {
           name: 'Salesforce Pricing Monitor',
           description: 'Monitors Salesforce pricing changes, new tiers, and promotional offers across all products with real-time alerts and competitive analysis.',
@@ -701,6 +742,160 @@ export default function CreateAgentPage() {
             'new_department',
             'location_expansion',
             'remote_hiring'
+          ],
+          sentiment_tracking: false,
+          deep_analysis: true,
+          data_retention_days: 365
+        },
+        'feature-tracker': {
+          name: 'Feature Tracker',
+          description: 'Monitors new feature announcements and product updates from key competitors.',
+          type: 'features',
+          competitor_ids: ['salesforce', 'hubspot'],
+          schedule: 'weekly',
+          sources: [
+            'Product pages',
+            'Release notes',
+            'Changelogs',
+            'Documentation',
+            'Developer blog',
+            'Product announcements'
+          ],
+          keywords: [
+            'new feature',
+            'product update',
+            'announcement',
+            'release',
+            'beta',
+            'launch',
+            'update'
+          ],
+          notification_triggers: [
+            'new_feature',
+            'major_update',
+            'beta_program',
+            'product_launch'
+          ],
+          sentiment_tracking: true,
+          deep_analysis: true,
+          data_retention_days: 120
+        },
+        'news-sentinel': {
+          name: 'News Sentinel',
+          description: 'Aggregates news coverage and media mentions of competitors for market intelligence.',
+          type: 'news',
+          competitor_ids: ['salesforce', 'hubspot', 'pipedrive'],
+          schedule: 'hourly',
+          sources: [
+            'News sites',
+            'Press releases',
+            'Industry publications',
+            'Tech blogs',
+            'Business journals'
+          ],
+          keywords: [
+            'acquisition',
+            'funding',
+            'partnership',
+            'expansion',
+            'news',
+            'announcement'
+          ],
+          notification_triggers: [
+            'acquisition',
+            'funding_news',
+            'partnership',
+            'expansion'
+          ],
+          sentiment_tracking: true,
+          deep_analysis: true,
+          data_retention_days: 60
+        },
+        'hiring-insights': {
+          name: 'Hiring Insights',
+          description: 'Analyzes competitor job postings to understand strategic hiring and expansion plans.',
+          type: 'hiring',
+          competitor_ids: ['salesforce', 'hubspot'],
+          schedule: 'weekly',
+          sources: [
+            'LinkedIn',
+            'Company careers',
+            'Job boards',
+            'Glassdoor',
+            'AngelList'
+          ],
+          keywords: [
+            'engineer',
+            'sales',
+            'product manager',
+            'remote',
+            'hiring',
+            'job posting'
+          ],
+          notification_triggers: [
+            'job_posting',
+            'team_expansion',
+            'executive_hire'
+          ],
+          sentiment_tracking: false,
+          deep_analysis: true,
+          data_retention_days: 180
+        },
+        'social-pulse': {
+          name: 'Social Pulse',
+          description: 'Monitors social media sentiment and engagement patterns for competitive analysis.',
+          type: 'social',
+          competitor_ids: ['salesforce', 'hubspot', 'pipedrive'],
+          schedule: 'daily',
+          sources: [
+            'Twitter',
+            'LinkedIn',
+            'Reddit',
+            'Review sites',
+            'Social media'
+          ],
+          keywords: [
+            'customer',
+            'review',
+            'complaint',
+            'praise',
+            'sentiment',
+            'social'
+          ],
+          notification_triggers: [
+            'negative_sentiment',
+            'viral_content',
+            'customer_complaint'
+          ],
+          sentiment_tracking: true,
+          deep_analysis: true,
+          data_retention_days: 45
+        },
+        'funding-radar': {
+          name: 'Funding Radar',
+          description: 'Tracks funding rounds and investment activities in the competitive landscape.',
+          type: 'funding',
+          competitor_ids: ['pipedrive'],
+          schedule: 'monthly',
+          sources: [
+            'Crunchbase',
+            'TechCrunch',
+            'Venture databases',
+            'SEC filings',
+            'Press releases'
+          ],
+          keywords: [
+            'funding',
+            'investment',
+            'series',
+            'venture',
+            'round',
+            'investor'
+          ],
+          notification_triggers: [
+            'funding_round',
+            'investment_news',
+            'valuation_change'
           ],
           sentiment_tracking: false,
           deep_analysis: true,
@@ -1276,37 +1471,47 @@ export default function CreateAgentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-6">
+    <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center space-x-4 mb-4">
+          <div className="calendly-card-static" style={{ marginBottom: '24px', padding: '24px' }}>
+            <div className="flex items-center space-x-4">
               <button 
                 onClick={() => router.push(`/agents/${editId}`)}
-                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: '#718096' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                  e.currentTarget.style.color = '#4285f4';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#718096';
+                }}
               >
-                <ArrowLeft className="w-6 h-6" />
+                <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="calendly-h1" style={{ marginBottom: '4px' }}>
                   {isEditMode ? 'Edit AI Agent' : 'Create AI Agent'}
                 </h1>
-                <p className="text-gray-600">
+                <p className="calendly-body">
                   {isEditMode ? 'Update agent configuration and monitoring settings' : 'Set up AI-powered competitor intelligence monitoring'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Progress Steps */}
-          <div className="flex items-center space-x-4 mb-8">
+          {/* Progress Steps - Only show in create mode */}
+          {!isEditMode && <div className="flex items-center space-x-4 mb-8">
             <div className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                 researchComplete || (newAgent.name && newAgent.type && newAgent.competitor_ids.length > 0)
                   ? 'bg-green-500 text-white' 
-                  : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white'
-              }`}>
+                  : 'text-white'
+              }`}
+              style={researchComplete || (newAgent.name && newAgent.type && newAgent.competitor_ids.length > 0) ? {} : { background: '#4285f4' }}>
                 {researchComplete || (newAgent.name && newAgent.type && newAgent.competitor_ids.length > 0) ? <CheckCircle className="w-4 h-4" /> : '1'}
               </div>
               <div className="ml-3">
@@ -1340,9 +1545,10 @@ export default function CreateAgentPage() {
             <div className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                 researchComplete && canCreateAgent
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white' 
+                  ? 'text-white' 
                   : 'bg-gray-200 text-gray-600'
-              }`}>
+              }`}
+              style={researchComplete && canCreateAgent ? { background: '#4285f4' } : {}}>
                 {researchComplete && canCreateAgent ? '3' : '3'}
               </div>
               <div className="ml-3">
@@ -1350,10 +1556,10 @@ export default function CreateAgentPage() {
                 <p className="text-xs text-gray-500">Finalize and deploy agent</p>
               </div>
             </div>
-          </div>
+          </div>}
 
           {/* Agent Configuration Step */}
-          <div ref={step1Ref} className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 mb-6">
+          <div ref={step1Ref} className="calendly-card-static mb-6">
             <div className="p-6">
               <button
                 onClick={() => toggleStep('step1')}
@@ -1649,7 +1855,7 @@ export default function CreateAgentPage() {
 
                   {/* AI Configuration Button */}
                   {!isEditMode && (
-                    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
+                    <div className="calendly-card" style={{ background: '#f0f4ff', border: '1px solid #4285f4' }}>
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
@@ -1661,7 +1867,7 @@ export default function CreateAgentPage() {
                         <button
                           onClick={handleAIConfiguration}
                           disabled={!newAgent.name || !newAgent.type || newAgent.competitor_ids.length === 0 || isResearching}
-                          className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                          className="calendly-btn-primary flex items-center space-x-3 px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                         >
                           {isResearching ? (
                             <>
@@ -1681,7 +1887,7 @@ export default function CreateAgentPage() {
                   
                   {/* AI Regenerate Button for Edit Mode */}
                   {isEditMode && (
-                    <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200 p-6">
+                    <div className="calendly-card" style={{ background: '#f0fff4', border: '1px solid #10b981' }}>
                       <div className="flex items-center justify-between">
                         <div>
                           <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
@@ -1693,7 +1899,7 @@ export default function CreateAgentPage() {
                         <button
                           onClick={handleAIConfiguration}
                           disabled={isResearching}
-                          className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-lg hover:from-green-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                          className="calendly-btn-primary flex items-center space-x-3 px-6 py-3 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                         >
                           {isResearching ? (
                             <>
@@ -1717,7 +1923,7 @@ export default function CreateAgentPage() {
 
           {/* AI Configuration Results */}
           {(researchComplete || isEditMode) && (
-            <div ref={aiConfigRef} className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 mb-8">
+            <div ref={aiConfigRef} className="calendly-card-static mb-8">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
@@ -1737,7 +1943,7 @@ export default function CreateAgentPage() {
                       <button
                     onClick={() => handleAIConfiguration()}
                     disabled={!newAgent.name || !newAgent.type || newAgent.competitor_ids.length === 0 || isResearching}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium"
+                    className="calendly-btn-primary flex items-center space-x-2 px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
                     title="Regenerate AI configuration based on current monitoring type and competitors"
                   >
                     {isResearching ? (
@@ -2264,7 +2470,7 @@ export default function CreateAgentPage() {
                     <div className="flex justify-center mt-8 pt-6 border-t border-gray-200">
                       <button
                         onClick={handleReviewAgent}
-                        className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-md"
+                        className="calendly-btn-primary flex items-center space-x-2 px-6 py-3 font-medium"
                       >
                         <Eye className="w-5 h-5" />
                         <span>Review Agent Configuration</span>
@@ -2279,10 +2485,10 @@ export default function CreateAgentPage() {
 
           {/* Step 3: Review & Create */}
           {(researchComplete || isEditMode) && (isEditMode || !stepsCollapsed.step3) && (
-            <div id="step-3" className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 mb-8">
+            <div id="step-3" className="calendly-card-static mb-8">
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: '#4285f4' }}>
                     <Eye className="w-5 h-5 text-white" />
                   </div>
                   <div>
@@ -2292,7 +2498,7 @@ export default function CreateAgentPage() {
                 </div>
 
                 {/* Agent Summary */}
-                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200 p-4 mb-6">
+                <div className="calendly-card" style={{ background: '#f0f4ff', border: '1px solid #4285f4' }}>
                   <div className="flex items-center space-x-3 mb-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedAgentType?.color || 'bg-gray-100'}`}>
                       {selectedAgentType && (() => {
@@ -2399,7 +2605,7 @@ export default function CreateAgentPage() {
                 </div>
 
                 {/* Final Action */}
-                <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200 p-6">
+                <div className="calendly-card" style={{ background: '#f0f4ff', border: '1px solid #4285f4' }}>
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 flex items-center space-x-2">
@@ -2423,7 +2629,7 @@ export default function CreateAgentPage() {
                     <button
                       onClick={handleSaveAgent}
                       disabled={!canCreateAgent || isCreating}
-                      className="flex items-center space-x-3 px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                      className="calendly-btn-primary flex items-center space-x-3 px-8 py-3 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                     >
                       {isCreating ? (
                         <>

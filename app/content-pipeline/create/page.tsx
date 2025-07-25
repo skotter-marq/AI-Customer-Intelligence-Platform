@@ -312,7 +312,7 @@ export default function CreateContentPage() {
         step3: true
       });
 
-      // Set initial publish status - check localStorage first, then default to draft
+      // Set initial publish status - check localStorage first, then fall back to mock data
       const statusKey = `content_status_${editId}`;
       const savedStatus = localStorage.getItem(statusKey);
       let initialStatus: 'draft' | 'published' = 'draft';
@@ -321,15 +321,36 @@ export default function CreateContentPage() {
         try {
           const statusData = JSON.parse(savedStatus);
           initialStatus = statusData.status || 'draft';
-          console.log('📖 EDIT MODE: Found saved status:', initialStatus, 'for ID:', editId);
+          console.log('📖 EDIT MODE: Found saved status in localStorage:', initialStatus, 'for ID:', editId);
         } catch (error) {
           console.warn('Error parsing saved status:', error);
+        }
+      } else {
+        // If no localStorage status, try to get status from mock data
+        // This ensures consistency with the Content Pipeline page
+        const mockItems = [
+          { id: '1', status: 'published' },
+          { id: '2', status: 'published' },
+          { id: '3', status: 'published' },
+          { id: '4', status: 'review' },
+          { id: '5', status: 'draft' },
+          { id: '6', status: 'draft' },
+          { id: '7', status: 'published' },
+          { id: '8', status: 'published' }
+        ];
+        
+        const mockItem = mockItems.find(item => item.id === editId);
+        if (mockItem) {
+          initialStatus = mockItem.status as 'draft' | 'published';
+          console.log('📖 EDIT MODE: Using mock data status:', initialStatus, 'for ID:', editId);
+        } else {
+          console.log('📖 EDIT MODE: No saved or mock status found, defaulting to draft for ID:', editId);
         }
       }
       
       setPublishStatus(initialStatus);
       setOriginalPublishStatus(initialStatus);
-      console.log('📊 ORIGINAL STATUS SET:', initialStatus);
+      console.log('📊 FINAL STATUS SET:', initialStatus, 'for item ID:', editId);
       
       // Auto-select template based on content type
       if (contentType) {
@@ -1865,11 +1886,11 @@ export default function CreateContentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-6">
-      <div className="p-4">
+    <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
+      <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between" style={{ marginBottom: '32px' }}>
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => router.push('/content-pipeline')}
@@ -1878,17 +1899,17 @@ export default function CreateContentPage() {
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">
+                <h1 className="calendly-h1">
                   {editingId ? 'Edit Content' : 'Create Content'}
                 </h1>
-                <p className="text-gray-800">
+                <p className="calendly-body">
                   {editingId ? 'Update your content details' : 'Create professional external communications with AI-powered rich content'}
                 </p>
               </div>
             </div>
             
             <div className="flex items-center space-x-3">
-              {editingId ? (
+              {editingId && (
                 <>
                   {/* Publish Status Indicator */}
                   <div className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-sm font-medium ${
@@ -1902,120 +1923,7 @@ export default function CreateContentPage() {
                     <span>{publishStatus === 'published' ? 'Published' : 'Draft'}</span>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex items-center space-x-2">
-                    {/* Save as Draft / Unpublish Button */}
-                    {publishStatus === 'published' ? (
-                      <button
-                        onClick={() => {
-                          // Unpublish: change status back to draft, stay on edit page
-                          console.log('📝 UNPUBLISH: Changing status back to draft');
-                          setPublishStatus('draft');
-                        }}
-                        className="flex items-center space-x-2 px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
-                      >
-                        <X className="w-4 h-4" />
-                        <span>Unpublish</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          // Save as draft (status remains 'draft') and return to pipeline
-                          console.log('💾 SAVE AS DRAFT: Saving and returning to pipeline');
-                          setPublishStatus('draft'); // Ensure status stays draft
-                          router.push('/content-pipeline');
-                        }}
-                        className="flex items-center space-x-2 px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
-                      >
-                        <Save className="w-4 h-4" />
-                        <span>Save as Draft</span>
-                      </button>
-                    )}
-
-                    {/* Publish Button */}
-                    <button
-                      onClick={() => {
-                        console.log(editingId ? '🚀 PUBLISH CHANGES: Publishing updated content' : '🚀 PUBLISH: Publishing content');
-                        setPublishStatus('published');
-                        
-                        // Save published status to localStorage for Content Pipeline
-                        if (editingId) {
-                          const statusKey = `content_status_${editingId}`;
-                          const statusData = {
-                            status: 'published',
-                            publishedAt: new Date().toISOString(),
-                            title: richContent?.title,
-                            type: selectedTemplate?.type || 'blog'
-                          };
-                          localStorage.setItem(statusKey, JSON.stringify(statusData));
-                          console.log('💾 STATUS SAVED: Content status saved to localStorage', statusKey);
-                          
-                          // Reset changes flag after publishing
-                          setHasChanges(false);
-                          console.log('🔄 CHANGES RESET: hasChanges set to false after publishing');
-                        }
-                        
-                        // Export content and redirect to dashboard
-                        exportForPreview();
-                        
-                        // Redirect to Content Pipeline dashboard after a short delay
-                        setTimeout(() => {
-                          console.log('🔄 REDIRECT: Navigating back to Content Pipeline dashboard');
-                          router.push('/content-pipeline');
-                        }, 500);
-                      }}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      <span>{editingId && originalPublishStatus === 'published' && hasChanges ? 'Publish Changes' : 'Publish'}</span>
-                    </button>
-
-                  </div>
                 </>
-              ) : (
-                // Create mode - show action buttons when content is generated
-                contentGenerated && (
-                  <div className="flex items-center space-x-2">
-                    {/* Publish Button */}
-                    <button
-                      onClick={() => {
-                        console.log(editingId ? '🚀 PUBLISH CHANGES: Publishing updated content' : '🚀 PUBLISH: Publishing content');
-                        setPublishStatus('published');
-                        
-                        // Save published status to localStorage for Content Pipeline
-                        if (editingId) {
-                          const statusKey = `content_status_${editingId}`;
-                          const statusData = {
-                            status: 'published',
-                            publishedAt: new Date().toISOString(),
-                            title: richContent?.title,
-                            type: selectedTemplate?.type || 'blog'
-                          };
-                          localStorage.setItem(statusKey, JSON.stringify(statusData));
-                          console.log('💾 STATUS SAVED: Content status saved to localStorage', statusKey);
-                          
-                          // Reset changes flag after publishing
-                          setHasChanges(false);
-                          console.log('🔄 CHANGES RESET: hasChanges set to false after publishing');
-                        }
-                        
-                        // Export content and redirect to dashboard
-                        exportForPreview();
-                        
-                        // Redirect to Content Pipeline dashboard after a short delay
-                        setTimeout(() => {
-                          console.log('🔄 REDIRECT: Navigating back to Content Pipeline dashboard');
-                          router.push('/content-pipeline');
-                        }, 500);
-                      }}
-                      className="flex items-center space-x-2 px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                    >
-                      <CheckCircle className="w-4 h-4" />
-                      <span>{editingId && originalPublishStatus === 'published' && hasChanges ? 'Publish Changes' : 'Publish'}</span>
-                    </button>
-
-                  </div>
-                )
               )}
             </div>
           </div>
@@ -2024,12 +1932,12 @@ export default function CreateContentPage() {
           {/* Content Setup - Full Width Layout */}
           <div className="space-y-4">
             {/* Step 1: Content Type Selection */}
-            <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-4">
+            <div className="calendly-card-static">
               <div className="flex items-center justify-between cursor-pointer" 
                    onClick={() => setStepsCollapsed(prev => ({...prev, step1: !prev.step1}))}>
                 <div className="flex items-center space-x-3">
                   <div className="flex items-center space-x-2">
-                    <h2 className="text-lg font-semibold text-gray-900">Step 1: Select Content Type</h2>
+                    <h2 className="calendly-h3">Step 1: Select Content Type</h2>
                     {selectedTemplate && stepsCollapsed.step1 && (
                       <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
                         {selectedTemplate.name}
@@ -2087,12 +1995,12 @@ export default function CreateContentPage() {
 
             {/* Step 2: Feature Selection */}
             {selectedTemplate && (
-              <div ref={step2Ref} className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-4">
+              <div ref={step2Ref} className="calendly-card-static">
                 <div className="flex items-center justify-between cursor-pointer" 
                      onClick={() => setStepsCollapsed(prev => ({...prev, step2: !prev.step2}))}>
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center space-x-2">
-                      <h2 className="text-lg font-semibold text-gray-900">Step 2: Select Product Feature</h2>
+                      <h2 className="calendly-h3">Step 2: Select Product Feature</h2>
                       {selectedFeature && stepsCollapsed.step2 && (
                         <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
                           {selectedFeature.title}
@@ -2124,7 +2032,7 @@ export default function CreateContentPage() {
                     value={featureSearch}
                     onChange={(e) => setFeatureSearch(e.target.value)}
                     placeholder="Search for a feature, JIRA ticket, or changelog entry..."
-                    className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-900 text-gray-900"
+                    className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-900"
                   />
                   <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-400" />
                 </div>
@@ -2184,12 +2092,12 @@ export default function CreateContentPage() {
 
             {/* Step 3: Layout Selection */}
             {selectedTemplate && selectedFeature && (
-              <div ref={step3Ref} className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 p-4">
+              <div ref={step3Ref} className="calendly-card-static">
                 <div className="flex items-center justify-between cursor-pointer" 
                      onClick={() => setStepsCollapsed(prev => ({...prev, step3: !prev.step3}))}>
                   <div className="flex items-center space-x-3">
                     <div className="flex items-center space-x-2">
-                      <h2 className="text-lg font-semibold text-gray-900">Step 3: Choose Content Layout</h2>
+                      <h2 className="calendly-h3">Step 3: Choose Content Layout</h2>
                       {selectedLayout && stepsCollapsed.step3 && (
                         <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-sm">
                           {selectedLayout.name}
@@ -2308,12 +2216,12 @@ export default function CreateContentPage() {
 
             {/* Step 4: Generate Content Button */}
             {selectedTemplate && selectedFeature && selectedLayout && (
-              <div ref={generateButtonRef} className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200 p-3">
+              <div ref={generateButtonRef} className="calendly-card-static">
                 <div className="flex items-center justify-center">
                   <button
                     onClick={() => generateRichContent(selectedFeature, selectedTemplate, selectedLayout)}
                     disabled={isGeneratingAI}
-                    className="flex items-center space-x-3 px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                    className="calendly-btn-primary flex items-center space-x-3 disabled:opacity-50"
                   >
                     <Sparkles className={`w-6 h-6 ${isGeneratingAI ? 'animate-spin' : ''}`} />
                     <span className="text-lg">
@@ -2857,7 +2765,7 @@ export default function CreateContentPage() {
                             
                             {/* Edit Icon - shows on hover */}
                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              <div className="bg-blue-600 text-white p-1 rounded-full shadow-lg">
+                              <div className="text-white p-1 rounded-full shadow-lg" style={{ background: '#4285f4' }}>
                                 <Edit className="w-3 h-3" />
                               </div>
                             </div>
@@ -2878,10 +2786,165 @@ export default function CreateContentPage() {
                 </div>
                 
                 {/* Footer Actions */}
-                <div className="p-4 border-t border-gray-200 bg-gray-50">
-                  <div className="flex items-center justify-end">
+                {contentGenerated && (
+                  <div className="p-4 border-t border-gray-200 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        {/* Status Indicator */}
+                        <div className={`flex items-center space-x-1.5 px-3 py-1 rounded-full text-sm font-medium ${
+                          publishStatus === 'published' 
+                            ? 'bg-green-100 text-green-800 border border-green-200' 
+                            : 'bg-amber-100 text-amber-800 border border-amber-200'
+                        }`}>
+                          <div className={`w-2 h-2 rounded-full ${
+                            publishStatus === 'published' ? 'bg-green-600' : 'bg-amber-600'
+                          }`} />
+                          <span>{publishStatus === 'published' ? 'Published' : 'Draft'}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center space-x-3">
+                        {/* Show different buttons based on current publish status */}
+                        {publishStatus === 'published' ? (
+                          <>
+                            {/* Unpublish Button - when content is currently published */}
+                            <button
+                              onClick={() => {
+                                console.log('📝 UNPUBLISH: Changing content from published to draft');
+                                setPublishStatus('draft');
+                                setHasChanges(false);
+                                
+                                // Save unpublished status to localStorage for Content Pipeline
+                                if (editingId) {
+                                  const statusKey = `content_status_${editingId}`;
+                                  const statusData = {
+                                    status: 'draft',
+                                    unpublishedAt: new Date().toISOString(),
+                                    title: richContent?.title,
+                                    type: selectedTemplate?.type || 'blog'
+                                  };
+                                  localStorage.setItem(statusKey, JSON.stringify(statusData));
+                                  console.log('📝 UNPUBLISH STATUS SAVED: Content unpublished and saved to localStorage', statusKey);
+                                }
+                                
+                                // Navigate back to content pipeline
+                                router.push('/content-pipeline');
+                              }}
+                              className="calendly-btn-secondary flex items-center space-x-2"
+                            >
+                              <X className="w-4 h-4" />
+                              <span>Unpublish</span>
+                            </button>
+
+                            {/* Update Published Content Button */}
+                            <button
+                              onClick={() => {
+                                console.log('🔄 PUBLISH CHANGES: Updating published content');
+                                setPublishStatus('published');
+                                setHasChanges(false);
+                                
+                                // Save updated published status to localStorage for Content Pipeline
+                                if (editingId) {
+                                  const statusKey = `content_status_${editingId}`;
+                                  const statusData = {
+                                    status: 'published',
+                                    publishedAt: new Date().toISOString(),
+                                    title: richContent?.title,
+                                    type: selectedTemplate?.type || 'blog'
+                                  };
+                                  localStorage.setItem(statusKey, JSON.stringify(statusData));
+                                  console.log('🔄 PUBLISHED CHANGES SAVED: Updated content saved to localStorage', statusKey);
+                                }
+                                
+                                // Export content and redirect to dashboard
+                                exportForPreview();
+                                
+                                // Redirect to Content Pipeline dashboard after a short delay
+                                setTimeout(() => {
+                                  console.log('🔄 REDIRECT: Navigating back to Content Pipeline dashboard');
+                                  router.push('/content-pipeline');
+                                }, 500);
+                              }}
+                              className="calendly-btn-primary flex items-center space-x-2"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              <span>Update Published Content</span>
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            {/* Save as Draft Button - when content is currently draft */}
+                            <button
+                              onClick={() => {
+                                console.log('💾 SAVE AS DRAFT: Saving content as draft and returning to pipeline');
+                                setPublishStatus('draft');
+                                setHasChanges(false);
+                                
+                                // Save draft status to localStorage for Content Pipeline
+                                if (editingId) {
+                                  const statusKey = `content_status_${editingId}`;
+                                  const statusData = {
+                                    status: 'draft',
+                                    savedAt: new Date().toISOString(),
+                                    title: richContent?.title,
+                                    type: selectedTemplate?.type || 'blog'
+                                  };
+                                  localStorage.setItem(statusKey, JSON.stringify(statusData));
+                                  console.log('💾 DRAFT STATUS SAVED: Content saved as draft to localStorage', statusKey);
+                                }
+                                
+                                // Navigate back to content pipeline
+                                router.push('/content-pipeline');
+                              }}
+                              className="calendly-btn-secondary flex items-center space-x-2"
+                            >
+                              <Save className="w-4 h-4" />
+                              <span>Save as Draft</span>
+                            </button>
+
+                            {/* Publish Button - when content is currently draft */}
+                            <button
+                              onClick={() => {
+                                console.log(editingId ? '🚀 PUBLISH CHANGES: Publishing updated content' : '🚀 PUBLISH: Publishing content');
+                                setPublishStatus('published');
+                                
+                                // Save published status to localStorage for Content Pipeline
+                                if (editingId) {
+                                  const statusKey = `content_status_${editingId}`;
+                                  const statusData = {
+                                    status: 'published',
+                                    publishedAt: new Date().toISOString(),
+                                    title: richContent?.title,
+                                    type: selectedTemplate?.type || 'blog'
+                                  };
+                                  localStorage.setItem(statusKey, JSON.stringify(statusData));
+                                  console.log('💾 PUBLISHED STATUS SAVED: Content status saved to localStorage', statusKey);
+                                  
+                                  // Reset changes flag after publishing
+                                  setHasChanges(false);
+                                  console.log('🔄 CHANGES RESET: hasChanges set to false after publishing');
+                                }
+                                
+                                // Export content and redirect to dashboard
+                                exportForPreview();
+                                
+                                // Redirect to Content Pipeline dashboard after a short delay
+                                setTimeout(() => {
+                                  console.log('🔄 REDIRECT: Navigating back to Content Pipeline dashboard');
+                                  router.push('/content-pipeline');
+                                }, 500);
+                              }}
+                              className="calendly-btn-primary flex items-center space-x-2"
+                            >
+                              <CheckCircle className="w-4 h-4" />
+                              <span>{editingId && originalPublishStatus === 'published' && hasChanges ? 'Publish Changes' : 'Publish'}</span>
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>

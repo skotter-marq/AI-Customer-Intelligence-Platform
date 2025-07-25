@@ -76,8 +76,12 @@ export default function Navigation() {
     if (href === '/') {
       return pathname === '/' || pathname === '/cs-query';
     }
-    // Handle legacy competitor-intelligence route
-    if (href === '/competitors' && pathname?.startsWith('/competitor-intelligence')) {
+    // Handle legacy competitor-intelligence route (but exclude create-agent which belongs to Agents)
+    if (href === '/competitors' && pathname?.startsWith('/competitor-intelligence') && !pathname?.includes('/create-agent')) {
+      return true;
+    }
+    // Handle create-agent route for Agents tab
+    if (href === '/agents' && pathname?.includes('/create-agent')) {
       return true;
     }
     return pathname?.startsWith(href) || false;

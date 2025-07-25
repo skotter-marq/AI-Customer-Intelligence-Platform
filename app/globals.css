@@ -54,13 +54,16 @@ html {
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
   padding: 24px;
-  transition: all 0.2s ease;
 }
 
-.calendly-card:hover {
-  background: #f8fafc;
-  border-color: #cbd5e0;
+.calendly-card-static {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+  padding: 24px;
 }
+
 
 .calendly-btn-primary {
   background: #4285f4;

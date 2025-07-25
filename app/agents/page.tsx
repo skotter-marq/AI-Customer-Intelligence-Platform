@@ -333,7 +333,10 @@ export default function AgentsPage() {
                 <Download className="w-4 h-4" />
                 <span>Export</span>
               </button>
-              <button className="calendly-btn-primary flex items-center space-x-2">
+              <button 
+                onClick={() => router.push('/agents/create')}
+                className="calendly-btn-primary flex items-center space-x-2"
+              >
                 <Plus className="w-4 h-4" />
                 <span>New Agent</span>
               </button>
@@ -689,7 +692,10 @@ export default function AgentsPage() {
                   ? 'Try adjusting your search or filters' 
                   : 'Get started by creating your first AI agent'}
               </p>
-              <button className="calendly-btn-primary">
+              <button 
+                onClick={() => router.push('/agents/create')}
+                className="calendly-btn-primary"
+              >
                 Create Agent
               </button>
             </div>

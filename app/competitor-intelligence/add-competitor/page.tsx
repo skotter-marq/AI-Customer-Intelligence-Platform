@@ -110,7 +110,7 @@ export default function AddCompetitorPage() {
       // For now, find the competitor from the mock data used in the main page
       const mockCompetitors = [
         {
-          id: '1', name: 'Salesforce', website: 'salesforce.com', industry: 'CRM & Sales',
+          id: 'salesforce', name: 'Salesforce', website: 'salesforce.com', industry: 'CRM & Sales',
           location: 'San Francisco, CA', founded: '1999', employees: '79,000', marketCap: '$248B',
           description: 'Leading cloud-based CRM platform with AI-powered sales and marketing tools',
           threat_level: 'high', key_products: ['Sales Cloud', 'Service Cloud', 'Marketing Cloud', 'Einstein AI'],
@@ -118,7 +118,7 @@ export default function AddCompetitorPage() {
           weaknesses: ['High complexity', 'Expensive for SMBs', 'Steep learning curve']
         },
         {
-          id: '2', name: 'HubSpot', website: 'hubspot.com', industry: 'Marketing & Sales',
+          id: 'hubspot', name: 'HubSpot', website: 'hubspot.com', industry: 'Marketing & Sales',
           location: 'Cambridge, MA', founded: '2006', employees: '7,000', marketCap: '$31B',
           description: 'Inbound marketing, sales, and customer service platform with integrated CRM',
           threat_level: 'high', key_products: ['Marketing Hub', 'Sales Hub', 'Service Hub', 'CMS Hub'],
@@ -126,7 +126,7 @@ export default function AddCompetitorPage() {
           weaknesses: ['Limited enterprise features', 'Pricing complexity', 'Reporting limitations']
         },
         {
-          id: '3', name: 'Pipedrive', website: 'https://pipedrive.com', industry: 'Sales CRM',
+          id: 'pipedrive', name: 'Pipedrive', website: 'https://pipedrive.com', industry: 'Sales CRM',
           location: 'Tallinn, Estonia', founded: '2010', employees: '1,000', marketCap: '$2.1B',
           description: 'Sales-focused CRM designed for small to medium businesses.',
           threat_level: 'medium', key_products: ['Sales CRM', 'Pipeline Management', 'Email Sync', 'Mobile App'],
@@ -134,7 +134,7 @@ export default function AddCompetitorPage() {
           weaknesses: ['Limited marketing features', 'Basic reporting', 'Fewer integrations']
         },
         {
-          id: '4', name: 'Zendesk', website: 'https://zendesk.com', industry: 'Customer Support',
+          id: 'zendesk', name: 'Zendesk', website: 'https://zendesk.com', industry: 'Customer Support',
           location: 'San Francisco, CA', founded: '2007', employees: '6,000', marketCap: '$13B',
           description: 'Customer service platform with ticketing, knowledge base, and chat support.',
           threat_level: 'medium', key_products: ['Support Suite', 'Guide', 'Chat', 'Talk', 'Explore'],
@@ -535,7 +535,7 @@ export default function AddCompetitorPage() {
         router.push(`/competitor-intelligence/competitors/${editId}`);
       } else {
         // Navigate back to competitor intelligence page - profiles tab for new competitors
-        router.push('/competitor-intelligence?tab=profiles');
+        router.push('/competitors');
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'creating'} competitor:`, error);
@@ -1535,7 +1535,7 @@ export default function AddCompetitorPage() {
                   return (
                     <label
                       key={index}
-                      className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                      className="flex items-center space-x-2 p-2 rounded-lg cursor-pointer"
                     >
                       <input
                         type="checkbox"
@@ -1583,7 +1583,7 @@ export default function AddCompetitorPage() {
                 const actualIndex = items.findIndex(i => i === item);
                 onRemove(actualIndex);
               }}
-              className="ml-2 hover:opacity-70"
+              className="ml-2"
             >
               <X className="w-3 h-3" />
             </button>
@@ -1593,7 +1593,7 @@ export default function AddCompetitorPage() {
         {!showAll && remainingCount > 0 && (
           <button
             onClick={() => setShowAll(true)}
-            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600"
           >
             +{remainingCount} more
           </button>
@@ -1602,7 +1602,7 @@ export default function AddCompetitorPage() {
         {showAll && items.length > limit && (
           <button
             onClick={() => setShowAll(false)}
-            className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium text-gray-500 hover:text-gray-700 transition-colors"
+            className="inline-flex items-center px-2 py-1 rounded-full text-sm font-medium text-gray-500"
           >
             Show less
           </button>
@@ -1614,113 +1614,135 @@ export default function AddCompetitorPage() {
   const canCreateCompetitor = newCompetitor.name && newCompetitor.industry;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-6">
+    <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center space-x-4 mb-4">
+          <div className="calendly-card-static" style={{ marginBottom: '24px', padding: '24px' }}>
+            <div className="flex items-center space-x-4">
               <button 
                 onClick={() => {
                   if (isEditMode && editId) {
                     router.push(`/competitor-intelligence/competitors/${editId}`);
                   } else {
-                    router.push('/competitor-intelligence?tab=profiles');
+                    router.push('/competitors');
                   }
                 }}
-                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: '#718096' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                  e.currentTarget.style.color = '#4285f4';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#718096';
+                }}
               >
-                <ArrowLeft className="w-6 h-6" />
+                <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="calendly-h1" style={{ marginBottom: '8px' }}>
                   {isEditMode ? 'Edit Competitor' : 'Add New Competitor'}
                 </h1>
-                <p className="text-gray-800">
+                <p className="calendly-body">
                   {isEditMode ? 'Update competitor profile and intelligence settings' : 'Create a comprehensive competitor profile for intelligence monitoring'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Progress Steps */}
-          {!researchComplete && (
-            <div className="flex items-center space-x-4 mb-8">
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-                  1
+          {/* Progress Steps - Only show on initial step */}
+          {false && (
+            <div className="calendly-card-static" style={{ marginBottom: '24px', padding: '20px' }}>
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center calendly-label-sm font-semibold text-white" style={{ background: '#4285f4' }}>
+                    1
+                  </div>
+                  <div className="ml-3">
+                    <p className="calendly-body-sm font-medium">Company Information</p>
+                    <p className="calendly-label-sm">Provide basic details for AI research</p>
+                  </div>
                 </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">Company Information</p>
-                  <p className="text-xs text-gray-500">Provide basic details for AI research</p>
+                
+                <div className="w-12 h-1 rounded" style={{ background: '#e2e8f0' }} />
+                
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center calendly-label-sm font-semibold" style={{ background: '#e2e8f0', color: '#718096' }}>
+                    2
+                  </div>
+                  <div className="ml-3">
+                    <p className="calendly-body-sm font-medium" style={{ color: '#718096' }}>AI Research</p>
+                    <p className="calendly-label-sm">Auto-populate competitive intelligence</p>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="w-12 h-1 rounded bg-gray-200" />
-              
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold bg-gray-200 text-gray-600">
-                  2
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">AI Research</p>
-                  <p className="text-xs text-gray-500">Auto-populate competitive intelligence</p>
-                </div>
-              </div>
-              
-              <div className="w-12 h-1 rounded bg-gray-200" />
-              
-              <div className="flex items-center">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold bg-gray-200 text-gray-600">
-                  3
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-900">Review & Create</p>
-                  <p className="text-xs text-gray-500">Edit and finalize competitor profile</p>
+                
+                <div className="w-12 h-1 rounded" style={{ background: '#e2e8f0' }} />
+                
+                <div className="flex items-center">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center calendly-label-sm font-semibold" style={{ background: '#e2e8f0', color: '#718096' }}>
+                    3
+                  </div>
+                  <div className="ml-3">
+                    <p className="calendly-body-sm font-medium" style={{ color: '#718096' }}>Review & Create</p>
+                    <p className="calendly-label-sm">Edit and finalize competitor profile</p>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {researchComplete && (
-            <div className="flex items-center justify-between mb-8 p-4 bg-green-50 rounded-xl border border-green-200">
-              <div className="flex items-center space-x-3">
-                <CheckCircle className="w-6 h-6 text-green-600" />
-                <div>
-                  <p className="font-semibold text-green-900">
-                    {isEditMode ? 'Profile Loaded for Editing!' : 'Research Complete!'}
-                  </p>
-                  <p className="text-sm text-green-700">
-                    {isEditMode 
-                      ? `${researchAge ? `AI research from ${researchAge}. ` : ''}Review and edit the profile below. Manual edits will be preserved during re-research.`
-                      : 'Review and edit the generated competitor profile below'
-                    }
-                  </p>
+            <div className="calendly-card-static" style={{ marginBottom: '24px', padding: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <CheckCircle className="w-6 h-6" style={{ color: '#10b981' }} />
+                  <div>
+                    <p className="calendly-body font-semibold" style={{ color: '#065f46', marginBottom: '4px' }}>
+                      {isEditMode ? 'Profile Loaded for Editing!' : 'Research Complete!'}
+                    </p>
+                    <p className="calendly-body-sm" style={{ color: '#047857' }}>
+                      {isEditMode 
+                        ? `${researchAge ? `AI research from ${researchAge}. ` : ''}Review and edit the profile below. Manual edits will be preserved during re-research.`
+                        : 'Review and edit the generated competitor profile below'
+                      }
+                    </p>
+                  </div>
                 </div>
+                <button
+                  onClick={handleAIResearch}
+                  disabled={isResearching || (!newCompetitor.name && !newCompetitor.website)}
+                  className={`calendly-btn-secondary flex items-center space-x-2 ${(isResearching || (!newCompetitor.name && !newCompetitor.website)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  style={{ borderColor: '#10b981', color: '#10b981' }}
+                  onMouseEnter={(e) => {
+                    if (!isResearching && (newCompetitor.name || newCompetitor.website)) {
+                      e.currentTarget.style.background = '#f0fdf4';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'white';
+                  }}
+                >
+                  {isResearching ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Re-researching...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-4 h-4" />
+                      <span>Regenerate Analysis</span>
+                    </>
+                  )}
+                </button>
               </div>
-              <button
-                onClick={handleAIResearch}
-                disabled={isResearching || (!newCompetitor.name && !newCompetitor.website)}
-                className="flex items-center space-x-2 px-4 py-2 bg-white text-green-700 border border-green-300 rounded-lg hover:bg-green-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
-              >
-                {isResearching ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Re-researching...</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap className="w-4 h-4" />
-                    <span>Regenerate Analysis</span>
-                  </>
-                )}
-              </button>
             </div>
           )}
 
           {/* Step 1: Basic Information - Only show if research not complete */}
           {!researchComplete && (
-            <div ref={step1Ref} className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 mb-6">
+            <div ref={step1Ref} className="calendly-card-static" style={{ marginBottom: '24px' }}>
             <div className="p-6">
               <button
                 onClick={() => toggleStep('step1')}
@@ -1731,7 +1753,7 @@ export default function AddCompetitorPage() {
                     <Building className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Step 1: Basic Information</h2>
+                    <h2 className="calendly-h3">Step 1: Basic Information</h2>
                     <p className="text-sm text-gray-800">Company name, industry, and contact details</p>
                   </div>
                 </div>
@@ -1746,28 +1768,46 @@ export default function AddCompetitorPage() {
                 <div className="mt-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                      <label className="calendly-label" style={{ marginBottom: '8px', display: 'block' }}>
                         Company Name *
                       </label>
                       <input
                         type="text"
                         value={newCompetitor.name}
                         onChange={(e) => handleFieldChange('name', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="e.g., Salesforce"
                         disabled={isResearching}
                       />
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                      <label className="calendly-label" style={{ marginBottom: '8px', display: 'block' }}>
                         Website
                       </label>
                       <input
                         type="url"
                         value={newCompetitor.website}
                         onChange={(e) => handleFieldChange('website', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="https://salesforce.com"
                         disabled={isResearching}
                       />
@@ -1783,7 +1823,16 @@ export default function AddCompetitorPage() {
                       <select
                         value={newCompetitor.industry}
                         onChange={(e) => handleFieldChange('industry', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         disabled={isResearching}
                       >
                         <option value="">Select Industry</option>
@@ -1809,7 +1858,16 @@ export default function AddCompetitorPage() {
                         type="text"
                         value={newCompetitor.location}
                         onChange={(e) => handleFieldChange('location', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="San Francisco, CA"
                         disabled={isResearching}
                       />
@@ -1838,7 +1896,7 @@ export default function AddCompetitorPage() {
                         <button
                           onClick={handleAIResearch}
                           disabled={isResearching || (!newCompetitor.name && !newCompetitor.website)}
-                          className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                          className="calendly-btn-primary flex items-center space-x-2"
                         >
                           {isResearching ? (
                             <>
@@ -1881,7 +1939,7 @@ export default function AddCompetitorPage() {
           {researchComplete && (
             <div className="space-y-6">
               {/* Company Overview Section */}
-              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50">
+              <div className="calendly-card-static">
                 <div className="p-6 border-b border-gray-200/50">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -1901,7 +1959,16 @@ export default function AddCompetitorPage() {
                         type="text"
                         value={newCompetitor.name}
                         onChange={(e) => handleFieldChange('name', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="e.g., Salesforce"
                       />
                     </div>
@@ -1914,7 +1981,16 @@ export default function AddCompetitorPage() {
                         type="url"
                         value={newCompetitor.website}
                         onChange={(e) => handleFieldChange('website', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="https://salesforce.com"
                       />
                     </div>
@@ -1926,7 +2002,16 @@ export default function AddCompetitorPage() {
                       <select
                         value={newCompetitor.industry}
                         onChange={(e) => handleFieldChange('industry', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       >
                         <option value="">Select Industry</option>
                         <option value="CRM & Sales">CRM & Sales</option>
@@ -1948,7 +2033,16 @@ export default function AddCompetitorPage() {
                         type="text"
                         value={newCompetitor.location}
                         onChange={(e) => handleFieldChange('location', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="San Francisco, CA"
                       />
                     </div>
@@ -1971,7 +2065,7 @@ export default function AddCompetitorPage() {
               </div>
 
               {/* Financial & Company Data */}
-              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50">
+              <div className="calendly-card-static">
                 <div className="p-6 border-b border-gray-200/50">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
@@ -1991,7 +2085,16 @@ export default function AddCompetitorPage() {
                         type="text"
                         value={newCompetitor.founded}
                         onChange={(e) => handleFieldChange('founded', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="2006"
                       />
                     </div>
@@ -2004,7 +2107,16 @@ export default function AddCompetitorPage() {
                         type="text"
                         value={newCompetitor.employees}
                         onChange={(e) => handleFieldChange('employees', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="1,000"
                       />
                     </div>
@@ -2017,7 +2129,16 @@ export default function AddCompetitorPage() {
                         type="text"
                         value={newCompetitor.marketCap}
                         onChange={(e) => handleFieldChange('marketCap', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="$31B"
                       />
                     </div>
@@ -2026,7 +2147,7 @@ export default function AddCompetitorPage() {
               </div>
 
               {/* Competitive Analysis */}
-              <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50">
+              <div className="calendly-card-static">
                 <div className="p-6 border-b border-gray-200/50">
                   <div className="flex items-center space-x-3">
                     <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center">
@@ -2058,7 +2179,7 @@ export default function AddCompetitorPage() {
                                 : threat.color === 'yellow'
                                   ? 'border-yellow-500 bg-yellow-50'
                                   : 'border-red-500 bg-red-50'
-                              : 'border-gray-200 hover:border-gray-300'
+                              : 'border-gray-200'
                           }`}
                         >
                           <div className={`font-semibold ${
@@ -2094,7 +2215,7 @@ export default function AddCompetitorPage() {
                         />
                         <button
                           onClick={() => addKeyProduct()}
-                          className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                          className="calendly-btn-primary"
                         >
                           Add
                         </button>
@@ -2110,7 +2231,7 @@ export default function AddCompetitorPage() {
                             <button
                               key={index}
                               onClick={() => addKeyProduct(suggestion)}
-                              className="w-full text-left px-3 py-2 hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none text-sm border-b last:border-b-0"
+                              className="w-full text-left px-3 py-2 focus:bg-indigo-50 focus:outline-none text-sm border-b last:border-b-0"
                             >
                               <span className="font-medium text-indigo-600">🔍</span> {suggestion}
                             </button>
@@ -2123,7 +2244,7 @@ export default function AddCompetitorPage() {
                     <div className="mb-3">
                       <button
                         onClick={() => setShowProductLibrary(!showProductLibrary)}
-                        className="flex items-center space-x-2 text-sm text-indigo-600 hover:text-indigo-700 transition-colors mb-2"
+                        className="flex items-center space-x-2 text-sm text-indigo-600 mb-2"
                       >
                         {showProductLibrary ? (
                           <ChevronUp className="w-4 h-4" />
@@ -2174,7 +2295,7 @@ export default function AddCompetitorPage() {
                           />
                           <button
                             onClick={() => addStrength()}
-                            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                            className="calendly-btn-primary"
                           >
                             Add
                           </button>
@@ -2190,7 +2311,7 @@ export default function AddCompetitorPage() {
                               <button
                                 key={index}
                                 onClick={() => addStrength(suggestion)}
-                                className="w-full text-left px-3 py-2 hover:bg-green-50 focus:bg-green-50 focus:outline-none text-sm border-b last:border-b-0"
+                                className="w-full text-left px-3 py-2 focus:bg-green-50 focus:outline-none text-sm border-b last:border-b-0"
                               >
                                 <span className="font-medium text-green-600">✅</span> {suggestion}
                               </button>
@@ -2203,7 +2324,7 @@ export default function AddCompetitorPage() {
                       <div className="mb-3">
                         <button
                           onClick={() => setShowStrengthLibrary(!showStrengthLibrary)}
-                          className="flex items-center space-x-2 text-sm text-green-600 hover:text-green-700 transition-colors mb-2"
+                          className="flex items-center space-x-2 text-sm text-green-600 mb-2"
                         >
                           {showStrengthLibrary ? (
                             <ChevronUp className="w-4 h-4" />
@@ -2252,7 +2373,7 @@ export default function AddCompetitorPage() {
                           />
                           <button
                             onClick={() => addWeakness()}
-                            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
+                            className="calendly-btn-secondary"
                           >
                             Add
                           </button>
@@ -2268,7 +2389,7 @@ export default function AddCompetitorPage() {
                               <button
                                 key={index}
                                 onClick={() => addWeakness(suggestion)}
-                                className="w-full text-left px-3 py-2 hover:bg-orange-50 focus:bg-orange-50 focus:outline-none text-sm border-b last:border-b-0"
+                                className="w-full text-left px-3 py-2 focus:bg-orange-50 focus:outline-none text-sm border-b last:border-b-0"
                               >
                                 <span className="font-medium text-orange-600">⚠️</span> {suggestion}
                               </button>
@@ -2281,7 +2402,7 @@ export default function AddCompetitorPage() {
                       <div className="mb-3">
                         <button
                           onClick={() => setShowWeaknessLibrary(!showWeaknessLibrary)}
-                          className="flex items-center space-x-2 text-sm text-orange-600 hover:text-orange-700 transition-colors mb-2"
+                          className="flex items-center space-x-2 text-sm text-orange-600 mb-2"
                         >
                           {showWeaknessLibrary ? (
                             <ChevronUp className="w-4 h-4" />
@@ -2306,7 +2427,7 @@ export default function AddCompetitorPage() {
                         removeWeakness,
                         showAllWeaknesses,
                         setShowAllWeaknesses,
-                        'bg-orange-100 text-orange-800 hover:bg-orange-200',
+                        'bg-orange-100 text-orange-800',
                         5
                       )}
                     </div>
@@ -2333,7 +2454,7 @@ export default function AddCompetitorPage() {
                 <button
                   onClick={handleSaveCompetitor}
                   disabled={!canCreateCompetitor || isCreating}
-                  className="flex items-center space-x-3 px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                  className="calendly-btn-primary flex items-center space-x-3"
                 >
                   <Save className="w-5 h-5" />
                   <span>

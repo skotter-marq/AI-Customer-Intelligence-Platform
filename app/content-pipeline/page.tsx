@@ -731,6 +731,17 @@ export default function ContentPipelinePage() {
             delete updatedItem.published_date;
           }
           
+          // Update localStorage so getUpdatedStatus picks up the change
+          const statusKey = `content_status_${item.id}`;
+          const statusData = {
+            status: newStatus,
+            updatedAt: new Date().toISOString(),
+            title: updatedItem.title,
+            type: updatedItem.type || 'blog'
+          };
+          localStorage.setItem(statusKey, JSON.stringify(statusData));
+          console.log(`💾 DIRECT STATUS SAVED: Item ${item.id} status updated to ${newStatus} in localStorage`);
+          
           return updatedItem;
         }
         return contentItem;
@@ -866,12 +877,32 @@ export default function ContentPipelinePage() {
             delete updatedItem.published_date;
           }
           
+          // Update localStorage for each item so getUpdatedStatus picks up the change
+          const statusKey = `content_status_${item.id}`;
+          const statusData = {
+            status: newStatus,
+            updatedAt: new Date().toISOString(),
+            title: updatedItem.title,
+            type: updatedItem.type || 'blog'
+          };
+          localStorage.setItem(statusKey, JSON.stringify(statusData));
+          console.log(`💾 BULK STATUS SAVED: Item ${item.id} status updated to ${newStatus} in localStorage`);
+          
           return updatedItem;
         }
         return item;
       });
       
       setContentItems(updatedItems);
+      
+      // Update displayOrderItems preserving current order
+      setDisplayOrderItems(prevDisplayItems => {
+        return prevDisplayItems.map(prevItem => {
+          const updatedItem = updatedItems.find(ui => ui.id === prevItem.id);
+          return updatedItem || prevItem;
+        });
+      });
+      
       setSelectedItems([]);
       
       // Update stats
@@ -1104,14 +1135,14 @@ export default function ContentPipelinePage() {
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => handleBulkStatusChange('published')}
-                    className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                    className="calendly-btn-primary flex items-center space-x-1"
                   >
                     <Upload className="w-4 h-4" />
                     <span className="text-sm font-medium">Publish All</span>
                   </button>
                   <button
                     onClick={() => handleBulkStatusChange('draft')}
-                    className="flex items-center space-x-1 px-3 py-1 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                    className="calendly-btn-secondary flex items-center space-x-1"
                   >
                     <AlertCircle className="w-4 h-4" />
                     <span className="text-sm font-medium">Unpublish All</span>

@@ -995,30 +995,40 @@ export default function CreateAgentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-6">
+    <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <div className="flex items-center space-x-4 mb-4">
+          <div className="calendly-card-static" style={{ marginBottom: '24px', padding: '24px' }}>
+            <div className="flex items-center space-x-4">
               <button 
-                onClick={() => router.push('/competitor-intelligence?tab=agents')}
-                className="p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+                onClick={() => router.push('/agents')}
+                className="p-2 rounded-lg transition-colors"
+                style={{ color: '#718096' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                  e.currentTarget.style.color = '#4285f4';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#718096';
+                }}
               >
-                <ArrowLeft className="w-6 h-6" />
+                <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-gray-900">
+                <h1 className="calendly-h1" style={{ marginBottom: '8px' }}>
                   {isEditMode ? 'Edit AI Agent' : 'Create AI Agent'}
                 </h1>
-                <p className="text-gray-600">
+                <p className="calendly-body">
                   {isEditMode ? 'Update agent configuration and monitoring settings' : 'Set up AI-powered competitor intelligence monitoring'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Progress Steps */}
+          {/* Progress Steps - Hidden for cleaner UI */}
+          {false && (
           <div className="flex items-center space-x-4 mb-8">
             <div className="flex items-center">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
@@ -1070,9 +1080,10 @@ export default function CreateAgentPage() {
               </div>
             </div>
           </div>
+          )}
 
           {/* Agent Configuration Step */}
-          <div ref={step1Ref} className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 mb-6">
+          <div ref={step1Ref} className="calendly-card-static" style={{ marginBottom: '24px' }}>
             <div className="p-6">
               <button
                 onClick={() => toggleStep('step1')}
@@ -1083,7 +1094,7 @@ export default function CreateAgentPage() {
                     <Zap className="w-5 h-5 text-indigo-600" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Step 1: Agent Configuration</h2>
+                    <h2 className="calendly-h3">Step 1: Agent Configuration</h2>
                     <p className="text-sm text-gray-600">Define your agent's purpose and monitoring targets</p>
                   </div>
                 </div>
@@ -1098,20 +1109,29 @@ export default function CreateAgentPage() {
                 <div className="mt-6 space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="calendly-label" style={{ marginBottom: '8px', display: 'block' }}>
                         Agent Name *
                       </label>
                       <input
                         type="text"
                         value={newAgent.name}
                         onChange={(e) => setNewAgent({...newAgent, name: e.target.value})}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="e.g., Pricing Monitor"
                         disabled={isResearching}
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="calendly-label" style={{ marginBottom: '8px', display: 'block' }}>
                         Description
                       </label>
                       <input
@@ -1121,7 +1141,16 @@ export default function CreateAgentPage() {
                           setNewAgent({...newAgent, description: e.target.value});
                           handleFieldEdit('description');
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="Brief description of what this agent monitors"
                         disabled={isResearching}
                       />
@@ -1136,7 +1165,7 @@ export default function CreateAgentPage() {
                         <Target className="w-4 h-4 text-gray-600" />
                       </div>
                       <div>
-                        <h2 className="text-lg font-semibold text-gray-900">Choose Monitoring Type</h2>
+                        <h2 className="calendly-h3">Choose Monitoring Type</h2>
                         <p className="text-sm text-gray-600">Select the type of intelligence monitoring for your competitor analysis</p>
                       </div>
                     </div>
@@ -1264,7 +1293,7 @@ export default function CreateAgentPage() {
                           <Users className="w-4 h-4 text-gray-600" />
                         </div>
                         <div>
-                          <h2 className="text-lg font-semibold text-gray-900">Select Competitors</h2>
+                          <h2 className="calendly-h3">Select Competitors</h2>
                           <p className="text-sm text-gray-600">Choose which competitors to monitor for {agentTypes.find(t => t.value === newAgent.type)?.label.toLowerCase()}</p>
                         </div>
                       </div>
@@ -1380,7 +1409,7 @@ export default function CreateAgentPage() {
                         <button
                           onClick={handleAIConfiguration}
                           disabled={!newAgent.name || !newAgent.type || newAgent.competitor_ids.length === 0 || isResearching}
-                          className="flex items-center space-x-3 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                          className="calendly-btn-primary flex items-center space-x-3"
                         >
                           {isResearching ? (
                             <>
@@ -1404,7 +1433,7 @@ export default function CreateAgentPage() {
 
           {/* AI Configuration Results */}
           {(researchComplete || isEditMode) && (
-            <div ref={aiConfigRef} className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 mb-8">
+            <div ref={aiConfigRef} className="calendly-card-static" style={{ marginBottom: '24px' }}>
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <div className="flex items-center space-x-3">
@@ -1412,19 +1441,15 @@ export default function CreateAgentPage() {
                       <Settings className="w-5 h-5 text-purple-600" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-semibold text-gray-900">Step 2: AI Configuration Results</h2>
+                      <h2 className="calendly-h3">Step 2: AI Configuration Results</h2>
                       <p className="text-sm text-gray-600">Review and customize your agent settings</p>
                     </div>
                   </div>
-                </div>
-
-                <div className="mt-6">
-                    {/* Regenerate Button */}
-                    <div className="flex justify-end mb-6">
-                      <button
+                  {/* Regenerate Button */}
+                  <button
                     onClick={() => handleAIConfiguration()}
                     disabled={!newAgent.name || !newAgent.type || newAgent.competitor_ids.length === 0 || isResearching}
-                    className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 text-sm font-medium"
+                    className="calendly-btn-primary flex items-center space-x-2"
                     title="Regenerate AI configuration based on current monitoring type and competitors"
                   >
                     {isResearching ? (
@@ -1441,11 +1466,12 @@ export default function CreateAgentPage() {
                   </button>
                 </div>
 
+                <div className="mt-6">
                 <div className="space-y-6">
                   {/* Data Sources */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">Data Sources</label>
+                      <label className="calendly-label" style={{ display: 'block' }}>Data Sources</label>
                       {getFieldIndicator('sources')}
                     </div>
                     <div className="mb-3">
@@ -1460,7 +1486,7 @@ export default function CreateAgentPage() {
                         />
                         <button
                           onClick={addSource}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                          className="calendly-btn-primary"
                         >
                           Add
                         </button>
@@ -1580,7 +1606,7 @@ export default function CreateAgentPage() {
                   {/* Monitoring Keywords */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">Monitoring Keywords</label>
+                      <label className="calendly-label" style={{ display: 'block' }}>Monitoring Keywords</label>
                       {getFieldIndicator('keywords')}
                     </div>
                     <div className="mb-3">
@@ -1595,7 +1621,7 @@ export default function CreateAgentPage() {
                         />
                         <button
                           onClick={addKeyword}
-                          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
+                          className="calendly-btn-primary"
                         >
                           Add
                         </button>
@@ -1716,7 +1742,7 @@ export default function CreateAgentPage() {
                   {/* Notification Triggers */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-700">Alert Triggers</label>
+                      <label className="calendly-label" style={{ display: 'block' }}>Alert Triggers</label>
                       {getFieldIndicator('notification_triggers')}
                     </div>
                     <div className="mb-3">
@@ -1731,7 +1757,7 @@ export default function CreateAgentPage() {
                         />
                         <button
                           onClick={addTrigger}
-                          className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
+                          className="calendly-btn-secondary"
                         >
                           Add
                         </button>
@@ -1852,7 +1878,7 @@ export default function CreateAgentPage() {
                   {/* Advanced Settings */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="calendly-label" style={{ marginBottom: '8px', display: 'block' }}>
                         Monitoring Schedule
                       </label>
                       <select
@@ -1861,7 +1887,16 @@ export default function CreateAgentPage() {
                           setNewAgent({...newAgent, schedule: e.target.value as any});
                           handleFieldEdit('schedule');
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                       >
                         <option value="hourly">Every Hour</option>
                         <option value="daily">Daily</option>
@@ -1872,7 +1907,7 @@ export default function CreateAgentPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="calendly-label" style={{ marginBottom: '8px', display: 'block' }}>
                         Data Retention (Days)
                       </label>
                       <input
@@ -1882,7 +1917,16 @@ export default function CreateAgentPage() {
                           setNewAgent({...newAgent, data_retention_days: parseInt(e.target.value) || 90});
                           handleFieldEdit('data_retention_days');
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         min="7"
                         max="365"
                       />
@@ -1927,7 +1971,7 @@ export default function CreateAgentPage() {
                   {/* Price Threshold for Pricing Agents */}
                   {newAgent.type === 'pricing' && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                      <label className="calendly-label" style={{ marginBottom: '8px', display: 'block' }}>
                         Price Change Threshold (%)
                       </label>
                       <input
@@ -1937,7 +1981,16 @@ export default function CreateAgentPage() {
                           setNewAgent({...newAgent, price_threshold: parseFloat(e.target.value) || undefined});
                           handleFieldEdit('price_threshold');
                         }}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
+                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        onFocus={(e) => {
+                          e.target.style.borderColor = '#4285f4';
+                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                        }}
+                        onBlur={(e) => {
+                          e.target.style.borderColor = '#e2e8f0';
+                          e.target.style.boxShadow = 'none';
+                        }}
                         placeholder="5"
                         min="0"
                         max="100"
@@ -1947,18 +2000,18 @@ export default function CreateAgentPage() {
                     </div>
                   )}
 
-                    {/* Review Button */}
-                    <div className="flex justify-center mt-8 pt-6 border-t border-gray-200">
-                      <button
-                        onClick={handleReviewAgent}
-                        className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-md"
-                      >
-                        <Eye className="w-5 h-5" />
-                        <span>Review Agent Configuration</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </button>
-                    </div>
+                  {/* Review Button */}
+                  <div className="flex justify-center mt-8 pt-6 border-t border-gray-200">
+                    <button
+                      onClick={handleReviewAgent}
+                      className="calendly-btn-primary flex items-center space-x-2"
+                    >
+                      <Eye className="w-5 h-5" />
+                      <span>Review Agent Configuration</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
                   </div>
+                </div>
                 </div>
               </div>
             </div>
@@ -1966,14 +2019,14 @@ export default function CreateAgentPage() {
 
           {/* Step 3: Review & Create */}
           {(researchComplete || isEditMode) && (isEditMode || !stepsCollapsed.step3) && (
-            <div id="step-3" className="bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50 mb-8">
+            <div id="step-3" className="calendly-card-static" style={{ marginBottom: '24px' }}>
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-6">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 flex items-center justify-center">
-                    <Eye className="w-5 h-5 text-white" />
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-blue-600" />
                   </div>
                   <div>
-                    <h2 className="text-lg font-semibold text-gray-900">Step 3: Review & Create</h2>
+                    <h2 className="calendly-h3">Step 3: Review & Create</h2>
                     <p className="text-sm text-gray-600">Review your agent configuration and deploy</p>
                   </div>
                 </div>
@@ -2110,7 +2163,7 @@ export default function CreateAgentPage() {
                     <button
                       onClick={handleSaveAgent}
                       disabled={!canCreateAgent || isCreating}
-                      className="flex items-center space-x-3 px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl font-medium"
+                      className="calendly-btn-primary flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isCreating ? (
                         <>

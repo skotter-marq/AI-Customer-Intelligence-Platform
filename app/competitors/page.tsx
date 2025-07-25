@@ -364,7 +364,10 @@ export default function CompetitorsPage() {
                 <Download className="w-4 h-4" />
                 <span>Export</span>
               </button>
-              <button className="calendly-btn-primary flex items-center space-x-2">
+              <button 
+                onClick={() => router.push('/competitor-intelligence/add-competitor')}
+                className="calendly-btn-primary flex items-center space-x-2"
+              >
                 <Plus className="w-4 h-4" />
                 <span>Add Competitor</span>
               </button>
@@ -613,7 +616,10 @@ export default function CompetitorsPage() {
                   ? 'Try adjusting your search or filters' 
                   : 'Get started by adding your first competitor'}
               </p>
-              <button className="calendly-btn-primary">
+              <button 
+                onClick={() => router.push('/competitor-intelligence/add-competitor')}
+                className="calendly-btn-primary"
+              >
                 Add Competitor
               </button>
             </div>
