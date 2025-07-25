@@ -418,28 +418,28 @@ export default function CustomerIntelPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-20">
+    <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Customer Intelligence Dashboard</h1>
-            <p className="text-gray-600">Analyze customer data, track trends, and generate insights with AI-powered tools</p>
+          <div style={{ marginBottom: '32px' }}>
+            <h1 className="calendly-h1">Customer Intelligence Dashboard</h1>
+            <p className="calendly-body">Analyze customer data, track trends, and generate insights with AI-powered tools</p>
           </div>
 
           {/* AI Assistant Section */}
-          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6 mb-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="p-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-lg">
-                <Bot className="w-6 h-6 text-purple-600" />
+          <div className="calendly-card" style={{ marginBottom: '24px' }}>
+            <div className="flex items-center space-x-3" style={{ marginBottom: '20px' }}>
+              <div className="p-3 rounded-lg" style={{ background: '#dbeafe' }}>
+                <Bot className="w-6 h-6" style={{ color: '#4285f4' }} />
               </div>
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">AI Assistant</h2>
-                <p className="text-gray-600">Ask questions about your customer data, trends, and insights</p>
+                <h2 className="calendly-h2">AI Assistant</h2>
+                <p className="calendly-label">Ask questions about your customer data, trends, and insights</p>
               </div>
             </div>
             
-            <div className="flex space-x-4 mb-4">
+            <div className="flex space-x-3" style={{ marginBottom: '16px' }}>
               <div className="flex-1">
                 <input
                   type="text"
@@ -447,13 +447,30 @@ export default function CustomerIntelPage() {
                   value={aiQuery}
                   onChange={(e) => setAiQuery(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleAiQuery()}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
+                  className="w-full px-4 py-3 rounded-lg transition-all duration-200 calendly-body-sm"
+                  style={{ 
+                    border: '1px solid #e2e8f0',
+                    background: 'white',
+                    color: '#1a1a1a'
+                  }}
+                  onFocus={(e) => {
+                    e.target.style.borderColor = '#4285f4';
+                    e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                  }}
+                  onBlur={(e) => {
+                    e.target.style.borderColor = '#e2e8f0';
+                    e.target.style.boxShadow = 'none';
+                  }}
                 />
               </div>
               <button
                 onClick={handleAiQuery}
                 disabled={isAiLoading || !aiQuery.trim()}
-                className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center space-x-2"
+                className="calendly-btn-primary flex items-center space-x-2"
+                style={{ 
+                  opacity: isAiLoading || !aiQuery.trim() ? 0.5 : 1,
+                  cursor: isAiLoading || !aiQuery.trim() ? 'not-allowed' : 'pointer'
+                }}
               >
                 {isAiLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
@@ -465,7 +482,7 @@ export default function CustomerIntelPage() {
             </div>
             
             {/* Quick suggestion buttons */}
-            <div className="flex flex-wrap gap-2 mb-4">
+            <div className="flex flex-wrap gap-2" style={{ marginBottom: '16px' }}>
               {[
                 "What are the top customer pain points?",
                 "Which customers are at risk of churning?",
@@ -475,7 +492,18 @@ export default function CustomerIntelPage() {
                 <button
                   key={index}
                   onClick={() => setAiQuery(suggestion)}
-                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                  className="px-3 py-1 rounded-full calendly-label-sm transition-colors"
+                  style={{ 
+                    background: '#f1f5f9',
+                    color: '#4a5568',
+                    border: '1px solid #e2e8f0'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#e2e8f0';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#f1f5f9';
+                  }}
                 >
                   {suggestion}
                 </button>
@@ -484,13 +512,16 @@ export default function CustomerIntelPage() {
             
             {/* AI Response */}
             {aiResponse && (
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-4 border border-purple-200">
+              <div className="rounded-lg p-4" style={{ 
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0'
+              }}>
                 <div className="flex items-start space-x-3">
-                  <div className="p-1 bg-purple-100 rounded-full">
-                    <Bot className="w-4 h-4 text-purple-600" />
+                  <div className="p-2 rounded-full" style={{ background: '#dbeafe' }}>
+                    <Bot className="w-4 h-4" style={{ color: '#4285f4' }} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-gray-800 leading-relaxed">{aiResponse}</p>
+                    <p className="calendly-body">{aiResponse}</p>
                   </div>
                 </div>
               </div>
@@ -498,17 +529,32 @@ export default function CustomerIntelPage() {
           </div>
 
           {/* Primary Tabbed Interface */}
-          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
+          <div className="calendly-card overflow-hidden" style={{ padding: 0 }}>
             {/* Tab Navigation */}
-            <div className="border-b border-gray-200">
+            <div style={{ borderBottom: '1px solid #e2e8f0' }}>
               <nav className="flex space-x-8 px-6 overflow-x-auto">
                 <button
                   onClick={() => setActiveTab('overview')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === 'overview'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className="py-4 px-1 border-b-2 calendly-body-sm font-medium transition-colors whitespace-nowrap"
+                  style={activeTab === 'overview' ? {
+                    borderBottomColor: '#4285f4',
+                    color: '#4285f4'
+                  } : {
+                    borderBottomColor: 'transparent',
+                    color: '#718096'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'overview') {
+                      e.currentTarget.style.color = '#4a5568';
+                      e.currentTarget.style.borderBottomColor = '#cbd5e0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'overview') {
+                      e.currentTarget.style.color = '#718096';
+                      e.currentTarget.style.borderBottomColor = 'transparent';
+                    }
+                  }}
                 >
                   <div className="flex items-center space-x-2">
                     <BarChart3 className="w-4 h-4" />
@@ -517,11 +563,26 @@ export default function CustomerIntelPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('grain')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === 'grain'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className="py-4 px-1 border-b-2 calendly-body-sm font-medium transition-colors whitespace-nowrap"
+                  style={activeTab === 'grain' ? {
+                    borderBottomColor: '#4285f4',
+                    color: '#4285f4'
+                  } : {
+                    borderBottomColor: 'transparent',
+                    color: '#718096'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'grain') {
+                      e.currentTarget.style.color = '#4a5568';
+                      e.currentTarget.style.borderBottomColor = '#cbd5e0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'grain') {
+                      e.currentTarget.style.color = '#718096';
+                      e.currentTarget.style.borderBottomColor = 'transparent';
+                    }
+                  }}
                 >
                   <div className="flex items-center space-x-2">
                     <Phone className="w-4 h-4" />
@@ -530,11 +591,26 @@ export default function CustomerIntelPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('hubspot')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === 'hubspot'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className="py-4 px-1 border-b-2 calendly-body-sm font-medium transition-colors whitespace-nowrap"
+                  style={activeTab === 'hubspot' ? {
+                    borderBottomColor: '#4285f4',
+                    color: '#4285f4'
+                  } : {
+                    borderBottomColor: 'transparent',
+                    color: '#718096'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'hubspot') {
+                      e.currentTarget.style.color = '#4a5568';
+                      e.currentTarget.style.borderBottomColor = '#cbd5e0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'hubspot') {
+                      e.currentTarget.style.color = '#718096';
+                      e.currentTarget.style.borderBottomColor = 'transparent';
+                    }
+                  }}
                 >
                   <div className="flex items-center space-x-2">
                     <Building className="w-4 h-4" />
@@ -543,11 +619,26 @@ export default function CustomerIntelPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('support')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === 'support'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className="py-4 px-1 border-b-2 calendly-body-sm font-medium transition-colors whitespace-nowrap"
+                  style={activeTab === 'support' ? {
+                    borderBottomColor: '#4285f4',
+                    color: '#4285f4'
+                  } : {
+                    borderBottomColor: 'transparent',
+                    color: '#718096'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'support') {
+                      e.currentTarget.style.color = '#4a5568';
+                      e.currentTarget.style.borderBottomColor = '#cbd5e0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'support') {
+                      e.currentTarget.style.color = '#718096';
+                      e.currentTarget.style.borderBottomColor = 'transparent';
+                    }
+                  }}
                 >
                   <div className="flex items-center space-x-2">
                     <MessageSquare className="w-4 h-4" />
@@ -556,11 +647,26 @@ export default function CustomerIntelPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('product')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === 'product'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className="py-4 px-1 border-b-2 calendly-body-sm font-medium transition-colors whitespace-nowrap"
+                  style={activeTab === 'product' ? {
+                    borderBottomColor: '#4285f4',
+                    color: '#4285f4'
+                  } : {
+                    borderBottomColor: 'transparent',
+                    color: '#718096'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'product') {
+                      e.currentTarget.style.color = '#4a5568';
+                      e.currentTarget.style.borderBottomColor = '#cbd5e0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'product') {
+                      e.currentTarget.style.color = '#718096';
+                      e.currentTarget.style.borderBottomColor = 'transparent';
+                    }
+                  }}
                 >
                   <div className="flex items-center space-x-2">
                     <Zap className="w-4 h-4" />
@@ -569,11 +675,26 @@ export default function CustomerIntelPage() {
                 </button>
                 <button
                   onClick={() => setActiveTab('insights')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors whitespace-nowrap ${
-                    activeTab === 'insights'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
+                  className="py-4 px-1 border-b-2 calendly-body-sm font-medium transition-colors whitespace-nowrap"
+                  style={activeTab === 'insights' ? {
+                    borderBottomColor: '#4285f4',
+                    color: '#4285f4'
+                  } : {
+                    borderBottomColor: 'transparent',
+                    color: '#718096'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== 'insights') {
+                      e.currentTarget.style.color = '#4a5568';
+                      e.currentTarget.style.borderBottomColor = '#cbd5e0';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== 'insights') {
+                      e.currentTarget.style.color = '#718096';
+                      e.currentTarget.style.borderBottomColor = 'transparent';
+                    }
+                  }}
                 >
                   <div className="flex items-center space-x-2">
                     <Brain className="w-4 h-4" />
@@ -594,70 +715,70 @@ export default function CustomerIntelPage() {
                         <BarChart3 className="w-6 h-6 text-blue-600" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-gray-900">Marq Product Impact Overview</h3>
-                        <p className="text-gray-600">High-level insights affecting product and user experience</p>
+                        <h3 className="calendly-h2">Marq Product Impact Overview</h3>
+                        <p className="calendly-body">High-level insights affecting product and user experience</p>
                       </div>
                     </div>
                   </div>
 
                   {/* Key Metrics Cards */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                    <div className="calendly-card" style={{ background: '#f0f4ff', border: '1px solid #a5b4fc' }}>
                       <div className="flex items-center space-x-3 mb-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <TrendingUp className="w-5 h-5 text-blue-600" />
+                        <div className="p-2 rounded-lg" style={{ background: '#dbeafe' }}>
+                          <TrendingUp className="w-5 h-5" style={{ color: '#4285f4' }} />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Overall Health Score</p>
-                          <p className="text-2xl font-semibold text-gray-900">4.3</p>
+                          <p className="calendly-label">Overall Health Score</p>
+                          <p className="calendly-h2" style={{ marginBottom: 0 }}>4.3</p>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500">↑ 0.2 from last month</p>
+                      <p className="calendly-label-sm">↑ 0.2 from last month</p>
                     </div>
 
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+                    <div className="calendly-card" style={{ background: '#f0fdf4', border: '1px solid #86efac' }}>
                       <div className="flex items-center space-x-3 mb-3">
-                        <div className="p-2 bg-green-100 rounded-lg">
-                          <Target className="w-5 h-5 text-green-600" />
+                        <div className="p-2 rounded-lg" style={{ background: '#d1fae5' }}>
+                          <Target className="w-5 h-5" style={{ color: '#10b981' }} />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Feature Adoption</p>
-                          <p className="text-2xl font-semibold text-gray-900">78%</p>
+                          <p className="calendly-label">Feature Adoption</p>
+                          <p className="calendly-h2" style={{ marginBottom: 0 }}>78%</p>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500">↑ 5% from last month</p>
+                      <p className="calendly-label-sm">↑ 5% from last month</p>
                     </div>
 
-                    <div className="bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border border-yellow-200">
+                    <div className="calendly-card" style={{ background: '#fffbeb', border: '1px solid #fbbf24' }}>
                       <div className="flex items-center space-x-3 mb-3">
-                        <div className="p-2 bg-yellow-100 rounded-lg">
-                          <AlertTriangle className="w-5 h-5 text-yellow-600" />
+                        <div className="p-2 rounded-lg" style={{ background: '#fef3c7' }}>
+                          <AlertTriangle className="w-5 h-5" style={{ color: '#f59e0b' }} />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Active Issues</p>
-                          <p className="text-2xl font-semibold text-gray-900">12</p>
+                          <p className="calendly-label">Active Issues</p>
+                          <p className="calendly-h2" style={{ marginBottom: 0 }}>12</p>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500">↓ 8 from last month</p>
+                      <p className="calendly-label-sm">↓ 8 from last month</p>
                     </div>
 
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                    <div className="calendly-card" style={{ background: '#faf5ff', border: '1px solid #c084fc' }}>
                       <div className="flex items-center space-x-3 mb-3">
-                        <div className="p-2 bg-purple-100 rounded-lg">
-                          <Zap className="w-5 h-5 text-purple-600" />
+                        <div className="p-2 rounded-lg" style={{ background: '#e9d5ff' }}>
+                          <Zap className="w-5 h-5" style={{ color: '#8b5cf6' }} />
                         </div>
                         <div>
-                          <p className="text-sm text-gray-600">Product Updates</p>
-                          <p className="text-2xl font-semibold text-gray-900">8</p>
+                          <p className="calendly-label">Product Updates</p>
+                          <p className="calendly-h2" style={{ marginBottom: 0 }}>8</p>
                         </div>
                       </div>
-                      <p className="text-xs text-gray-500">Released this month</p>
+                      <p className="calendly-label-sm">Released this month</p>
                     </div>
                   </div>
 
                   {/* Key Insights with Expandable Details */}
                   <div className="space-y-4">
-                    <h4 className="text-lg font-semibold text-gray-900">Key Product Impact Insights</h4>
+                    <h4 className="calendly-h3">Key Product Impact Insights</h4>
                     
                     {[
                       {
@@ -730,7 +851,14 @@ export default function CustomerIntelPage() {
                         ]
                       }
                     ].map((insight) => (
-                      <div key={insight.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                      <div key={insight.id} className="calendly-card"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)';
+                        }}
+                      >
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-lg ${
@@ -1145,7 +1273,14 @@ export default function CustomerIntelPage() {
                         ]
                       }
                     ].map((insight) => (
-                      <div key={insight.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                      <div key={insight.id} className="calendly-card"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)';
+                        }}
+                      >
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-lg ${
@@ -1371,7 +1506,14 @@ export default function CustomerIntelPage() {
                         ]
                       }
                     ].map((insight) => (
-                      <div key={insight.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                      <div key={insight.id} className="calendly-card"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)';
+                        }}
+                      >
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-lg ${
@@ -1717,7 +1859,14 @@ export default function CustomerIntelPage() {
                         potential_value: '-$50,000'
                       }
                     ].map((insight) => (
-                      <div key={insight.id} className="bg-white border border-gray-200 rounded-xl p-6 hover:shadow-md transition-shadow">
+                      <div key={insight.id} className="calendly-card"
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)';
+                        }}
+                      >
                         <div className="flex items-start justify-between mb-4">
                           <div className="flex items-center space-x-3">
                             <div className={`p-2 rounded-lg ${

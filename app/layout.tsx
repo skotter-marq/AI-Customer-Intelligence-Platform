@@ -28,8 +28,12 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Navigation />
-        {children}
+        <div className="flex min-h-screen">
+          <Navigation />
+          <main className="flex-1" style={{ marginLeft: '250px' }}>
+            {children}
+          </main>
+        </div>
       </body>
     </html>
   );

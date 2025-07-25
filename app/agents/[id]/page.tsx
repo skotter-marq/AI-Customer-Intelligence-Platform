@@ -346,10 +346,10 @@ export default function AgentProfilePage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Agent Not Found</h1>
           <p className="text-gray-600 mb-4">The requested agent profile could not be loaded.</p>
           <button
-            onClick={() => router.push('/competitor-intelligence')}
+            onClick={() => router.push('/agents')}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
-            Back to Dashboard
+            Back to Agents
           </button>
         </div>
       </div>
@@ -361,21 +361,21 @@ export default function AgentProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Navigation */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 pt-20">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 pt-6">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => router.push('/competitor-intelligence')}
+              onClick={() => router.push('/agents')}
               className="p-2 rounded-lg text-gray-800 hover:text-indigo-600 hover:bg-gray-100 transition-all duration-200"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <button 
-                onClick={() => router.push('/competitor-intelligence')}
+                onClick={() => router.push('/agents')}
                 className="hover:text-indigo-600 transition-colors"
               >
-                Competitor Intelligence
+                Agents
               </button>
               {navigationSource === 'competitor' && (
                 <>
@@ -392,7 +392,7 @@ export default function AgentProfilePage() {
                 <>
                   <span>›</span>
                   <button 
-                    onClick={() => router.push('/competitor-intelligence/agents')}
+                    onClick={() => router.push('/agents')}
                     className="hover:text-indigo-600 transition-colors"
                   >
                     AI Agents
@@ -698,7 +698,7 @@ export default function AgentProfilePage() {
                 {agent.linkedCompetitors.map((competitor) => (
                   <button
                     key={competitor.id}
-                    onClick={() => router.push(`/competitor-intelligence/competitors/${competitor.id}`)}
+                    onClick={() => router.push(`/competitors/${competitor.id}`)}
                     className="w-full bg-gray-50 rounded-lg p-4 hover:bg-gray-100 hover:shadow-md transition-all duration-200 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
                   >
                     <div className="flex items-center space-x-3 mb-2">

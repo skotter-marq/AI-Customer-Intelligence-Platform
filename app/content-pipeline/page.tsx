@@ -904,18 +904,18 @@ export default function ContentPipelinePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 pt-20">
+    <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center justify-between" style={{ marginBottom: '32px' }}>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Content Pipeline</h1>
-              <p className="text-gray-600">Create and manage marketing content from product features</p>
+              <h1 className="calendly-h1">Content Pipeline</h1>
+              <p className="calendly-body">Create and manage marketing content from product features</p>
             </div>
             <button
               onClick={handleCreateContent}
-              className="flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all duration-200 shadow-lg hover:shadow-xl"
+              className="calendly-btn-primary flex items-center space-x-2"
             >
               <Plus className="w-5 h-5" />
               <span>Create Content</span>
@@ -923,60 +923,60 @@ export default function ContentPipelinePage() {
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4" style={{ marginBottom: '24px' }}>
+            <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Posts</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.total_posts}</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Total Posts</p>
+                  <p className="calendly-h2" style={{ marginBottom: 0 }}>{stats.total_posts}</p>
                 </div>
-                <FileText className="w-8 h-8 text-blue-600" />
+                <FileText className="w-8 h-8" style={{ color: '#4285f4' }} />
               </div>
             </div>
             
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6">
+            <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Published</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.published}</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Published</p>
+                  <p className="calendly-h2" style={{ marginBottom: 0 }}>{stats.published}</p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-green-600" />
+                <CheckCircle className="w-8 h-8" style={{ color: '#10b981' }} />
               </div>
             </div>
             
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6">
+            <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Drafts</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.drafts}</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Drafts</p>
+                  <p className="calendly-h2" style={{ marginBottom: 0 }}>{stats.drafts}</p>
                 </div>
-                <Edit className="w-8 h-8 text-orange-600" />
+                <Edit className="w-8 h-8" style={{ color: '#f59e0b' }} />
               </div>
             </div>
             
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6">
+            <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Views This Month</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.views_this_month.toLocaleString()}</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Views This Month</p>
+                  <p className="calendly-h2" style={{ marginBottom: 0 }}>{stats.views_this_month.toLocaleString()}</p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-purple-600" />
+                <TrendingUp className="w-8 h-8" style={{ color: '#4285f4' }} />
               </div>
             </div>
             
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6">
+            <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Engagement Rate</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.engagement_rate}%</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Engagement Rate</p>
+                  <p className="calendly-h2" style={{ marginBottom: 0 }}>{stats.engagement_rate}%</p>
                 </div>
-                <TrendingUp className="w-8 h-8 text-indigo-600" />
+                <TrendingUp className="w-8 h-8" style={{ color: '#4285f4' }} />
               </div>
             </div>
           </div>
 
           {/* Search and Filters */}
-          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6 mb-6">
+          <div className="calendly-card" style={{ marginBottom: '24px' }}>
             <div className="flex flex-col lg:flex-row gap-4">
               {/* Search */}
               <div className="flex-1 relative">
@@ -1092,7 +1092,11 @@ export default function ContentPipelinePage() {
 
           {/* Bulk Actions Toolbar */}
           {selectedItems.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 flex items-center justify-between">
+            <div className="p-4 mb-4 flex items-center justify-between" style={{
+              background: '#dbeafe',
+              border: '1px solid #93c5fd', 
+              borderRadius: '12px'
+            }}>
               <div className="flex items-center space-x-4">
                 <span className="font-medium text-blue-900">
                   {selectedItems.length} item{selectedItems.length !== 1 ? 's' : ''} selected
@@ -1103,14 +1107,14 @@ export default function ContentPipelinePage() {
                     className="flex items-center space-x-1 px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
                   >
                     <Upload className="w-4 h-4" />
-                    <span>Publish All</span>
+                    <span className="text-sm font-medium">Publish All</span>
                   </button>
                   <button
                     onClick={() => handleBulkStatusChange('draft')}
                     className="flex items-center space-x-1 px-3 py-1 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm"
                   >
                     <AlertCircle className="w-4 h-4" />
-                    <span>Unpublish All</span>
+                    <span className="text-sm font-medium">Unpublish All</span>
                   </button>
                 </div>
               </div>
@@ -1138,11 +1142,28 @@ export default function ContentPipelinePage() {
                 <div
                   key={item.id}
                   onClick={() => handleEditContent(item)}
-                  className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden hover:shadow-xl hover:border-blue-300 hover:bg-white transition-all duration-300 group h-[580px] flex flex-col cursor-pointer relative"
+                  className="calendly-card overflow-hidden group h-[540px] flex flex-col cursor-pointer relative"
+                  style={{ 
+                    padding: 0,
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    background: 'white',
+                    boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#f8fafc';
+                    e.currentTarget.style.borderColor = '#cbd5e0';
+                    e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'white';
+                    e.currentTarget.style.borderColor = '#e2e8f0';
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)';
+                  }}
                 >
                   
                   {/* Featured Image */}
-                  <div className="relative h-48 bg-gradient-to-br from-blue-100 to-purple-100 overflow-hidden flex-shrink-0">
+                  <div className="relative h-48 overflow-hidden flex-shrink-0" style={{ background: '#f1f5f9' }}>
                     {item.featured_image && item.featured_image !== '/api/placeholder/400/240' ? (
                       <img
                         src={item.featured_image}
@@ -1150,12 +1171,12 @@ export default function ContentPipelinePage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-blue-100 to-purple-100 flex items-center justify-center">
+                      <div className="w-full h-full flex items-center justify-center" style={{ background: '#f1f5f9' }}>
                         <div className="text-center">
-                          <div className="w-16 h-16 mx-auto mb-2 bg-white/30 rounded-full flex items-center justify-center">
-                            <FileText className="w-8 h-8 text-blue-600/60" />
+                          <div className="w-16 h-16 mx-auto mb-2 rounded-full flex items-center justify-center" style={{ background: 'white' }}>
+                            <FileText className="w-8 h-8" style={{ color: '#4285f4' }} />
                           </div>
-                          <p className="text-sm font-medium text-blue-800/70">{item.type.replace('_', ' ')}</p>
+                          <p className="calendly-label-sm" style={{ color: '#4a5568' }}>{item.type.replace('_', ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -1179,11 +1200,15 @@ export default function ContentPipelinePage() {
                     </div>
 
                     <div className="absolute top-4 right-4 flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getTypeColor(item.type)}`}>
+                      <span className="calendly-badge calendly-badge-info flex items-center">
                         <TypeIcon className="w-3 h-3 mr-1" />
                         {item.type.replace('_', ' ')}
                       </span>
-                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(item.status)}`}>
+                      <span className={`calendly-badge ${
+                        item.status === 'published' ? 'calendly-badge-success' :
+                        item.status === 'review' ? 'calendly-badge-warning' :
+                        'calendly-badge-info'
+                      } flex items-center`}>
                         <StatusIcon className="w-3 h-3 mr-1" />
                         {item.status}
                       </span>
@@ -1191,50 +1216,50 @@ export default function ContentPipelinePage() {
                   </div>
                   
                   {/* Content */}
-                  <div className="p-6 flex-1 flex flex-col">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <div className="p-5 flex-1 flex flex-col">
+                    <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
+                      <div className="flex items-center space-x-2 calendly-body-sm" style={{ color: '#718096' }}>
                         <User className="w-4 h-4" />
                         <span>{item.author}</span>
                       </div>
-                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <div className="flex items-center space-x-2 calendly-body-sm" style={{ color: '#718096' }}>
                         <Clock className="w-4 h-4" />
                         <span>{item.reading_time} min read</span>
                       </div>
                     </div>
                     
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2 line-clamp-2 h-14 overflow-hidden">{item.title}</h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2 h-10 overflow-hidden">{item.excerpt}</p>
+                    <h3 className="calendly-h3 line-clamp-2 h-14 overflow-hidden" style={{ marginBottom: '8px' }}>{item.title}</h3>
+                    <p className="calendly-body-sm line-clamp-2 h-10 overflow-hidden" style={{ marginBottom: '16px' }}>{item.excerpt}</p>
                     
                     {/* Feature Info */}
-                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <div className="p-3 rounded-lg" style={{ marginBottom: '16px', background: '#dbeafe', border: '1px solid #93c5fd' }}>
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-blue-900">Based on: {item.feature_title}</p>
-                          <p className="text-xs text-blue-700">{item.feature_category}</p>
+                          <p className="calendly-body-sm font-medium" style={{ color: '#1e40af', marginBottom: '2px' }}>Based on: {item.feature_title}</p>
+                          <p className="calendly-label-sm" style={{ color: '#3b82f6' }}>{item.feature_category}</p>
                         </div>
-                        <Tag className="w-4 h-4 text-blue-600" />
+                        <Tag className="w-4 h-4" style={{ color: '#4285f4' }} />
                       </div>
                     </div>
                     
                     {/* Tags */}
-                    <div className="flex gap-1 mb-4 h-6 overflow-hidden">
+                    <div className="flex gap-1 h-6 overflow-hidden" style={{ marginBottom: '16px' }}>
                       {item.tags.slice(0, 2).map((tag, index) => (
-                        <span key={index} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg whitespace-nowrap flex-shrink-0">
+                        <span key={index} className="calendly-badge calendly-badge-info whitespace-nowrap flex-shrink-0">
                           {tag.length > 12 ? `${tag.substring(0, 12)}...` : tag}
                         </span>
                       ))}
                       {item.tags.length > 2 && (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-lg whitespace-nowrap flex-shrink-0">
+                        <span className="calendly-badge calendly-badge-info whitespace-nowrap flex-shrink-0">
                           +{item.tags.length - 2} more
                         </span>
                       )}
                     </div>
                     
                     {/* Metrics and Date Section - Fixed height for consistency */}
-                    <div className="h-8 mb-4">
+                    <div className="h-8" style={{ marginBottom: '16px' }}>
                       {item.status === 'published' ? (
-                        <div className="flex items-center justify-between text-sm text-gray-600 h-full">
+                        <div className="flex items-center justify-between calendly-body-sm h-full" style={{ color: '#718096' }}>
                           <div className="flex items-center space-x-4">
                             <div className="flex items-center space-x-1">
                               <Eye className="w-4 h-4" />
@@ -1251,7 +1276,7 @@ export default function ContentPipelinePage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-1 text-sm text-gray-600 h-full">
+                        <div className="flex items-center space-x-1 calendly-body-sm h-full" style={{ color: '#718096' }}>
                           <Calendar className="w-4 h-4" />
                           <span>Created {formatDate(item.created_date)}</span>
                         </div>
@@ -1263,15 +1288,14 @@ export default function ContentPipelinePage() {
                       <div className="flex items-center space-x-3">
                         {/* Published Toggle Switch */}
                         <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-600">Published</span>
+                          <span className="calendly-body-sm" style={{ color: '#718096' }}>Published</span>
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDirectStatusChange(item, item.status === 'published' ? 'draft' : 'published');
                             }}
-                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                              item.status === 'published' ? 'bg-green-600' : 'bg-gray-300'
-                            }`}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors`}
+                            style={{ background: item.status === 'published' ? '#10b981' : '#cbd5e0' }}
                             title={item.status === 'published' ? 'Click to unpublish' : 'Click to publish'}
                           >
                             <span
@@ -1289,7 +1313,16 @@ export default function ContentPipelinePage() {
                             e.stopPropagation();
                             handleEditContent(item);
                           }}
-                          className="p-2 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: '#4285f4' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#f0f4ff';
+                            e.currentTarget.style.color = '#3367d6';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#4285f4';
+                          }}
                           title="Edit content"
                         >
                           <Edit className="w-4 h-4" />
@@ -1299,7 +1332,16 @@ export default function ContentPipelinePage() {
                             e.stopPropagation();
                             window.open(`/content/${item.slug}`, '_blank');
                           }}
-                          className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: '#718096' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#f0f4ff';
+                            e.currentTarget.style.color = '#4285f4';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#718096';
+                          }}
                           title="View on site"
                         >
                           <ExternalLink className="w-4 h-4" />
@@ -1313,7 +1355,13 @@ export default function ContentPipelinePage() {
             </div>
           ) : (
             /* List View */
-            <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 overflow-hidden">
+            <div className="overflow-hidden" style={{ 
+              padding: 0,
+              border: '1px solid #e2e8f0',
+              borderRadius: '12px',
+              background: 'white',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)'
+            }}>
               <div className="divide-y divide-gray-200">
                 {filteredItems.map((item) => {
                   const StatusIcon = getStatusIcon(item.status);
@@ -1323,7 +1371,13 @@ export default function ContentPipelinePage() {
                     <div
                       key={item.id}
                       onClick={() => handleEditContent(item)}
-                      className="p-6 hover:bg-gray-50 transition-colors cursor-pointer relative"
+                      className="p-6 transition-colors cursor-pointer relative"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = '#f8fafc';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'white';
+                      }}
                     >
                       {/* Selection Circle */}
                       <div className="absolute top-6 left-6">
@@ -1348,7 +1402,7 @@ export default function ContentPipelinePage() {
                         {/* Left Content */}
                         <div className="flex-1">
                           <div className="flex items-center space-x-4 mb-2">
-                            <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{item.title}</h3>
+                            <h3 className="calendly-h3 line-clamp-1" style={{ marginBottom: 0 }}>{item.title}</h3>
                             <div className="flex items-center space-x-2">
                               <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getTypeColor(item.type)}`}>
                                 <TypeIcon className="w-3 h-3 mr-1" />
@@ -1361,9 +1415,9 @@ export default function ContentPipelinePage() {
                             </div>
                           </div>
                           
-                          <p className="text-gray-600 text-sm mb-2 line-clamp-1">{item.excerpt}</p>
+                          <p className="calendly-body-sm line-clamp-1" style={{ marginBottom: '8px' }}>{item.excerpt}</p>
                           
-                          <div className="flex items-center space-x-4 text-sm text-gray-500">
+                          <div className="flex items-center space-x-4 calendly-body-sm" style={{ color: '#718096' }}>
                             <div className="flex items-center space-x-1">
                               <User className="w-4 h-4" />
                               <span>{item.author}</span>
@@ -1395,15 +1449,14 @@ export default function ContentPipelinePage() {
                         <div className="flex items-center space-x-2">
                           {/* Published Toggle */}
                           <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-600">Published</span>
+                            <span className="calendly-body-sm" style={{ color: '#718096' }}>Published</span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDirectStatusChange(item, item.status === 'published' ? 'draft' : 'published');
                               }}
-                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                                item.status === 'published' ? 'bg-green-600' : 'bg-gray-300'
-                              }`}
+                              className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors"
+                              style={{ background: item.status === 'published' ? '#10b981' : '#cbd5e0' }}
                             >
                               <span
                                 className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
@@ -1419,7 +1472,16 @@ export default function ContentPipelinePage() {
                               e.stopPropagation();
                               handleEditContent(item);
                             }}
-                            className="p-2 rounded-lg text-blue-600 hover:text-blue-700 hover:bg-blue-50 transition-colors"
+                            className="p-2 rounded-lg transition-colors"
+                            style={{ color: '#4285f4' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#f0f4ff';
+                              e.currentTarget.style.color = '#3367d6';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = '#4285f4';
+                            }}
                             title="Edit content"
                           >
                             <Edit className="w-4 h-4" />
@@ -1429,7 +1491,16 @@ export default function ContentPipelinePage() {
                               e.stopPropagation();
                               window.open(`/content/${item.slug}`, '_blank');
                             }}
-                            className="p-2 rounded-lg text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                            className="p-2 rounded-lg transition-colors"
+                            style={{ color: '#718096' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#f0f4ff';
+                              e.currentTarget.style.color = '#4285f4';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = '#718096';
+                            }}
                             title="View on site"
                           >
                             <ExternalLink className="w-4 h-4" />
@@ -1446,16 +1517,16 @@ export default function ContentPipelinePage() {
           {/* Empty State */}
           {filteredItems.length === 0 && (
             <div className="text-center py-12">
-              <FileText className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No content found</h3>
-              <p className="text-gray-600 mb-6">
+              <FileText className="w-16 h-16 mx-auto mb-4" style={{ color: '#a0aec0' }} />
+              <h3 className="calendly-h3" style={{ marginBottom: '8px' }}>No content found</h3>
+              <p className="calendly-body" style={{ marginBottom: '24px' }}>
                 {searchTerm || selectedFilter !== 'all' || statusFilter !== 'all' 
                   ? 'Try adjusting your search or filters' 
                   : 'Get started by creating your first piece of content'}
               </p>
               <button
                 onClick={handleCreateContent}
-                className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors"
+                className="calendly-btn-primary inline-flex items-center space-x-2"
               >
                 <Plus className="w-5 h-5" />
                 <span>Create Content</span>
@@ -1465,13 +1536,13 @@ export default function ContentPipelinePage() {
 
           {/* Pagination */}
           {filteredAndSortedItems.length > itemsPerPage && (
-            <div className="flex items-center justify-between mt-8 px-6 py-4 bg-white/90 backdrop-blur-md rounded-xl shadow-lg border border-gray-200/50">
+            <div className="calendly-card flex items-center justify-between mt-8">
               <div className="flex items-center space-x-4">
-                <span className="text-sm text-gray-600">
+                <span className="calendly-body-sm">
                   Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAndSortedItems.length)} of {filteredAndSortedItems.length} items
                 </span>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600">Items per page:</span>
+                  <span className="calendly-body-sm">Items per page:</span>
                   <select
                     value={itemsPerPage}
                     onChange={(e) => {
@@ -1479,7 +1550,17 @@ export default function ContentPipelinePage() {
                       setCurrentPage(1);
                       // Update itemsPerPage - you'd need to make this a state variable
                     }}
-                    className="px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="px-2 py-1 rounded calendly-body-sm" 
+                    style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.outline = 'none';
+                      e.currentTarget.style.boxShadow = '0 0 0 2px #4285f4';
+                      e.currentTarget.style.borderColor = '#4285f4';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
                   >
                     <option value={12}>12</option>
                     <option value={24}>24</option>
@@ -1493,7 +1574,16 @@ export default function ContentPipelinePage() {
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ border: '1px solid #e2e8f0' }}
+                  onMouseEnter={(e) => {
+                    if (currentPage !== 1) {
+                      e.currentTarget.style.background = '#f8fafc';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
                   title="Previous page"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -1507,11 +1597,23 @@ export default function ContentPipelinePage() {
                         <button
                           key={pageNumber}
                           onClick={() => setCurrentPage(pageNumber)}
-                          className={`px-3 py-1 rounded-lg text-sm transition-colors ${
-                            currentPage === pageNumber
-                              ? 'bg-blue-600 text-white'
-                              : 'text-gray-600 hover:bg-gray-100'
-                          }`}
+                          className="px-3 py-1 rounded-lg calendly-body-sm transition-colors"
+                          style={currentPage === pageNumber ? {
+                            background: '#4285f4',
+                            color: 'white'
+                          } : {
+                            color: '#718096'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (currentPage !== pageNumber) {
+                              e.currentTarget.style.background = '#f1f5f9';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (currentPage !== pageNumber) {
+                              e.currentTarget.style.background = 'transparent';
+                            }
+                          }}
                         >
                           {pageNumber}
                         </button>
@@ -1524,7 +1626,16 @@ export default function ContentPipelinePage() {
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="p-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  style={{ border: '1px solid #e2e8f0' }}
+                  onMouseEnter={(e) => {
+                    if (currentPage !== totalPages) {
+                      e.currentTarget.style.background = '#f8fafc';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'transparent';
+                  }}
                   title="Next page"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -1538,7 +1649,14 @@ export default function ContentPipelinePage() {
             <div className="mt-4 flex justify-center">
               <button
                 onClick={handleSelectAll}
-                className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:text-blue-600 transition-colors"
+                className="flex items-center space-x-2 px-4 py-2 calendly-body-sm transition-colors"
+                style={{ color: '#718096' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#4285f4';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#718096';
+                }}
               >
                 {selectedItems.length === filteredItems.length ? (
                   <>

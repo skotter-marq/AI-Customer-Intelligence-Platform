@@ -1,249 +1,186 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { 
+  BarChart3, 
+  FileText, 
+  Target, 
+  GitBranch, 
+  Settings,
+  User,
+  ChevronLeft,
+  Menu
+} from 'lucide-react';
 
 interface NavigationItem {
-  name: string;
   href: string;
-  icon: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
   description: string;
 }
 
-interface NavigationGroup {
-  title: string;
-  items: NavigationItem[];
-  color: string;
-}
-
 export default function Navigation() {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
 
-  const navigationGroups: NavigationGroup[] = [
-    {
-      title: 'Customer Research',
-      color: 'text-indigo-600',
-      items: [
-        {
-          name: 'Customer Intelligence',
-          href: '/cs-query',
-          icon: '🔍',
-          description: 'Advanced customer search and AI insights'
-        },
-        {
-          name: 'Quick Search',
-          href: '/cs-quick',
-          icon: '⚡',
-          description: 'Rapid customer lookup and basic info'
-        }
-      ]
-    },
-    {
-      title: 'Content Pipeline',
-      color: 'text-purple-600',
-      items: [
-        {
-          name: 'Product Updates',
-          href: '/changelog',
-          icon: '📋',
-          description: 'View and manage product changelog'
-        },
-        {
-          name: 'Content Approval',
-          href: '/approval',
-          icon: '✅',
-          description: 'Review and approve content'
-        },
-        {
-          name: 'Content Editor',
-          href: '/edit',
-          icon: '✏️',
-          description: 'Edit and refine generated content'
-        }
-      ]
-    },
-    {
-      title: 'System Management',
-      color: 'text-indigo-700',
-      items: [
-        {
-          name: 'Dashboard',
-          href: '/dashboard',
-          icon: '📊',
-          description: 'Main analytics dashboard'
-        },
-        {
-          name: 'System Monitoring',
-          href: '/monitoring',
-          icon: '🔬',
-          description: 'Monitor system performance'
-        },
-        {
-          name: 'Testing',
-          href: '/testing',
-          icon: '🧪',
-          description: 'System health and testing'
-        }
-      ]
-    },
-    {
-      title: 'Integrations',
-      color: 'text-purple-700',
-      items: [
-        {
-          name: 'Slack Integration',
-          href: '/slack',
-          icon: '💬',
-          description: 'Team notifications and alerts'
-        },
-        {
-          name: 'Notifications',
-          href: '/notifications',
-          icon: '🔔',
-          description: 'Multi-channel notifications'
-        }
-      ]
+  // Update the main content margin when sidebar state changes
+  useEffect(() => {
+    const mainElement = document.querySelector('main');
+    if (mainElement) {
+      mainElement.style.marginLeft = isCollapsed ? '80px' : '250px';
     }
-  ];
+  }, [isCollapsed]);
 
-  const quickNavItems = [
-    { href: '/', label: 'Dashboard', icon: '🔍' },
-    { href: '/content-pipeline', label: 'Content Pipeline', icon: '📋' },
-    { href: '/competitor-intelligence', label: 'Competitor Intelligence', icon: '🎯' },
-    { href: '/changelog', label: 'Changelog', icon: '📝' },
-    { href: '/integrations', label: 'Integrations', icon: '🔗' }
+  const navigationItems: NavigationItem[] = [
+    { 
+      href: '/', 
+      label: 'Dashboard', 
+      icon: BarChart3, 
+      description: 'Overview and analytics' 
+    },
+    { 
+      href: '/content-pipeline', 
+      label: 'Content Pipeline', 
+      icon: FileText, 
+      description: 'Manage content workflow' 
+    },
+    { 
+      href: '/competitors', 
+      label: 'Competitors', 
+      icon: Target, 
+      description: 'Competitive analysis' 
+    },
+    { 
+      href: '/agents', 
+      label: 'Agents', 
+      icon: User, 
+      description: 'AI agent management' 
+    },
+    { 
+      href: '/changelog', 
+      label: 'Changelog', 
+      icon: GitBranch, 
+      description: 'Product updates' 
+    },
+    { 
+      href: '/integrations', 
+      label: 'Integrations', 
+      icon: Settings, 
+      description: 'System connections' 
+    }
   ];
 
   const isActiveRoute = (href: string) => {
     if (href === '/') {
       return pathname === '/' || pathname === '/cs-query';
     }
+    // Handle legacy competitor-intelligence route
+    if (href === '/competitors' && pathname?.startsWith('/competitor-intelligence')) {
+      return true;
+    }
     return pathname?.startsWith(href) || false;
   };
 
   return (
-    <>
-      {/* Top Navigation Bar */}
-      <nav className="bg-gradient-to-r from-indigo-100 via-white to-purple-100 backdrop-blur-md shadow-lg border-b border-indigo-200/20 fixed top-0 left-0 right-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            {/* Logo */}
-            <Link href="/" className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
-                <span className="text-white font-bold text-sm">AI</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">Marq AI Product Insights</span>
-            </Link>
+    <div className="fixed left-0 top-0 h-full bg-white border-r border-gray-200 z-40 flex flex-col" 
+         style={{ width: isCollapsed ? '80px' : '250px' }}>
+      
+      {/* Logo/Brand Section */}
+      <div className="flex items-center justify-between p-5 border-b" style={{ borderColor: '#f1f5f9' }}>
+        {!isCollapsed && (
+          <Link href="/" className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#4285f4' }}>
+              <span className="text-white font-semibold text-sm">AI</span>
+            </div>
+            <span className="calendly-h3" style={{ marginBottom: 0 }}>Marq AI</span>
+          </Link>
+        )}
+        {isCollapsed && (
+          <Link href="/" className="flex items-center justify-center w-full">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: '#4285f4' }}>
+              <span className="text-white font-semibold text-sm">AI</span>
+            </div>
+          </Link>
+        )}
+        <button
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          className="p-2 rounded-lg transition-colors"
+          style={{ color: '#718096' }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#f8fafc';
+            e.currentTarget.style.color = '#4a5568';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'transparent';
+            e.currentTarget.style.color = '#718096';
+          }}
+        >
+          <ChevronLeft className={`w-4 h-4 transition-transform ${isCollapsed ? 'rotate-180' : ''}`} />
+        </button>
+      </div>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-1">
-              {quickNavItems.map((item) => (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                    isActiveRoute(item.href)
-                      ? 'bg-indigo-100 text-indigo-700 shadow-sm'
-                      : 'text-gray-700 hover:text-indigo-600 hover:bg-gray-50'
-                  }`}
-                >
+      {/* Navigation Items */}
+      <nav className="flex-1 px-4 py-5 space-y-2">
+        {navigationItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = isActiveRoute(item.href);
+          
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center px-3 py-3 rounded-lg transition-all duration-200 group relative ${
+                isActive
+                  ? 'text-white'
+                  : 'calendly-body-sm hover:bg-gray-50'
+              }`}
+              style={isActive ? { 
+                background: '#4285f4',
+                fontWeight: 500
+              } : { 
+                color: '#4a5568' 
+              }}
+              onMouseEnter={!isActive ? (e) => {
+                e.currentTarget.style.background = '#f8fafc';
+              } : undefined}
+              onMouseLeave={!isActive ? (e) => {
+                e.currentTarget.style.background = 'transparent';
+              } : undefined}
+            >
+              <Icon className={`flex-shrink-0 w-5 h-5 ${isActive ? 'text-white' : ''}`} 
+                    style={!isActive ? { color: '#718096' } : {}} />
+              {!isCollapsed && (
+                <span className="ml-3 truncate">{item.label}</span>
+              )}
+              
+              {/* Tooltip for collapsed state */}
+              {isCollapsed && (
+                <div className="absolute left-full ml-2 px-3 py-2 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50"
+                     style={{ background: '#2d3748' }}>
                   {item.label}
-                </Link>
-              ))}
-            </div>
-
-            {/* Mobile Menu */}
-            <div className="flex items-center space-x-4">
-              {/* Mobile menu button */}
-              <button
-                type="button"
-                className="md:hidden inline-flex items-center justify-center p-2 rounded-xl text-gray-700 hover:text-indigo-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 transition-colors"
-                onClick={() => setIsOpen(!isOpen)}
-              >
-                <span className="sr-only">Open main menu</span>
-                {isOpen ? (
-                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                ) : (
-                  <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                  </svg>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
+                </div>
+              )}
+            </Link>
+          );
+        })}
       </nav>
 
-      {/* Mobile Navigation Menu */}
-      {isOpen && (
-        <div className="md:hidden">
-          <div className="fixed inset-0 z-50 bg-black bg-opacity-50 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
-          <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-2xl z-50 overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold text-gray-900">Navigation</h2>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-2 rounded-xl text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
-                >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              </div>
-
-              <div className="space-y-8">
-                {navigationGroups.map((group) => (
-                  <div key={group.title}>
-                    <h3 className={`text-sm font-semibold ${group.color} mb-4 uppercase tracking-wider`}>
-                      {group.title}
-                    </h3>
-                    <div className="space-y-2">
-                      {group.items.map((item) => (
-                        <Link
-                          key={item.name}
-                          href={item.href}
-                          className={`block p-4 rounded-xl transition-all ${
-                            isActiveRoute(item.href)
-                              ? 'bg-indigo-50 border-2 border-indigo-200 text-indigo-700'
-                              : 'border-2 border-gray-100 hover:border-gray-200 hover:bg-gray-50'
-                          }`}
-                          onClick={() => setIsOpen(false)}
-                        >
-                          <div className="flex items-center space-x-3">
-                            <span className="text-xl">{item.icon}</span>
-                            <div>
-                              <div className="font-semibold text-gray-900">{item.name}</div>
-                              <div className="text-sm text-gray-500">{item.description}</div>
-                            </div>
-                          </div>
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <div className="space-y-4">
-                  <Link
-                    href="/dashboard"
-                    className="flex items-center space-x-3 p-4 rounded-xl hover:bg-gray-50 transition-colors"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <span className="text-xl">🏠</span>
-                    <span className="font-semibold text-gray-900">Back to Dashboard</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
+      {/* User Profile Section */}
+      <div className="border-t p-5" style={{ borderColor: '#f1f5f9' }}>
+        <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'}`}>
+          <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#e2e8f0' }}>
+            <User className="w-4 h-4" style={{ color: '#718096' }} />
           </div>
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="calendly-body-sm font-medium truncate" style={{ color: '#1a1a1a', marginBottom: '2px' }}>User Account</p>
+              <p className="calendly-label-sm truncate">admin@company.com</p>
+            </div>
+          )}
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 }

@@ -235,65 +235,132 @@ export default function CompetitorProfilePage() {
     try {
       setLoading(true);
       // Enhanced mock data with new profile structure
+      // Helper function to normalize competitor ID
+      const getCompetitorType = (id: string) => {
+        const normalizedId = id.toLowerCase();
+        if (normalizedId === '1' || normalizedId === 'salesforce') return 'salesforce';
+        if (normalizedId === '2' || normalizedId === 'hubspot') return 'hubspot';
+        if (normalizedId === '3' || normalizedId === 'pipedrive') return 'pipedrive';
+        if (normalizedId === '4' || normalizedId === 'zendesk') return 'zendesk';
+        // Return salesforce as default for unknown IDs since it's our main competitor
+        return 'salesforce';
+      };
+      
+      const competitorType = getCompetitorType(competitorId);
+      
+      // Handle unknown competitor types by showing appropriate data
+      const competitorData = {
+        'salesforce': {
+          name: 'Salesforce',
+          logo: 'https://logo.clearbit.com/salesforce.com',
+          industry: 'CRM & Sales Automation',
+          location: 'San Francisco, CA',
+          website: 'salesforce.com',
+          founded: '1999',
+          employees: '79,000+',
+          revenue: '$31.4B ARR',
+          funding: 'Public (NYSE: CRM)',
+          threat_level: 'high' as const,
+          overallScore: 94,
+          marketShare: 23.1,
+          customerSatisfaction: 4.2,
+          growthRate: 18,
+          innovationScore: 92,
+          totalReviews: 18547,
+          averageRating: 4.2,
+          trustScore: 89,
+          recommendationRate: 78,
+          tags: ['Enterprise', 'AI/ML', 'Cloud Platform', 'Market Leader'],
+          key_products: ['Sales Cloud', 'Service Cloud', 'Marketing Cloud', 'Einstein AI', 'Tableau', 'Slack Integration'],
+          social: { linkedin: 'linkedin.com/company/salesforce', twitter: '@Salesforce' }
+        },
+        'hubspot': {
+          name: 'HubSpot',
+          logo: 'https://logo.clearbit.com/hubspot.com',
+          industry: 'Inbound Marketing & Sales',
+          location: 'Cambridge, MA',
+          website: 'hubspot.com',
+          founded: '2006',
+          employees: '7,000+',
+          revenue: '$1.7B ARR',
+          funding: 'Public (NYSE: HUBS)',
+          threat_level: 'high' as const,
+          overallScore: 89,
+          marketShare: 8.7,
+          customerSatisfaction: 4.6,
+          growthRate: 32,
+          innovationScore: 87,
+          totalReviews: 12834,
+          averageRating: 4.6,
+          trustScore: 92,
+          recommendationRate: 89,
+          tags: ['Inbound Marketing', 'SMB Focused', 'Freemium', 'User-Friendly'],
+          key_products: ['Marketing Hub', 'Sales Hub', 'Service Hub', 'CMS Hub', 'AI Content Assistant'],
+          social: { linkedin: 'linkedin.com/company/hubspot', twitter: '@HubSpot' }
+        },
+        'pipedrive': {
+          name: 'Pipedrive',
+          logo: 'https://logo.clearbit.com/pipedrive.com',
+          industry: 'Sales CRM & Pipeline Management',
+          location: 'Tallinn, Estonia',
+          website: 'pipedrive.com',
+          founded: '2010',
+          employees: '1,000+',
+          revenue: '$142M ARR',
+          funding: '$90M Series B',
+          threat_level: 'medium' as const,
+          overallScore: 78,
+          marketShare: 2.3,
+          customerSatisfaction: 4.5,
+          growthRate: 41,
+          innovationScore: 73,
+          totalReviews: 5621,
+          averageRating: 4.5,
+          trustScore: 94,
+          recommendationRate: 91,
+          tags: ['Visual Pipeline', 'SMB CRM', 'Affordable', 'European'],
+          key_products: ['Sales CRM', 'Pipeline Management', 'Activity Tracking', 'Email Sync', 'Mobile App'],
+          social: { linkedin: 'linkedin.com/company/pipedrive', twitter: '@Pipedrive' }
+        }
+      };
+      
+      const data = competitorData[competitorType as keyof typeof competitorData] || competitorData['salesforce'];
+      
       const mockProfile: CompetitorProfile = {
         id: competitorId,
-        name: competitorId === '1' ? 'Salesforce' : competitorId === '2' ? 'HubSpot' : competitorId === '3' ? 'Pipedrive' : 'Zendesk',
-        logo: competitorId === '1' ? 'https://logo.clearbit.com/salesforce.com' : 
-              competitorId === '2' ? 'https://logo.clearbit.com/hubspot.com' :
-              competitorId === '3' ? 'https://logo.clearbit.com/pipedrive.com' : 
-              'https://logo.clearbit.com/zendesk.com',
-        industry: competitorId === '1' ? 'CRM & Sales Automation' : 
-                 competitorId === '2' ? 'Inbound Marketing & Sales' : 
-                 competitorId === '3' ? 'Sales CRM & Pipeline Management' : 'Customer Support & Service',
-        location: competitorId === '1' ? 'San Francisco, CA' : 
-                 competitorId === '2' ? 'Cambridge, MA' : 
-                 competitorId === '3' ? 'Tallinn, Estonia' : 'San Francisco, CA',
-        website: competitorId === '1' ? 'salesforce.com' : 
-                competitorId === '2' ? 'hubspot.com' : 
-                competitorId === '3' ? 'pipedrive.com' : 'zendesk.com',
+        name: data.name,
+        logo: data.logo,
+        industry: data.industry,
+        location: data.location,
+        website: data.website,
         status: 'active',
-        threat_level: competitorId === '1' || competitorId === '2' ? 'high' : 'medium',
-        founded: competitorId === '1' ? '1999' : competitorId === '2' ? '2006' : competitorId === '3' ? '2010' : '2007',
-        employees: competitorId === '1' ? '79,000+' : competitorId === '2' ? '7,000+' : competitorId === '3' ? '1,000+' : '6,000+',
-        revenue: competitorId === '1' ? '$31.4B ARR' : competitorId === '2' ? '$1.7B ARR' : competitorId === '3' ? '$142M ARR' : '$1.67B ARR',
-        funding: competitorId === '1' ? 'Public (NYSE: CRM)' : competitorId === '2' ? 'Public (NYSE: HUBS)' : competitorId === '3' ? '$90M Series B' : 'Public (NYSE: ZEN)',
+        threat_level: data.threat_level,
+        founded: data.founded,
+        employees: data.employees,
+        revenue: data.revenue,
+        funding: data.funding,
         last_updated: '2024-01-15',
-        social: {
-          linkedin: `linkedin.com/company/${competitorId === '1' ? 'salesforce' : competitorId === '2' ? 'hubspot' : competitorId === '3' ? 'pipedrive' : 'zendesk'}`,
-          twitter: competitorId === '1' ? '@Salesforce' : competitorId === '2' ? '@HubSpot' : competitorId === '3' ? '@Pipedrive' : '@Zendesk'
-        },
+        social: data.social,
         
         // Enhanced metrics
-        overallScore: competitorId === '1' ? 94 : competitorId === '2' ? 89 : competitorId === '3' ? 78 : 85,
-        marketShare: competitorId === '1' ? 23.1 : competitorId === '2' ? 8.7 : competitorId === '3' ? 2.3 : 12.4,
-        customerSatisfaction: competitorId === '1' ? 4.2 : competitorId === '2' ? 4.6 : competitorId === '3' ? 4.5 : 4.1,
-        growthRate: competitorId === '1' ? 18 : competitorId === '2' ? 32 : competitorId === '3' ? 41 : 15,
-        innovationScore: competitorId === '1' ? 92 : competitorId === '2' ? 87 : competitorId === '3' ? 73 : 79,
+        overallScore: data.overallScore,
+        marketShare: data.marketShare,
+        customerSatisfaction: data.customerSatisfaction,
+        growthRate: data.growthRate,
+        innovationScore: data.innovationScore,
         userReviews: {
-          totalReviews: competitorId === '1' ? 18547 : competitorId === '2' ? 12834 : competitorId === '3' ? 5621 : 15342,
-          averageRating: competitorId === '1' ? 4.2 : competitorId === '2' ? 4.6 : competitorId === '3' ? 4.5 : 4.1,
-          trustScore: competitorId === '1' ? 89 : competitorId === '2' ? 92 : competitorId === '3' ? 94 : 87,
-          recommendationRate: competitorId === '1' ? 78 : competitorId === '2' ? 89 : competitorId === '3' ? 91 : 82
+          totalReviews: data.totalReviews,
+          averageRating: data.averageRating,
+          trustScore: data.trustScore,
+          recommendationRate: data.recommendationRate
         },
 
         // Tags and Products
-        tags: competitorId === '1' 
-          ? ['Enterprise', 'AI/ML', 'Cloud Platform', 'Market Leader']
-          : competitorId === '2'
-          ? ['Inbound Marketing', 'SMB Focused', 'Freemium', 'User-Friendly']
-          : competitorId === '3'
-          ? ['Visual Pipeline', 'SMB CRM', 'Affordable', 'European']
-          : ['Customer Support', 'Ticketing', 'Multi-Channel', 'Scalable'],
-        key_products: competitorId === '1'
-          ? ['Sales Cloud', 'Service Cloud', 'Marketing Cloud', 'Einstein AI', 'Tableau', 'Slack Integration']
-          : competitorId === '2'
-          ? ['Marketing Hub', 'Sales Hub', 'Service Hub', 'CMS Hub', 'AI Content Assistant']
-          : competitorId === '3'
-          ? ['Sales CRM', 'Pipeline Management', 'Activity Tracking', 'Email Sync', 'Mobile App']
-          : ['Support Suite', 'Guide', 'Chat', 'Talk', 'Explore', 'Answer Bot'],
+        tags: data.tags,
+        key_products: data.key_products,
 
         // AI Agents for this competitor
-        agents: competitorId === '1' 
+        agents: competitorType === 'salesforce' 
           ? [
               {
                 id: 'sf-pricing-agent',
@@ -329,7 +396,7 @@ export default function CompetitorProfilePage() {
                 description: 'Monitors key hires, team expansions, and strategic role postings'
               }
             ]
-          : competitorId === '2'
+          : competitorType === 'hubspot'
           ? [
               {
                 id: 'hs-product-agent',
@@ -365,7 +432,7 @@ export default function CompetitorProfilePage() {
                 description: 'Tracks pricing changes and promotional offers across all HubSpot tiers'
               }
             ]
-          : competitorId === '3'
+          : competitorType === 'pipedrive'
           ? [
               {
                 id: 'pd-product-agent',
@@ -416,11 +483,11 @@ export default function CompetitorProfilePage() {
             ],
 
         executiveSummary: {
-          content: competitorId === '1' 
+          content: competitorType === 'salesforce' 
             ? 'Salesforce dominates the CRM landscape with comprehensive cloud solutions serving 150,000+ companies globally. Their Einstein AI platform and extensive ecosystem create significant competitive moats, though complexity and pricing remain barriers for smaller organizations.'
-            : competitorId === '2'
+            : competitorType === 'hubspot'
             ? 'HubSpot has revolutionized inbound marketing with integrated CRM, marketing, and sales tools. Their freemium model and user-friendly approach drive strong SMB adoption, with recent AI investments challenging our market position.'
-            : competitorId === '3'
+            : competitorType === 'pipedrive'
             ? 'Pipedrive excels in visual sales pipeline management for SMBs with intuitive design and competitive pricing. Strong European presence and high user satisfaction make them a formidable competitor in our target market segments.'
             : 'Zendesk leads customer service software with comprehensive support solutions. While primarily focused on support rather than sales intelligence, their platform expansion and AI initiatives present adjacent competitive threats.',
           confidence: 94,
@@ -430,11 +497,11 @@ export default function CompetitorProfilePage() {
         },
 
         businessModel: {
-          content: competitorId === '1'
+          content: competitorType === 'salesforce'
             ? 'Multi-cloud SaaS platform with land-and-expand strategy. Primary revenue from subscriptions ($26.5B) with high-value enterprise contracts. Strong ecosystem monetization through AppExchange and professional services.'
-            : competitorId === '2' 
+            : competitorType === 'hubspot' 
             ? 'Freemium-to-premium model across Marketing, Sales, Service, and CMS hubs. Viral growth through free tier drives customer acquisition with premium conversion rates around 15-20%. Average customer value growing 18% YoY.'
-            : competitorId === '3'
+            : competitorType === 'pipedrive'
             ? 'Simple subscription model ($14.90-$99/user/month) targeting sales teams. High retention (94%) in SMB segment with focus on ease of use and quick value realization. Strong European market presence.'
             : 'Multi-product strategy with Support Suite as core offering. Expansion revenue through additional products and seat growth. Average customer spends ~$8K annually with 95%+ enterprise retention.',
           confidence: 91,
@@ -444,11 +511,11 @@ export default function CompetitorProfilePage() {
         },
 
         marketPositioning: {
-          content: competitorId === '1'
+          content: competitorType === 'salesforce'
             ? 'Positioned as complete Customer 360 platform for enterprise. "AI for Everyone" messaging with Einstein. Dominates large enterprise but expensive for SMB. Strong partner ecosystem drives adoption.'
-            : competitorId === '2'
+            : competitorType === 'hubspot'
             ? 'Champions inbound methodology with "grow better" philosophy. Targets marketing-sales alignment in SMB/mid-market. Content marketing and freemium model drive organic growth and brand advocacy.'
-            : competitorId === '3'
+            : competitorType === 'pipedrive'
             ? 'Focuses on "CRM for salespeople" with visual pipeline emphasis. Targets SMB sales teams wanting simplicity over complexity. Strong word-of-mouth and user satisfaction drive growth.'
             : 'Leads customer service space with "easy-to-use" positioning. Targets support teams across SMB to enterprise. Recent expansion into sales tools broadens competitive overlap.',
           confidence: 88,
@@ -459,11 +526,11 @@ export default function CompetitorProfilePage() {
 
         productIntelligence: {
           overview: {
-            content: competitorId === '1'
+            content: competitorType === 'salesforce'
               ? 'Comprehensive platform with 15+ clouds including Sales, Marketing, Service, Commerce. Einstein AI embedded across products. Recent Slack integration and Tableau analytics enhance offering.'
-              : competitorId === '2'
+              : competitorType === 'hubspot'
               ? 'Integrated platform with Marketing Hub, Sales Hub, Service Hub, and CMS Hub. AI features include content assistant and conversation intelligence. Strong ecosystem with 1,000+ integrations.'
-              : competitorId === '3'
+              : competitorType === 'pipedrive'
               ? 'Focused sales CRM with visual pipeline management. Core features include deal tracking, activity management, and reporting. Recent AI assistant and mobile app improvements.'
               : 'Customer service platform with Support, Guide, Talk, and Explore products. Recent expansion into Sell CRM. AI features include Answer Bot and sentiment analysis.',
             confidence: 92,
@@ -476,30 +543,30 @@ export default function CompetitorProfilePage() {
               name: 'AI-Powered Analytics',
               description: 'Advanced AI and machine learning for predictive insights and automation',
               ourSupport: 'full',
-              theirSupport: competitorId === '1' || competitorId === '2' ? 'full' : 'partial',
-              advantage: competitorId === '1' ? 'them' : 'neutral'
+              theirSupport: competitorType === 'salesforce' || competitorType === 'hubspot' ? 'full' : 'partial',
+              advantage: competitorType === 'salesforce' ? 'them' : 'neutral'
             },
             {
               name: 'Pipeline Management',
               description: 'Visual deal tracking and sales process optimization',
               ourSupport: 'full',
               theirSupport: 'full',
-              advantage: competitorId === '3' ? 'them' : 'neutral'
+              advantage: competitorType === 'pipedrive' ? 'them' : 'neutral'
             },
             {
               name: 'Marketing Automation',
               description: 'Email campaigns, lead nurturing, and conversion tracking',
               ourSupport: 'partial',
-              theirSupport: competitorId === '2' ? 'full' : 'partial',
-              advantage: competitorId === '2' ? 'them' : 'neutral'
+              theirSupport: competitorType === 'hubspot' ? 'full' : 'partial',
+              advantage: competitorType === 'hubspot' ? 'them' : 'neutral'
             }
           ],
           pricingStrategy: {
-            content: competitorId === '1'
+            content: competitorType === 'salesforce'
               ? 'Premium pricing model with enterprise focus. Essentials ($25/user/month) to Unlimited ($300+). High total cost of ownership with add-ons and customization.'
-              : competitorId === '2'
+              : competitorType === 'hubspot'
               ? 'Freemium model with tiered pricing. Free CRM to Enterprise ($3,200/month). Pricing scales with contacts and features. Strong value proposition in SMB segment.'
-              : competitorId === '3'
+              : competitorType === 'pipedrive'
               ? 'Transparent, competitive pricing ($14.90-$99/user/month). No setup fees or long-term contracts. Strong value in SMB market with clear feature differentiation.'
               : 'Tiered pricing from $55-$215/agent/month. Additional products priced separately. Recent 15-20% price increases across most plans.',
             confidence: 89,
@@ -508,11 +575,11 @@ export default function CompetitorProfilePage() {
             isManuallyEdited: false
           },
           integrations: {
-            content: competitorId === '1'
+            content: competitorType === 'salesforce'
               ? 'AppExchange marketplace with 5,000+ applications. Native integrations with Google, Microsoft, Slack. MuleSoft provides enterprise connectivity.'
-              : competitorId === '2'
+              : competitorType === 'hubspot'
               ? 'App Marketplace with 1,000+ integrations. Native connections to Salesforce, Gmail, Shopify. Strong Zapier integration for workflow automation.'
-              : competitorId === '3'
+              : competitorType === 'pipedrive'
               ? '350+ marketplace integrations including Slack, Trello, Mailchimp. Zapier support provides access to 3,000+ additional apps.'
               : 'Marketplace with 1,000+ apps focused on customer service. Strong integrations with Salesforce, JIRA, Slack for enterprise workflows.',
             confidence: 86,
@@ -523,21 +590,21 @@ export default function CompetitorProfilePage() {
         },
 
         swotAnalysis: {
-          strengths: competitorId === '1' 
+          strengths: competitorType === 'salesforce' 
             ? [
                 'Market leading position with 23% CRM market share',
                 'Comprehensive platform covering entire customer lifecycle',
                 'Strong AI capabilities with Einstein across all products',
                 'Extensive partner and developer ecosystem'
               ]
-            : competitorId === '2'
+            : competitorType === 'hubspot'
             ? [
                 'Leading inbound marketing methodology and education',
                 'User-friendly interface with quick time-to-value', 
                 'Successful freemium model driving acquisition',
                 'Strong content marketing and thought leadership'
               ]
-            : competitorId === '3'
+            : competitorType === 'pipedrive'
             ? [
                 'Intuitive visual pipeline interface',
                 'Competitive pricing for SMB market',
@@ -550,21 +617,21 @@ export default function CompetitorProfilePage() {
                 'Strong brand recognition and loyalty',
                 'Comprehensive multi-channel support'
               ],
-          weaknesses: competitorId === '1'
+          weaknesses: competitorType === 'salesforce'
             ? [
                 'High complexity and steep learning curve',
                 'Expensive pricing limits SMB adoption',
                 'Over-engineering for simple use cases',
                 'Heavy dependence on partner ecosystem'
               ]
-            : competitorId === '2'
+            : competitorType === 'hubspot'
             ? [
                 'Pricing becomes expensive with contact growth',
                 'Limited enterprise features vs specialized competitors',
                 'Smaller professional services organization',
                 'Marketing focus may limit pure sales appeal'
               ]
-            : competitorId === '3'
+            : competitorType === 'pipedrive'
             ? [
                 'Limited marketing automation features',
                 'Smaller company size concerns for enterprise',
@@ -577,21 +644,21 @@ export default function CompetitorProfilePage() {
                 'Less marketing automation capabilities',
                 'Recent price increases driving churn'
               ],
-          opportunities: competitorId === '1'
+          opportunities: competitorType === 'salesforce'
             ? [
                 'AI-powered automation market growth',
                 'International market expansion',
                 'Industry-specific cloud development',
                 'Small business market penetration'
               ]
-            : competitorId === '2'
+            : competitorType === 'hubspot'
             ? [
                 'Enterprise market expansion',
                 'International growth opportunities',
                 'E-commerce platform integration',
                 'AI and machine learning advancement'
               ]
-            : competitorId === '3'
+            : competitorType === 'pipedrive'
             ? [
                 'North American market expansion',
                 'Enterprise feature development',
@@ -604,21 +671,21 @@ export default function CompetitorProfilePage() {
                 'Adjacent market expansion',
                 'SMB market penetration'
               ],
-          threats: competitorId === '1'
+          threats: competitorType === 'salesforce'
             ? [
                 'Microsoft Dynamics 365 integration threat',
                 'Economic downturn affecting enterprise spending',
                 'New AI-focused competitors',
                 'Regulatory data privacy changes'
               ]
-            : competitorId === '2'
+            : competitorType === 'hubspot'
             ? [
                 'Enterprise competitors expanding to SMB',
                 'Economic pressure on SMB tech spending',
                 'Rising customer acquisition costs',
                 'Major platform integration (Microsoft, Google)'
               ]
-            : competitorId === '3'
+            : competitorType === 'pipedrive'
             ? [
                 'Large competitors with competitive SMB pricing',
                 'Economic downturn affecting SMB customers',
@@ -639,7 +706,7 @@ export default function CompetitorProfilePage() {
             id: 'intel-1',
             type: 'pricing',
             title: 'Pricing Strategy Update Announced',
-            description: competitorId === '1' ? 'Enterprise tier pricing increased 15% with Einstein AI features included' : competitorId === '2' ? 'New Professional tier introduced at $800/month between Starter and Enterprise' : competitorId === '3' ? 'Enterprise tier launched at $99/user/month with advanced features' : '18% price increase across Support Suite plans',
+            description: competitorType === 'salesforce' ? 'Enterprise tier pricing increased 15% with Einstein AI features included' : competitorType === 'hubspot' ? 'New Professional tier introduced at $800/month between Starter and Enterprise' : competitorType === 'pipedrive' ? 'Enterprise tier launched at $99/user/month with advanced features' : '18% price increase across Support Suite plans',
             impact: 'high',
             timestamp: '2024-01-15T08:30:00Z',
             source: 'Company announcement',
@@ -649,7 +716,7 @@ export default function CompetitorProfilePage() {
             id: 'intel-2',
             type: 'product',
             title: 'AI Feature Release',
-            description: competitorId === '1' ? 'Einstein GPT integration provides automated content generation and deal insights' : competitorId === '2' ? 'AI Content Assistant launched for automated blog posts and email content' : competitorId === '3' ? 'AI Sales Assistant provides lead scoring and next-best-action recommendations' : 'Advanced AI for ticket routing and sentiment analysis with 95% accuracy',
+            description: competitorType === 'salesforce' ? 'Einstein GPT integration provides automated content generation and deal insights' : competitorType === 'hubspot' ? 'AI Content Assistant launched for automated blog posts and email content' : competitorType === 'pipedrive' ? 'AI Sales Assistant provides lead scoring and next-best-action recommendations' : 'Advanced AI for ticket routing and sentiment analysis with 95% accuracy',
             impact: 'high',
             timestamp: '2024-01-14T15:45:00Z',
             source: 'Product announcement',
@@ -1056,7 +1123,7 @@ export default function CompetitorProfilePage() {
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Competitor not found</h2>
           <p className="text-gray-800 mb-4">The competitor profile you're looking for doesn't exist.</p>
           <button
-            onClick={() => router.back()}
+            onClick={() => router.push('/competitors')}
             className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
             Go Back
@@ -1069,21 +1136,21 @@ export default function CompetitorProfilePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50">
       {/* Navigation */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 pt-20">
+      <div className="bg-white/80 backdrop-blur-sm border-b border-gray-200 pt-6">
         <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center space-x-4">
             <button
-              onClick={() => router.push('/competitor-intelligence')}
+              onClick={() => router.push('/competitors')}
               className="p-2 rounded-lg text-gray-800 hover:text-indigo-600 hover:bg-gray-100 transition-all duration-200"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <button 
-                onClick={() => router.push('/competitor-intelligence')}
+                onClick={() => router.push('/competitors')}
                 className="hover:text-indigo-600 transition-colors"
               >
-                Competitor Intelligence
+                Competitors
               </button>
               <ChevronRight className="w-4 h-4" />
               <span className="text-gray-900 font-medium">{competitor.name}</span>

@@ -274,42 +274,41 @@ export default function ChangelogPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50/30 pt-6">
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Filters Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6 sticky top-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <Filter className="w-5 h-5 mr-2" />
-                  Filters
-                </h3>
-                
-                {/* Search */}
-                <div className="mb-6">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                    <input
-                      type="text"
-                      placeholder="Search updates..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 focus:border-blue-500"
-                    />
-                  </div>
-                </div>
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-3">Product Changelog</h1>
+            <p className="text-base text-gray-600">Track all product updates and announcements</p>
+          </div>
 
+          {/* Filters Bar */}
+          <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-6 mb-6">
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Search */}
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search updates..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Filters Row */}
+              <div className="flex flex-wrap gap-3">
                 {/* Content Type Filter */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    <Tag className="w-4 h-4 inline mr-1" />
-                    Content Type
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <Tag className="w-4 h-4 text-gray-600" />
                   <select
                     value={filters.contentType}
                     onChange={(e) => setFilters({...filters, contentType: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className="px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm"
                   >
                     <option value="all">All Types</option>
                     <option value="product_announcement">Product Announcements</option>
@@ -322,15 +321,12 @@ export default function ChangelogPage() {
                 </div>
 
                 {/* Category Filter */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    <Users className="w-4 h-4 inline mr-1" />
-                    Category
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <Users className="w-4 h-4 text-gray-600" />
                   <select
                     value={filters.category}
                     onChange={(e) => setFilters({...filters, category: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className="px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm"
                   >
                     <option value="all">All Categories</option>
                     <option value="major_release">Major Release</option>
@@ -343,15 +339,12 @@ export default function ChangelogPage() {
                 </div>
 
                 {/* Time Range Filter */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    <Clock className="w-4 h-4 inline mr-1" />
-                    Time Range
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <Clock className="w-4 h-4 text-gray-600" />
                   <select
                     value={filters.timeRange}
                     onChange={(e) => setFilters({...filters, timeRange: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className="px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm"
                   >
                     <option value="all">All Time</option>
                     <option value="7d">Last 7 days</option>
@@ -361,31 +354,29 @@ export default function ChangelogPage() {
                 </div>
 
                 {/* Visibility Filter */}
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                    <Eye className="w-4 h-4 inline mr-1" />
-                    Visibility
-                  </label>
+                <div className="flex items-center space-x-2">
+                  <Eye className="w-4 h-4 text-gray-600" />
                   <select
                     value={filters.visibility}
                     onChange={(e) => setFilters({...filters, visibility: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                    className="px-3 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm"
                   >
                     <option value="all">All Updates</option>
                     <option value="public">Public Only</option>
                     <option value="private">Private Only</option>
                   </select>
                 </div>
-
-                {/* Results Count */}
-                <div className="text-sm text-gray-600 p-3 bg-gray-50 rounded-xl">
-                  <span className="font-medium">{filteredEntries.length}</span> updates found
-                </div>
               </div>
             </div>
 
-            {/* Main Content */}
-            <div className="lg:col-span-3">
+            {/* Results Count */}
+            <div className="mt-4 text-sm text-gray-600 bg-gray-50 rounded-xl p-3 inline-flex items-center">
+              <span className="font-medium">{filteredEntries.length}</span> updates found
+            </div>
+          </div>
+
+          {/* Main Content */}
+          <div>
               {filteredEntries.length === 0 ? (
                 <div className="bg-white/90 backdrop-blur-md rounded-2xl shadow-lg border border-gray-200/50 p-12 text-center">
                   <div className="text-gray-400 text-6xl mb-4">📋</div>
@@ -415,10 +406,10 @@ export default function ChangelogPage() {
                                   type="text"
                                   value={entry.content_title}
                                   onChange={(e) => handleFieldUpdate(entry.id, 'content_title', e.target.value)}
-                                  className="text-xl font-semibold text-gray-900 bg-white border border-gray-300 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  className="text-lg font-semibold text-gray-900 bg-white border border-gray-300 rounded-xl px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
                               ) : (
-                                <h3 className="text-xl font-semibold text-gray-900">
+                                <h3 className="text-lg font-semibold text-gray-900">
                                   {entry.content_title}
                                 </h3>
                               )}
@@ -588,7 +579,6 @@ export default function ChangelogPage() {
                   })}
                 </div>
               )}
-            </div>
           </div>
         </div>
       </div>
