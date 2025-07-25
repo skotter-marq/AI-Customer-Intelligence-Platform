@@ -14,6 +14,7 @@ import {
   Eye,
   Settings,
   Download,
+  ChevronDown,
   Plus,
   Edit,
   Zap,
@@ -49,7 +50,7 @@ interface IntelligenceAgent {
   id: string;
   name: string;
   description: string;
-  type: 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding' | 'products';
+  type: 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding' | 'products' | 'renewal' | 'health' | 'onboarding' | 'expansion';
   status: 'active' | 'paused' | 'error' | 'stopped';
   competitor_ids: string[];
   schedule: 'hourly' | 'daily' | 'weekly' | 'monthly' | 'on_trigger';
@@ -61,6 +62,17 @@ interface IntelligenceAgent {
   configuration: AgentConfiguration;
   created_date: string;
   performance_trend: 'up' | 'down' | 'stable';
+  // Customer account assignments
+  assigned_accounts?: {
+    account_id: string;
+    company_name: string;
+    assigned_date: string;
+    purpose: string;
+    status: 'active' | 'paused' | 'completed';
+    next_contact: string;
+    contact_attempts: number;
+    last_interaction: string;
+  }[];
 }
 
 export default function AgentsPage() {
@@ -68,11 +80,16 @@ export default function AgentsPage() {
   const [agents, setAgents] = useState<IntelligenceAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding' | 'products'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding' | 'products' | 'renewal' | 'health' | 'onboarding' | 'expansion'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'error' | 'stopped'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'name' | 'type' | 'success_rate' | 'insights'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [agentActivities, setAgentActivities] = useState<{[key: string]: any}>({});
+  const [lastActivityUpdate, setLastActivityUpdate] = useState<number>(Date.now());
+
+  // Export functionality
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Mock agents data
   const mockAgents: IntelligenceAgent[] = [
@@ -213,6 +230,125 @@ export default function AgentsPage() {
       },
       created_date: '2023-08-15',
       performance_trend: 'down'
+    },
+    // Customer Account Agents
+    {
+      id: 'agent-renewal-001',
+      name: 'Renewal Outreach Agent',
+      description: 'Proactively contacts accounts approaching renewal dates to schedule discussions and prevent churn.',
+      type: 'renewal',
+      status: 'active',
+      competitor_ids: [],
+      schedule: 'daily',
+      success_rate: 0.92,
+      total_insights: 45,
+      insights_this_week: 8,
+      last_run: '2024-01-15T09:00:00Z',
+      next_run: '2024-01-16T09:00:00Z',
+      configuration: {
+        keywords: ['renewal', 'contract', 'expiration'],
+        sources: ['email', 'phone', 'linkedin'],
+        frequency: 'daily',
+        notification_threshold: 0.80,
+        data_retention_days: 365
+      },
+      created_date: '2024-01-01',
+      performance_trend: 'up',
+      assigned_accounts: [
+        {
+          account_id: 'ACC-MKT-001',
+          company_name: 'MarketingCorp',
+          assigned_date: '2024-01-10',
+          purpose: 'Schedule renewal discussion',
+          status: 'active',
+          next_contact: '2024-01-18',
+          contact_attempts: 2,
+          last_interaction: '2024-01-15'
+        }
+      ]
+    },
+    {
+      id: 'agent-health-001',
+      name: 'Health Recovery Agent',
+      description: 'Engages with at-risk accounts to improve health scores and prevent churn through targeted outreach.',
+      type: 'health',
+      status: 'active',
+      competitor_ids: [],
+      schedule: 'daily',
+      success_rate: 0.78,
+      total_insights: 23,
+      insights_this_week: 5,
+      last_run: '2024-01-15T10:00:00Z',
+      next_run: '2024-01-16T10:00:00Z',
+      configuration: {
+        keywords: ['health', 'engagement', 'usage'],
+        sources: ['email', 'phone'],
+        frequency: 'daily',
+        notification_threshold: 0.70,
+        data_retention_days: 180
+      },
+      created_date: '2024-01-05',
+      performance_trend: 'stable',
+      assigned_accounts: [
+        {
+          account_id: 'ACC-FIN-005',
+          company_name: 'FinancePlus',
+          assigned_date: '2024-01-12',
+          purpose: 'Improve account health and engagement',
+          status: 'active',
+          next_contact: '2024-01-16',
+          contact_attempts: 1,
+          last_interaction: '2024-01-14'
+        }
+      ]
+    },
+    {
+      id: 'agent-onboard-001',
+      name: 'Onboarding Agent',
+      description: 'Guides new customers through product adoption and ensures successful onboarding milestones.',
+      type: 'onboarding',
+      status: 'active',
+      competitor_ids: [],
+      schedule: 'daily',
+      success_rate: 0.95,
+      total_insights: 12,
+      insights_this_week: 3,
+      last_run: '2024-01-15T11:00:00Z',
+      next_run: '2024-01-16T11:00:00Z',
+      configuration: {
+        keywords: ['onboarding', 'setup', 'training'],
+        sources: ['email', 'phone'],
+        frequency: 'daily',
+        notification_threshold: 0.90,
+        data_retention_days: 90
+      },
+      created_date: '2024-01-08',
+      performance_trend: 'up',
+      assigned_accounts: []
+    },
+    {
+      id: 'agent-expansion-001',
+      name: 'Expansion Agent',
+      description: 'Identifies and pursues expansion opportunities with existing customers for revenue growth.',
+      type: 'expansion',
+      status: 'paused',
+      competitor_ids: [],
+      schedule: 'weekly',
+      success_rate: 0.85,
+      total_insights: 8,
+      insights_this_week: 0,
+      last_run: '2024-01-08T12:00:00Z',
+      next_run: '2024-01-22T12:00:00Z',
+      configuration: {
+        keywords: ['expansion', 'upsell', 'growth'],
+        sources: ['email', 'linkedin'],
+        frequency: 'weekly',
+        notification_threshold: 0.75,
+        data_retention_days: 120
+      },
+      created_date: '2024-01-03',
+      performance_trend: 'stable',
+      assigned_accounts: []
     }
   ];
 
@@ -225,6 +361,280 @@ export default function AgentsPage() {
     }, 1000);
   }, []);
 
+  // Simulate real-time agent activity updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setAgentActivities(prev => {
+        const updates = { ...prev };
+        
+        agents.forEach(agent => {
+          const activityKey = agent.id;
+          const lastActivity = updates[activityKey] || {
+            status: agent.status,
+            current_task: 'Monitoring data sources',
+            last_execution: Date.now() - Math.random() * 1800000, // Random time within last 30 minutes
+            progress: Math.floor(Math.random() * 100),
+            insights_processed: Math.floor(Math.random() * 10),
+            response_time: Math.floor(Math.random() * 500) + 100, // 100-600ms
+            error_count: Math.floor(Math.random() * 3)
+          };
+          
+          // Simulate status changes for active agents
+          if (agent.status === 'active' && Math.random() < 0.05) { // 5% chance
+            const tasks = [
+              'Monitoring data sources',
+              'Processing new insights',
+              'Analyzing competitive data',
+              'Generating reports',
+              'Scanning for updates',
+              'Evaluating trends'
+            ];
+            lastActivity.current_task = tasks[Math.floor(Math.random() * tasks.length)];
+          }
+          
+          // Update progress for active agents
+          if (agent.status === 'active' && Math.random() < 0.3) {
+            lastActivity.progress = Math.min(100, lastActivity.progress + Math.floor(Math.random() * 15));
+            if (lastActivity.progress >= 100) {
+              lastActivity.progress = 0;
+              lastActivity.insights_processed += Math.floor(Math.random() * 3) + 1;
+            }
+          }
+          
+          // Update response times
+          if (Math.random() < 0.2) {
+            lastActivity.response_time = Math.floor(Math.random() * 500) + 100;
+          }
+          
+          // Simulate occasional errors
+          if (Math.random() < 0.02) {
+            lastActivity.error_count += 1;
+          }
+          
+          updates[activityKey] = lastActivity;
+        });
+        
+        return updates;
+      });
+      setLastActivityUpdate(Date.now());
+    }, 3000); // Update every 3 seconds
+
+    return () => clearInterval(interval);
+  }, [agents]);
+
+  // Generate Agent Performance Summary data
+  const generatePerformanceSummary = (agents: IntelligenceAgent[]) => {
+    return agents.map(agent => ({
+      'Agent Name': agent.name,
+      'Type': agent.type.toUpperCase(),
+      'Status': agent.status.toUpperCase(),
+      'Success Rate': `${Math.round(agent.success_rate * 100)}%`,
+      'Total Insights': agent.total_insights,
+      'Insights This Week': agent.insights_this_week,
+      'Performance Trend': agent.performance_trend.toUpperCase(),
+      'Schedule': agent.schedule,
+      'Monitoring Competitors': agent.competitor_ids.length,
+      'Created Date': new Date(agent.created_date).toLocaleDateString(),
+      'Last Run': new Date(agent.last_run).toLocaleDateString(),
+      'Next Run': new Date(agent.next_run).toLocaleDateString()
+    }));
+  };
+
+  // Generate Detailed Agent Configuration data
+  const generateDetailedConfiguration = (agents: IntelligenceAgent[]) => {
+    return agents.map(agent => ({
+      'Agent Name': agent.name,
+      'Description': agent.description,
+      'Type': agent.type.toUpperCase(),
+      'Status': agent.status.toUpperCase(),
+      'Schedule': agent.schedule,
+      'Success Rate': agent.success_rate,
+      'Total Insights': agent.total_insights,
+      'Insights This Week': agent.insights_this_week,
+      'Performance Trend': agent.performance_trend.toUpperCase(),
+      'Monitored Competitors': agent.competitor_ids.join('; '),
+      'Keywords': agent.configuration.keywords.join('; '),
+      'Data Sources': agent.configuration.sources.join('; '),
+      'Frequency': agent.configuration.frequency,
+      'Notification Threshold': `${Math.round(agent.configuration.notification_threshold * 100)}%`,
+      'Data Retention Days': agent.configuration.data_retention_days,
+      'Created Date': agent.created_date,
+      'Last Run': agent.last_run,
+      'Next Run': agent.next_run
+    }));
+  };
+
+  // Generate Agent Activity Report data
+  const generateActivityReport = (agents: IntelligenceAgent[]) => {
+    return agents.map(agent => ({
+      'Agent Name': agent.name,
+      'Type': agent.type.toUpperCase(),
+      'Current Status': agent.status.toUpperCase(),
+      'Schedule Frequency': agent.schedule,
+      'Last Successful Run': new Date(agent.last_run).toLocaleString(),
+      'Next Scheduled Run': new Date(agent.next_run).toLocaleString(),
+      'Insights Generated': agent.total_insights,
+      'Recent Activity (7 days)': agent.insights_this_week,
+      'Average Daily Insights': Math.round(agent.total_insights / 30), // Approximate monthly average
+      'Uptime Status': agent.status === 'active' ? '100%' : agent.status === 'paused' ? '0%' : 'ERROR',
+      'Performance Trend': agent.performance_trend.toUpperCase(),
+      'Configuration Last Updated': agent.created_date
+    }));
+  };
+
+  // Generate Performance Analytics data
+  const generatePerformanceAnalytics = (agents: IntelligenceAgent[]) => {
+    const analytics = agents.map(agent => {
+      const insightEfficiency = agent.total_insights / Math.max(1, Math.floor((new Date().getTime() - new Date(agent.created_date).getTime()) / (1000 * 60 * 60 * 24)));
+      const weeklyGrowthRate = agent.insights_this_week > 0 ? ((agent.insights_this_week / (agent.total_insights - agent.insights_this_week)) * 100) : 0;
+      
+      return {
+        'Agent Name': agent.name,
+        'Type Category': agent.type.toUpperCase(),
+        'Success Rate': `${Math.round(agent.success_rate * 100)}%`,
+        'Insight Generation Rate': `${insightEfficiency.toFixed(2)} per day`,
+        'Weekly Growth': `${weeklyGrowthRate.toFixed(1)}%`,
+        'Total Insights': agent.total_insights,
+        'Recent Performance': agent.insights_this_week,
+        'Efficiency Score': Math.round(agent.success_rate * insightEfficiency * 10),
+        'Competitor Coverage': agent.competitor_ids.length,
+        'Data Source Count': agent.configuration.sources.length,
+        'Keyword Diversity': agent.configuration.keywords.length,
+        'Performance Trend': agent.performance_trend.toUpperCase(),
+        'ROI Indicator': agent.success_rate > 0.8 && agent.insights_this_week > 5 ? 'HIGH' : agent.success_rate > 0.6 ? 'MEDIUM' : 'LOW'
+      };
+    });
+    
+    return analytics.sort((a, b) => parseInt(b['Efficiency Score']) - parseInt(a['Efficiency Score']));
+  };
+
+  // Generate Agent Health & Monitoring data
+  const generateHealthMonitoring = (agents: IntelligenceAgent[]) => {
+    return agents.map(agent => {
+      const daysSinceLastRun = Math.floor((new Date().getTime() - new Date(agent.last_run).getTime()) / (1000 * 60 * 60 * 24));
+      const healthScore = agent.status === 'active' && agent.success_rate > 0.7 ? 'HEALTHY' : 
+                         agent.status === 'paused' ? 'PAUSED' : 
+                         agent.status === 'error' ? 'CRITICAL' : 'WARNING';
+      
+      return {
+        'Agent Name': agent.name,
+        'Current Status': agent.status.toUpperCase(),
+        'Health Score': healthScore,
+        'Success Rate': `${Math.round(agent.success_rate * 100)}%`,
+        'Days Since Last Run': daysSinceLastRun,
+        'Error Rate': `${Math.round((1 - agent.success_rate) * 100)}%`,
+        'Performance Trend': agent.performance_trend.toUpperCase(),
+        'Configuration Issues': agent.configuration.keywords.length === 0 ? 'No Keywords' : 'OK',
+        'Data Source Status': agent.configuration.sources.length > 0 ? 'CONFIGURED' : 'MISSING',
+        'Notification Threshold': `${Math.round(agent.configuration.notification_threshold * 100)}%`,
+        'Data Retention': `${agent.configuration.data_retention_days} days`,
+        'Monitoring Scope': `${agent.competitor_ids.length} competitors`,
+        'Last Successful Run': new Date(agent.last_run).toLocaleDateString(),
+        'System Recommendation': healthScore === 'CRITICAL' ? 'IMMEDIATE ATTENTION' : 
+                               healthScore === 'WARNING' ? 'REVIEW REQUIRED' : 'OPERATING NORMALLY'
+      };
+    });
+  };
+
+  // Convert array of objects to CSV
+  const arrayToCSV = (data: any[], filename: string) => {
+    if (!data.length) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => 
+        headers.map(header => {
+          const value = row[header];
+          // Escape commas and quotes in values
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(',')
+      )
+    ].join('\n');
+    
+    return csvContent;
+  };
+
+  // Download file
+  const downloadFile = (content: string, filename: string, contentType: string) => {
+    const blob = new Blob([content], { type: contentType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Export handlers
+  const handleExportCSV = (dataType: 'performance' | 'configuration' | 'activity' | 'analytics' | 'health') => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    let data: any[] = [];
+    let filename = '';
+
+    switch (dataType) {
+      case 'performance':
+        data = generatePerformanceSummary(filteredAgents);
+        filename = `agent-performance-summary-${timestamp}.csv`;
+        break;
+      case 'configuration':
+        data = generateDetailedConfiguration(filteredAgents);
+        filename = `agent-detailed-configuration-${timestamp}.csv`;
+        break;
+      case 'activity':
+        data = generateActivityReport(filteredAgents);
+        filename = `agent-activity-report-${timestamp}.csv`;
+        break;
+      case 'analytics':
+        data = generatePerformanceAnalytics(filteredAgents);
+        filename = `agent-performance-analytics-${timestamp}.csv`;
+        break;
+      case 'health':
+        data = generateHealthMonitoring(filteredAgents);
+        filename = `agent-health-monitoring-${timestamp}.csv`;
+        break;
+    }
+
+    const csvContent = arrayToCSV(data, filename);
+    downloadFile(csvContent, filename, 'text/csv;charset=utf-8;');
+    setShowExportMenu(false);
+  };
+
+  const handleExportJSON = () => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const exportData = {
+      export_date: new Date().toISOString(),
+      total_agents: filteredAgents.length,
+      performance_summary: generatePerformanceSummary(filteredAgents),
+      detailed_configuration: generateDetailedConfiguration(filteredAgents),
+      activity_report: generateActivityReport(filteredAgents),
+      performance_analytics: generatePerformanceAnalytics(filteredAgents),
+      health_monitoring: generateHealthMonitoring(filteredAgents)
+    };
+
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    downloadFile(jsonContent, `agent-intelligence-${timestamp}.json`, 'application/json');
+    setShowExportMenu(false);
+  };
+
+  const handleExportAll = () => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    // Export all as separate CSV files
+    handleExportCSV('performance');
+    setTimeout(() => handleExportCSV('configuration'), 100);
+    setTimeout(() => handleExportCSV('activity'), 200);
+    setTimeout(() => handleExportCSV('analytics'), 300);
+    setTimeout(() => handleExportCSV('health'), 400);
+    
+    setShowExportMenu(false);
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'pricing': return DollarSign;
@@ -234,6 +644,11 @@ export default function AgentsPage() {
       case 'social': return MessageSquare;
       case 'funding': return TrendingUp;
       case 'products': return Zap;
+      // Customer Account Agent Types
+      case 'renewal': return Target;
+      case 'health': return Activity;
+      case 'onboarding': return CheckCircle;
+      case 'expansion': return TrendingUp;
       default: return Bot;
     }
   };
@@ -247,6 +662,11 @@ export default function AgentsPage() {
       case 'social': return { bg: '#fce7f3', color: '#ec4899' };
       case 'funding': return { bg: '#ecfccb', color: '#65a30d' };
       case 'products': return { bg: '#fef2e2', color: '#ea580c' };
+      // Customer Account Agent Colors
+      case 'renewal': return { bg: '#dbeafe', color: '#3b82f6' };
+      case 'health': return { bg: '#fee2e2', color: '#ef4444' };
+      case 'onboarding': return { bg: '#d1fae5', color: '#10b981' };
+      case 'expansion': return { bg: '#fef3c7', color: '#f59e0b' };
       default: return { bg: '#f1f5f9', color: '#6b7280' };
     }
   };
@@ -329,10 +749,116 @@ export default function AgentsPage() {
               <p className="calendly-body">Manage and monitor intelligent agents for competitive intelligence</p>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="calendly-btn-secondary flex items-center space-x-2">
-                <Download className="w-4 h-4" />
-                <span>Export</span>
-              </button>
+              {/* Export Menu */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="calendly-btn-secondary flex items-center space-x-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Export Agent Intelligence</h3>
+                      
+                      {/* CSV Exports */}
+                      <div className="space-y-2 mb-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">CSV Reports</h4>
+                        <button
+                          onClick={() => handleExportCSV('performance')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Performance Summary</div>
+                            <div className="text-xs text-gray-500">Success rates & insight metrics</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleExportCSV('configuration')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Detailed Configuration</div>
+                            <div className="text-xs text-gray-500">Complete agent setup & settings</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleExportCSV('activity')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Activity Report</div>
+                            <div className="text-xs text-gray-500">Scheduling & operational insights</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleExportCSV('analytics')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Performance Analytics</div>
+                            <div className="text-xs text-gray-500">Data-driven optimization insights</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleExportCSV('health')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Health & Monitoring</div>
+                            <div className="text-xs text-gray-500">System reliability & error tracking</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="border-t pt-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Complete Export</h4>
+                        <button
+                          onClick={handleExportJSON}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between mb-2"
+                        >
+                          <div>
+                            <div className="font-medium">JSON Data Export</div>
+                            <div className="text-xs text-gray-500">All data in structured format</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={handleExportAll}
+                          className="w-full text-left px-3 py-2 text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Export All (CSV)</div>
+                            <div className="text-xs text-indigo-600">Download all 5 CSV reports</div>
+                          </div>
+                          <Package className="w-4 h-4" />
+                        </button>
+                      </div>
+                      
+                      <div className="mt-3 pt-3 border-t text-xs text-gray-500">
+                        Exporting {filteredAgents.length} agents
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Click outside to close */}
+                {showExportMenu && (
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowExportMenu(false)}
+                  />
+                )}
+              </div>
               <button 
                 onClick={() => router.push('/agents/create')}
                 className="calendly-btn-primary flex items-center space-x-2"
@@ -434,6 +960,10 @@ export default function AgentsPage() {
                     <option value="social">Social</option>
                     <option value="funding">Funding</option>
                     <option value="products">Products</option>
+                    <option value="renewal">Renewal</option>
+                    <option value="health">Health</option>
+                    <option value="onboarding">Onboarding</option>
+                    <option value="expansion">Expansion</option>
                   </select>
                 </div>
 
@@ -521,21 +1051,110 @@ export default function AgentsPage() {
                       {agent.description}
                     </p>
 
+                    {/* Real-time Activity Status */}
+                    {agent.status === 'active' && (
+                      <div className="bg-gray-50 rounded-lg p-3" style={{ marginBottom: '12px' }}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                            <span className="text-xs font-medium text-gray-700">Live Activity</span>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {agentActivities[agent.id]?.response_time || 250}ms
+                          </span>
+                        </div>
+                        <div className="text-xs text-gray-600 mb-2">
+                          {agentActivities[agent.id]?.current_task || 'Monitoring data sources'}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="flex-1 bg-gray-200 rounded-full h-1.5">
+                            <div 
+                              className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
+                              style={{ width: `${agentActivities[agent.id]?.progress || 0}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            {agentActivities[agent.id]?.progress || 0}%
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     {/* Metrics */}
                     <div className="grid grid-cols-3 gap-3" style={{ marginBottom: '16px' }}>
                       <div className="text-center">
-                        <p className="calendly-h3" style={{ marginBottom: '2px' }}>{agent.total_insights}</p>
-                        <p className="calendly-label-sm">Insights</p>
+                        <p className="calendly-h3" style={{ marginBottom: '2px' }}>
+                          {agent.assigned_accounts?.length || agent.total_insights}
+                        </p>
+                        <p className="calendly-label-sm">
+                          {agent.assigned_accounts ? 'Accounts' : 'Insights'}
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="calendly-h3" style={{ marginBottom: '2px' }}>{Math.round(agent.success_rate * 100)}%</p>
                         <p className="calendly-label-sm">Success</p>
                       </div>
                       <div className="text-center">
-                        <p className="calendly-h3" style={{ marginBottom: '2px' }}>{agent.insights_this_week}</p>
-                        <p className="calendly-label-sm">This Week</p>
+                        <p className="calendly-h3" style={{ marginBottom: '2px' }}>
+                          {agent.assigned_accounts ? 
+                            agent.assigned_accounts.filter(a => a.status === 'active').length :
+                            (agent.insights_this_week + (agentActivities[agent.id]?.insights_processed || 0))
+                          }
+                        </p>
+                        <p className="calendly-label-sm">
+                          {agent.assigned_accounts ? 'Active' : 'This Week'}
+                        </p>
                       </div>
                     </div>
+
+                    {/* Customer Assignments for Account Agents */}
+                    {agent.assigned_accounts && agent.assigned_accounts.length > 0 && (
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Assigned Accounts</h4>
+                        <div className="space-y-2">
+                          {agent.assigned_accounts.slice(0, 2).map((account) => (
+                            <div key={account.account_id} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded">
+                              <div>
+                                <div className="font-medium">{account.company_name}</div>
+                                <div className="text-gray-500">{account.purpose}</div>
+                              </div>
+                              <div className="flex items-center space-x-1">
+                                <div className={`w-2 h-2 rounded-full ${
+                                  account.status === 'active' ? 'bg-green-500 animate-pulse' :
+                                  account.status === 'paused' ? 'bg-yellow-500' : 'bg-gray-500'
+                                }`}></div>
+                                <span className="text-gray-600">
+                                  Next: {new Date(account.next_contact).toLocaleDateString()}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                          {agent.assigned_accounts.length > 2 && (
+                            <div className="text-xs text-gray-500 text-center py-1">
+                              +{agent.assigned_accounts.length - 2} more accounts
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Performance Metrics for Active Agents */}
+                    {agent.status === 'active' && (
+                      <div className="grid grid-cols-2 gap-2 text-xs" style={{ marginBottom: '12px' }}>
+                        <div className="bg-blue-50 p-2 rounded text-center">
+                          <div className="font-medium text-blue-700">
+                            {agentActivities[agent.id]?.insights_processed || 0}
+                          </div>
+                          <div className="text-blue-600">Processed Today</div>
+                        </div>
+                        <div className="bg-red-50 p-2 rounded text-center">
+                          <div className="font-medium text-red-700">
+                            {agentActivities[agent.id]?.error_count || 0}
+                          </div>
+                          <div className="text-red-600">Errors</div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Footer with trend and actions */}
                     <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #f1f5f9' }}>
@@ -630,9 +1249,40 @@ export default function AgentsPage() {
                             </span>
                           </td>
                           <td>{agent.schedule}</td>
-                          <td>{Math.round(agent.success_rate * 100)}%</td>
-                          <td>{agent.total_insights}</td>
-                          <td>{agent.insights_this_week}</td>
+                          <td>
+                            <div className="flex items-center space-x-2">
+                              <span>{Math.round(agent.success_rate * 100)}%</span>
+                              {agent.status === 'active' && (
+                                <span className="text-xs text-gray-500">
+                                  {agentActivities[agent.id]?.response_time || 250}ms
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td>
+                            {agent.assigned_accounts ? 
+                              `${agent.assigned_accounts.length} accounts` :
+                              agent.total_insights
+                            }
+                          </td>
+                          <td>
+                            <div className="flex items-center space-x-2">
+                              <span>
+                                {agent.assigned_accounts ? 
+                                  `${agent.assigned_accounts.filter(a => a.status === 'active').length} active` :
+                                  (agent.insights_this_week + (agentActivities[agent.id]?.insights_processed || 0))
+                                }
+                              </span>
+                              {agent.status === 'active' && (
+                                <div className="w-12 bg-gray-200 rounded-full h-1">
+                                  <div 
+                                    className="bg-blue-500 h-1 rounded-full transition-all duration-300"
+                                    style={{ width: `${agentActivities[agent.id]?.progress || 0}%` }}
+                                  ></div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
                           <td>
                             <div className="flex items-center space-x-1">
                               <button

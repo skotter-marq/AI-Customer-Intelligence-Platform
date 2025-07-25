@@ -11,7 +11,13 @@ import {
   Settings,
   User,
   ChevronLeft,
-  Menu
+  Menu,
+  Users,
+  MessageSquare,
+  HeadphonesIcon,
+  Package,
+  TrendingUp,
+  Bot
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -38,31 +44,55 @@ export default function Navigation() {
       href: '/', 
       label: 'Dashboard', 
       icon: BarChart3, 
-      description: 'Overview and analytics' 
+      description: 'AI Assistant & overview' 
+    },
+    { 
+      href: '/customers', 
+      label: 'Customers', 
+      icon: Users, 
+      description: 'HubSpot pipeline & contacts' 
+    },
+    { 
+      href: '/meetings', 
+      label: 'Meetings', 
+      icon: MessageSquare, 
+      description: 'Grain call recordings' 
+    },
+    { 
+      href: '/competitors', 
+      label: 'Competitors', 
+      icon: Target, 
+      description: 'Competitive intelligence' 
+    },
+    { 
+      href: '/agents', 
+      label: 'Agents', 
+      icon: Bot, 
+      description: 'AI agent management' 
+    },
+    { 
+      href: '/support', 
+      label: 'Support', 
+      icon: HeadphonesIcon, 
+      description: 'Customer support tickets' 
+    },
+    { 
+      href: '/product', 
+      label: 'Product', 
+      icon: Package, 
+      description: 'Updates & changelog' 
+    },
+    { 
+      href: '/insights', 
+      label: 'Insights', 
+      icon: TrendingUp, 
+      description: 'Analytics & reports' 
     },
     { 
       href: '/content-pipeline', 
       label: 'Content Pipeline', 
       icon: FileText, 
       description: 'Manage content workflow' 
-    },
-    { 
-      href: '/competitors', 
-      label: 'Competitors', 
-      icon: Target, 
-      description: 'Competitive analysis' 
-    },
-    { 
-      href: '/agents', 
-      label: 'Agents', 
-      icon: User, 
-      description: 'AI agent management' 
-    },
-    { 
-      href: '/changelog', 
-      label: 'Changelog', 
-      icon: GitBranch, 
-      description: 'Product updates' 
     },
     { 
       href: '/integrations', 

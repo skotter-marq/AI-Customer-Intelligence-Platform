@@ -21,7 +21,9 @@ import {
   TrendingUp,
   Sparkles,
   Loader2,
-  Zap
+  Zap,
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 
 interface NewCompetitor {
@@ -94,6 +96,12 @@ export default function AddCompetitorPage() {
   
   // Research metadata
   const [researchAge, setResearchAge] = useState<string>('');
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{message: string, type: 'error' | 'success' | 'warning', show: boolean}>({message: '', type: 'error', show: false});
+  
+  // Field highlighting state
+  const [highlightedFields, setHighlightedFields] = useState<Set<string>>(new Set());
 
   // Load competitor data if in edit mode
   useEffect(() => {
@@ -546,9 +554,45 @@ export default function AddCompetitorPage() {
     }
   };
 
+  // Show toast notification function with field highlighting
+  const showToast = (message: string, type: 'error' | 'success' | 'warning', fieldsToHighlight: string[] = []) => {
+    setToast({ message, type, show: true });
+    
+    // Highlight specified fields
+    if (fieldsToHighlight.length > 0) {
+      setHighlightedFields(new Set(fieldsToHighlight));
+      
+      // Clear highlights after 8 seconds
+      setTimeout(() => {
+        setHighlightedFields(new Set());
+      }, 8000);
+    }
+    
+    // Hide toast after 5 seconds
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
+  // Validate required fields for AI Research
+  const validateAIResearch = () => {
+    const errors: {message: string, field: string}[] = [];
+    
+    if (!newCompetitor.name?.trim() && !newCompetitor.website?.trim()) {
+      // Both fields are empty - highlight both but show one message
+      errors.push({message: 'Please provide at least a company name or website to research', field: 'both'});
+    }
+    
+    return errors;
+  };
+
   const handleAIResearch = async () => {
-    if (!newCompetitor.name && !newCompetitor.website) {
-      alert('Please provide at least a company name or website to research');
+    // Validate fields first
+    const validationErrors = validateAIResearch();
+    if (validationErrors.length > 0) {
+      const firstError = validationErrors[0];
+      const fieldsToHighlight = firstError.field === 'both' ? ['name', 'website'] : [firstError.field];
+      showToast(firstError.message, 'error', fieldsToHighlight);
       return;
     }
 
@@ -608,6 +652,9 @@ export default function AddCompetitorPage() {
       console.log(`📊 FINAL UI DATA - Threat Level: "${updatedCompetitor.threat_level}"`);
       console.log(`📋 AI Populated Fields:`, Array.from(populatedFields));
       
+      // Show success toast
+      showToast('AI research completed successfully!', 'success');
+      
       // Auto-scroll to the comprehensive report after research is complete
       setTimeout(() => {
         window.scrollTo({ top: 600, behavior: 'smooth' });
@@ -615,7 +662,7 @@ export default function AddCompetitorPage() {
       
     } catch (error) {
       console.error('AI research failed:', error);
-      alert('AI research failed. Please fill in the information manually.');
+      showToast('AI research failed. Please fill in the information manually.', 'error');
     } finally {
       setIsResearching(false);
     }
@@ -1615,6 +1662,49 @@ export default function AddCompetitorPage() {
 
   return (
     <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg transition-all duration-300 transform ${
+          toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        } ${
+          toast.type === 'error' ? 'bg-red-50 border border-red-200' :
+          toast.type === 'success' ? 'bg-green-50 border border-green-200' :
+          'bg-yellow-50 border border-yellow-200'
+        }`}>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {toast.type === 'error' && <XCircle className="w-5 h-5 text-red-400" />}
+              {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
+              {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-yellow-400" />}
+            </div>
+            <div className="ml-3">
+              <p className={`text-sm font-medium ${
+                toast.type === 'error' ? 'text-red-800' :
+                toast.type === 'success' ? 'text-green-800' :
+                'text-yellow-800'
+              }`}>
+                {toast.message}
+              </p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  type="button"
+                  onClick={() => setToast(prev => ({ ...prev, show: false }))}
+                  className={`inline-flex p-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    toast.type === 'error' ? 'text-red-400 hover:bg-red-100 focus:ring-red-600' :
+                    toast.type === 'success' ? 'text-green-400 hover:bg-green-100 focus:ring-green-600' :
+                    'text-yellow-400 hover:bg-yellow-100 focus:ring-yellow-600'
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -1712,8 +1802,8 @@ export default function AddCompetitorPage() {
                 </div>
                 <button
                   onClick={handleAIResearch}
-                  disabled={isResearching || (!newCompetitor.name && !newCompetitor.website)}
-                  className={`calendly-btn-secondary flex items-center space-x-2 ${(isResearching || (!newCompetitor.name && !newCompetitor.website)) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  disabled={isResearching}
+                  className={`calendly-btn-secondary flex items-center space-x-2 ${isResearching ? 'opacity-50 cursor-not-allowed' : ''}`}
                   style={{ borderColor: '#10b981', color: '#10b981' }}
                   onMouseEnter={(e) => {
                     if (!isResearching && (newCompetitor.name || newCompetitor.website)) {
@@ -1776,14 +1866,27 @@ export default function AddCompetitorPage() {
                         value={newCompetitor.name}
                         onChange={(e) => handleFieldChange('name', e.target.value)}
                         className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
-                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        style={{ 
+                          border: highlightedFields.has('name') ? '1px solid #ef4444' : '1px solid #e2e8f0', 
+                          background: highlightedFields.has('name') ? '#fef2f2' : 'white' 
+                        }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = '#4285f4';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          if (!highlightedFields.has('name')) {
+                            e.target.style.borderColor = '#4285f4';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+                          }
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e2e8f0';
-                          e.target.style.boxShadow = 'none';
+                          if (!highlightedFields.has('name')) {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = 'none';
+                          }
                         }}
                         placeholder="e.g., Salesforce"
                         disabled={isResearching}
@@ -1799,14 +1902,27 @@ export default function AddCompetitorPage() {
                         value={newCompetitor.website}
                         onChange={(e) => handleFieldChange('website', e.target.value)}
                         className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
-                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        style={{ 
+                          border: highlightedFields.has('website') ? '1px solid #ef4444' : '1px solid #e2e8f0', 
+                          background: highlightedFields.has('website') ? '#fef2f2' : 'white' 
+                        }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = '#4285f4';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          if (!highlightedFields.has('website')) {
+                            e.target.style.borderColor = '#4285f4';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+                          }
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e2e8f0';
-                          e.target.style.boxShadow = 'none';
+                          if (!highlightedFields.has('website')) {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = 'none';
+                          }
                         }}
                         placeholder="https://salesforce.com"
                         disabled={isResearching}
@@ -1895,8 +2011,8 @@ export default function AddCompetitorPage() {
                       {!researchComplete && (
                         <button
                           onClick={handleAIResearch}
-                          disabled={isResearching || (!newCompetitor.name && !newCompetitor.website)}
-                          className="calendly-btn-primary flex items-center space-x-2"
+                          disabled={isResearching}
+                          className="calendly-btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isResearching ? (
                             <>
@@ -1960,14 +2076,27 @@ export default function AddCompetitorPage() {
                         value={newCompetitor.name}
                         onChange={(e) => handleFieldChange('name', e.target.value)}
                         className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
-                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        style={{ 
+                          border: highlightedFields.has('name') ? '1px solid #ef4444' : '1px solid #e2e8f0', 
+                          background: highlightedFields.has('name') ? '#fef2f2' : 'white' 
+                        }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = '#4285f4';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          if (!highlightedFields.has('name')) {
+                            e.target.style.borderColor = '#4285f4';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+                          }
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e2e8f0';
-                          e.target.style.boxShadow = 'none';
+                          if (!highlightedFields.has('name')) {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = 'none';
+                          }
                         }}
                         placeholder="e.g., Salesforce"
                       />
@@ -1982,14 +2111,27 @@ export default function AddCompetitorPage() {
                         value={newCompetitor.website}
                         onChange={(e) => handleFieldChange('website', e.target.value)}
                         className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
-                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        style={{ 
+                          border: highlightedFields.has('website') ? '1px solid #ef4444' : '1px solid #e2e8f0', 
+                          background: highlightedFields.has('website') ? '#fef2f2' : 'white' 
+                        }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = '#4285f4';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          if (!highlightedFields.has('website')) {
+                            e.target.style.borderColor = '#4285f4';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+                          }
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e2e8f0';
-                          e.target.style.boxShadow = 'none';
+                          if (!highlightedFields.has('website')) {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = 'none';
+                          }
                         }}
                         placeholder="https://salesforce.com"
                       />

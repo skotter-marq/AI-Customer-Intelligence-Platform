@@ -298,6 +298,212 @@ export default function CompetitorsPage() {
     }, 1000);
   }, []);
 
+  // Export functionality
+  const [showExportMenu, setShowExportMenu] = useState(false);
+
+  // Generate Executive Summary data
+  const generateExecutiveSummary = (competitors: CompetitorProfile[]) => {
+    return competitors.map(comp => ({
+      'Company': comp.name,
+      'Threat Level': comp.threat_level.toUpperCase(),
+      'Industry': comp.industry,
+      'Market Cap': comp.marketCap,
+      'Revenue': comp.financial_metrics.revenue,
+      'Growth Rate': comp.financial_metrics.growth_rate,
+      'Market Share': comp.financial_metrics.market_share,
+      'Employees': comp.employees,
+      'Key Advantage': comp.competitive_advantages[0] || 'N/A',
+      'Top Weakness': comp.weaknesses[0] || 'N/A',
+      'Confidence Score': `${Math.round(comp.confidence_score * 100)}%`,
+      'Last Updated': new Date(comp.last_analyzed).toLocaleDateString()
+    }));
+  };
+
+  // Generate Detailed Analysis data
+  const generateDetailedAnalysis = (competitors: CompetitorProfile[]) => {
+    return competitors.map(comp => ({
+      'Company Name': comp.name,
+      'Website': comp.website,
+      'Industry': comp.industry,
+      'Description': comp.description,
+      'Headquarters': comp.headquarters,
+      'Founded': comp.founded,
+      'Employees': comp.employees,
+      'Market Cap': comp.marketCap,
+      'Revenue': comp.financial_metrics.revenue,
+      'Growth Rate': comp.financial_metrics.growth_rate,
+      'Profit Margin': comp.financial_metrics.profit_margin,
+      'Market Share': comp.financial_metrics.market_share,
+      'Threat Level': comp.threat_level.toUpperCase(),
+      'Monitoring Status': comp.status.toUpperCase(),
+      'Confidence Score': comp.confidence_score,
+      'LinkedIn Followers': comp.social_metrics.linkedin_followers.toLocaleString(),
+      'Twitter Followers': comp.social_metrics.twitter_followers.toLocaleString(),
+      'Engagement Rate': `${(comp.social_metrics.engagement_rate * 100).toFixed(1)}%`,
+      'Sentiment Score': `${(comp.social_metrics.sentiment_score * 100).toFixed(0)}%`,
+      'Competitive Advantages': comp.competitive_advantages.join('; '),
+      'Weaknesses': comp.weaknesses.join('; '),
+      'Last Analyzed': new Date(comp.last_analyzed).toLocaleDateString()
+    }));
+  };
+
+  // Generate News & Activities data
+  const generateNewsActivities = (competitors: CompetitorProfile[]) => {
+    const newsData: any[] = [];
+    
+    competitors.forEach(comp => {
+      // Add recent news
+      comp.recent_news.forEach(news => {
+        newsData.push({
+          'Company': comp.name,
+          'Type': 'News',
+          'Title': news.title,
+          'Date': news.date,
+          'Sentiment': news.sentiment.toUpperCase(),
+          'Source': news.source,
+          'Impact': 'N/A'
+        });
+      });
+      
+      // Add recent activities
+      comp.recent_activities.forEach(activity => {
+        newsData.push({
+          'Company': comp.name,
+          'Type': 'Activity',
+          'Title': activity.title,
+          'Date': activity.date,
+          'Sentiment': 'N/A',
+          'Source': activity.type.replace('_', ' ').toUpperCase(),
+          'Impact': activity.impact.toUpperCase()
+        });
+      });
+    });
+    
+    return newsData.sort((a, b) => new Date(b.Date).getTime() - new Date(a.Date).getTime());
+  };
+
+  // Generate Competitive Matrix data
+  const generateCompetitiveMatrix = (competitors: CompetitorProfile[]) => {
+    const matrix: any = {};
+    
+    // Create a matrix with companies as rows and metrics as columns
+    competitors.forEach(comp => {
+      matrix[comp.name] = {
+        'Industry': comp.industry,
+        'Threat Level': comp.threat_level.toUpperCase(),
+        'Market Cap': comp.marketCap,
+        'Revenue': comp.financial_metrics.revenue,
+        'Growth Rate': comp.financial_metrics.growth_rate,
+        'Market Share': comp.financial_metrics.market_share,
+        'Employees': comp.employees,
+        'LinkedIn Followers': comp.social_metrics.linkedin_followers.toLocaleString(),
+        'Engagement Rate': `${(comp.social_metrics.engagement_rate * 100).toFixed(1)}%`,
+        'Sentiment Score': `${(comp.social_metrics.sentiment_score * 100).toFixed(0)}%`,
+        'Confidence Score': `${Math.round(comp.confidence_score * 100)}%`,
+        'Founded': comp.founded,
+        'Headquarters': comp.headquarters
+      };
+    });
+    
+    return Object.entries(matrix).map(([company, data]) => ({
+      'Company': company,
+      ...data
+    }));
+  };
+
+  // Convert array of objects to CSV
+  const arrayToCSV = (data: any[], filename: string) => {
+    if (!data.length) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+      headers.join(','),
+      ...data.map(row => 
+        headers.map(header => {
+          const value = row[header];
+          // Escape commas and quotes in values
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
+            return `"${value.replace(/"/g, '""')}"`;
+          }
+          return value;
+        }).join(',')
+      )
+    ].join('\n');
+    
+    return csvContent;
+  };
+
+  // Download file
+  const downloadFile = (content: string, filename: string, contentType: string) => {
+    const blob = new Blob([content], { type: contentType });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
+  // Export handlers
+  const handleExportCSV = (dataType: 'summary' | 'detailed' | 'news' | 'matrix') => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    let data: any[] = [];
+    let filename = '';
+
+    switch (dataType) {
+      case 'summary':
+        data = generateExecutiveSummary(filteredCompetitors);
+        filename = `competitor-executive-summary-${timestamp}.csv`;
+        break;
+      case 'detailed':
+        data = generateDetailedAnalysis(filteredCompetitors);
+        filename = `competitor-detailed-analysis-${timestamp}.csv`;
+        break;
+      case 'news':
+        data = generateNewsActivities(filteredCompetitors);
+        filename = `competitor-news-activities-${timestamp}.csv`;
+        break;
+      case 'matrix':
+        data = generateCompetitiveMatrix(filteredCompetitors);
+        filename = `competitive-matrix-${timestamp}.csv`;
+        break;
+    }
+
+    const csvContent = arrayToCSV(data, filename);
+    downloadFile(csvContent, filename, 'text/csv;charset=utf-8;');
+    setShowExportMenu(false);
+  };
+
+  const handleExportJSON = () => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const exportData = {
+      export_date: new Date().toISOString(),
+      total_competitors: filteredCompetitors.length,
+      executive_summary: generateExecutiveSummary(filteredCompetitors),
+      detailed_analysis: generateDetailedAnalysis(filteredCompetitors),
+      news_activities: generateNewsActivities(filteredCompetitors),
+      competitive_matrix: generateCompetitiveMatrix(filteredCompetitors)
+    };
+
+    const jsonContent = JSON.stringify(exportData, null, 2);
+    downloadFile(jsonContent, `competitor-intelligence-${timestamp}.json`, 'application/json');
+    setShowExportMenu(false);
+  };
+
+  const handleExportAll = () => {
+    const timestamp = new Date().toISOString().split('T')[0];
+    
+    // Export all as separate CSV files
+    handleExportCSV('summary');
+    setTimeout(() => handleExportCSV('detailed'), 100);
+    setTimeout(() => handleExportCSV('news'), 200);
+    setTimeout(() => handleExportCSV('matrix'), 300);
+    
+    setShowExportMenu(false);
+  };
+
   const getThreatLevelColor = (level: string) => {
     switch (level) {
       case 'high': return 'calendly-badge-danger';
@@ -360,10 +566,106 @@ export default function CompetitorsPage() {
               <p className="calendly-body">Monitor and analyze competitor activities and market positioning</p>
             </div>
             <div className="flex items-center space-x-3">
-              <button className="calendly-btn-secondary flex items-center space-x-2">
-                <Download className="w-4 h-4" />
-                <span>Export</span>
-              </button>
+              {/* Export Menu */}
+              <div className="relative">
+                <button 
+                  onClick={() => setShowExportMenu(!showExportMenu)}
+                  className="calendly-btn-secondary flex items-center space-x-2"
+                >
+                  <Download className="w-4 h-4" />
+                  <span>Export</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+                </button>
+                
+                {showExportMenu && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                    <div className="p-4">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">Export Competitor Intelligence</h3>
+                      
+                      {/* CSV Exports */}
+                      <div className="space-y-2 mb-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">CSV Reports</h4>
+                        <button
+                          onClick={() => handleExportCSV('summary')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Executive Summary</div>
+                            <div className="text-xs text-gray-500">Key metrics & threat levels</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleExportCSV('detailed')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Detailed Analysis</div>
+                            <div className="text-xs text-gray-500">Complete competitor profiles</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleExportCSV('news')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">News & Activities</div>
+                            <div className="text-xs text-gray-500">Recent developments & activities</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleExportCSV('matrix')}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Competitive Matrix</div>
+                            <div className="text-xs text-gray-500">Side-by-side comparison</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="border-t pt-4">
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Complete Export</h4>
+                        <button
+                          onClick={handleExportJSON}
+                          className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md flex items-center justify-between mb-2"
+                        >
+                          <div>
+                            <div className="font-medium">JSON Data Export</div>
+                            <div className="text-xs text-gray-500">All data in structured format</div>
+                          </div>
+                          <Download className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={handleExportAll}
+                          className="w-full text-left px-3 py-2 text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 rounded-md flex items-center justify-between"
+                        >
+                          <div>
+                            <div className="font-medium">Export All (CSV)</div>
+                            <div className="text-xs text-indigo-600">Download all 4 CSV reports</div>
+                          </div>
+                          <Package className="w-4 h-4" />
+                        </button>
+                      </div>
+                      
+                      <div className="mt-3 pt-3 border-t text-xs text-gray-500">
+                        Exporting {filteredCompetitors.length} competitors
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Click outside to close */}
+                {showExportMenu && (
+                  <div 
+                    className="fixed inset-0 z-40" 
+                    onClick={() => setShowExportMenu(false)}
+                  />
+                )}
+              </div>
               <button 
                 onClick={() => router.push('/competitor-intelligence/add-competitor')}
                 className="calendly-btn-primary flex items-center space-x-2"

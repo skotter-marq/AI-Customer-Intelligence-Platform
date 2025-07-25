@@ -29,7 +29,8 @@ import {
   AlertTriangle,
   Calendar,
   Library,
-  ArrowRight
+  CheckCircle2,
+  XCircle
 } from 'lucide-react';
 
 interface NewAgent {
@@ -87,6 +88,12 @@ export default function CreateAgentPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [isResearching, setIsResearching] = useState(false);
   const [researchComplete, setResearchComplete] = useState(false);
+  
+  // Toast notification state
+  const [toast, setToast] = useState<{message: string, type: 'error' | 'success' | 'warning', show: boolean}>({message: '', type: 'error', show: false});
+  
+  // Field highlighting state
+  const [highlightedFields, setHighlightedFields] = useState<Set<string>>(new Set());
   const [aiPopulatedFields, setAiPopulatedFields] = useState<Set<string>>(new Set());
   const [manuallyEditedFields, setManuallyEditedFields] = useState<Set<string>>(new Set());
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
@@ -498,9 +505,51 @@ export default function CreateAgentPage() {
     }
   };
 
+  // Show toast notification function with field highlighting
+  const showToast = (message: string, type: 'error' | 'success' | 'warning', fieldsToHighlight: string[] = []) => {
+    setToast({ message, type, show: true });
+    
+    // Highlight specified fields
+    if (fieldsToHighlight.length > 0) {
+      setHighlightedFields(new Set(fieldsToHighlight));
+      
+      // Clear highlights after 8 seconds
+      setTimeout(() => {
+        setHighlightedFields(new Set());
+      }, 8000);
+    }
+    
+    // Hide toast after 5 seconds
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
+
+  // Validate required fields for AI configuration
+  const validateAIConfiguration = () => {
+    const errors: {message: string, field: string}[] = [];
+    
+    if (!newAgent.name?.trim()) {
+      errors.push({message: 'Agent name is required', field: 'name'});
+    }
+    
+    if (!newAgent.type) {
+      errors.push({message: 'Monitoring type must be selected', field: 'type'});
+    }
+    
+    if (!newAgent.competitor_ids || newAgent.competitor_ids.length === 0) {
+      errors.push({message: 'At least one competitor must be selected', field: 'competitors'});
+    }
+    
+    return errors;
+  };
+
   const handleAIConfiguration = async () => {
-    if (!newAgent.name || !newAgent.type || newAgent.competitor_ids.length === 0) {
-      alert('Please provide an agent name, select a monitoring type, and choose at least one competitor');
+    // Validate fields first
+    const validationErrors = validateAIConfiguration();
+    if (validationErrors.length > 0) {
+      const firstError = validationErrors[0];
+      showToast(firstError.message, 'error', [firstError.field]);
       return;
     }
 
@@ -521,6 +570,9 @@ export default function CreateAgentPage() {
       setResearchComplete(true);
       setAiPopulatedFields(new Set(['sources', 'keywords', 'notification_triggers', 'description']));
 
+      // Show success toast
+      showToast('AI configuration completed successfully!', 'success');
+
       // Scroll to show the AI Configuration Results (Step 2)
       setTimeout(() => {
         aiConfigRef.current?.scrollIntoView({ 
@@ -532,7 +584,7 @@ export default function CreateAgentPage() {
 
     } catch (error) {
       console.error('Error in AI configuration:', error);
-      alert('AI configuration failed. Please try again.');
+      showToast('AI configuration failed. Please try again.', 'error');
     } finally {
       setIsResearching(false);
     }
@@ -867,7 +919,38 @@ export default function CreateAgentPage() {
     return configurations[type] || configurations.features;
   };
 
+  // Validate agent fields for creation
+  const validateAgent = () => {
+    const errors: {message: string, field: string}[] = [];
+    
+    if (!newAgent.name?.trim()) {
+      errors.push({message: 'Agent name is required', field: 'name'});
+    }
+    
+    if (!newAgent.type) {
+      errors.push({message: 'Agent type must be selected', field: 'type'});
+    }
+    
+    if (!newAgent.competitor_ids || newAgent.competitor_ids.length === 0) {
+      errors.push({message: 'At least one competitor must be selected', field: 'competitors'});
+    }
+    
+    if (!newAgent.description?.trim()) {
+      errors.push({message: 'Agent description is required', field: 'description'});
+    }
+    
+    return errors;
+  };
+
   const handleSaveAgent = async () => {
+    // Validate fields first
+    const validationErrors = validateAgent();
+    if (validationErrors.length > 0) {
+      const firstError = validationErrors[0];
+      showToast(firstError.message, 'error', [firstError.field]);
+      return;
+    }
+    
     setIsCreating(true);
     try {
       if (isEditMode) {
@@ -881,10 +964,14 @@ export default function CreateAgentPage() {
       // Simulate API call delay
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Navigate back to agents tab
-      router.push('/competitor-intelligence?tab=agents');
+      // Show success toast
+      showToast(isEditMode ? 'Agent updated successfully!' : 'Agent created successfully!', 'success');
+      
+      // Navigate back to agents tab with delay
+      setTimeout(() => router.push('/competitor-intelligence?tab=agents'), 1500);
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'creating'} agent:`, error);
+      showToast(`Failed to ${isEditMode ? 'update' : 'create'} agent. Please try again.`, 'error');
     } finally {
       setIsCreating(false);
     }
@@ -897,23 +984,6 @@ export default function CreateAgentPage() {
     }));
   };
 
-  const handleReviewAgent = () => {
-    // Show Step 3 when Review is clicked
-    setStepsCollapsed(prev => ({
-      ...prev,
-      step3: false
-    }));
-    
-    // Scroll to Step 3
-    setTimeout(() => {
-      const step3Element = document.getElementById('step-3');
-      step3Element?.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'start',
-        inline: 'nearest'
-      });
-    }, 300);
-  };
 
   const canCreateAgent = newAgent.name && newAgent.type && newAgent.competitor_ids.length > 0;
   const selectedAgentType = agentTypes.find(t => t.value === newAgent.type);
@@ -996,6 +1066,49 @@ export default function CreateAgentPage() {
 
   return (
     <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-4 right-4 z-50 max-w-md p-4 rounded-lg shadow-lg transition-all duration-300 transform ${
+          toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+        } ${
+          toast.type === 'error' ? 'bg-red-50 border border-red-200' :
+          toast.type === 'success' ? 'bg-green-50 border border-green-200' :
+          'bg-yellow-50 border border-yellow-200'
+        }`}>
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              {toast.type === 'error' && <XCircle className="w-5 h-5 text-red-400" />}
+              {toast.type === 'success' && <CheckCircle2 className="w-5 h-5 text-green-400" />}
+              {toast.type === 'warning' && <AlertTriangle className="w-5 h-5 text-yellow-400" />}
+            </div>
+            <div className="ml-3">
+              <p className={`text-sm font-medium ${
+                toast.type === 'error' ? 'text-red-800' :
+                toast.type === 'success' ? 'text-green-800' :
+                'text-yellow-800'
+              }`}>
+                {toast.message}
+              </p>
+            </div>
+            <div className="ml-auto pl-3">
+              <div className="-mx-1.5 -my-1.5">
+                <button
+                  type="button"
+                  onClick={() => setToast(prev => ({ ...prev, show: false }))}
+                  className={`inline-flex p-1.5 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    toast.type === 'error' ? 'text-red-400 hover:bg-red-100 focus:ring-red-600' :
+                    toast.type === 'success' ? 'text-green-400 hover:bg-green-100 focus:ring-green-600' :
+                    'text-yellow-400 hover:bg-yellow-100 focus:ring-yellow-600'
+                  }`}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       <div className="p-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -1117,14 +1230,27 @@ export default function CreateAgentPage() {
                         value={newAgent.name}
                         onChange={(e) => setNewAgent({...newAgent, name: e.target.value})}
                         className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
-                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        style={{ 
+                          border: highlightedFields.has('name') ? '1px solid #ef4444' : '1px solid #e2e8f0', 
+                          background: highlightedFields.has('name') ? '#fef2f2' : 'white' 
+                        }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = '#4285f4';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          if (!highlightedFields.has('name')) {
+                            e.target.style.borderColor = '#4285f4';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+                          }
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e2e8f0';
-                          e.target.style.boxShadow = 'none';
+                          if (!highlightedFields.has('name')) {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = 'none';
+                          }
                         }}
                         placeholder="e.g., Pricing Monitor"
                         disabled={isResearching}
@@ -1142,14 +1268,27 @@ export default function CreateAgentPage() {
                           handleFieldEdit('description');
                         }}
                         className="w-full px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
-                        style={{ border: '1px solid #e2e8f0', background: 'white' }}
+                        style={{ 
+                          border: highlightedFields.has('description') ? '1px solid #ef4444' : '1px solid #e2e8f0', 
+                          background: highlightedFields.has('description') ? '#fef2f2' : 'white' 
+                        }}
                         onFocus={(e) => {
-                          e.target.style.borderColor = '#4285f4';
-                          e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          if (!highlightedFields.has('description')) {
+                            e.target.style.borderColor = '#4285f4';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(239, 68, 68, 0.1)';
+                          }
                         }}
                         onBlur={(e) => {
-                          e.target.style.borderColor = '#e2e8f0';
-                          e.target.style.boxShadow = 'none';
+                          if (!highlightedFields.has('description')) {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                          } else {
+                            e.target.style.borderColor = '#ef4444';
+                            e.target.style.boxShadow = 'none';
+                          }
                         }}
                         placeholder="Brief description of what this agent monitors"
                         disabled={isResearching}
@@ -1159,7 +1298,11 @@ export default function CreateAgentPage() {
                   </div>
 
                   {/* Monitoring Type Selection */}
-                  <div className="bg-white rounded-xl border border-gray-200 p-6">
+                  <div className={`bg-white rounded-xl border p-6 ${
+                    highlightedFields.has('type')
+                      ? 'border-red-300 bg-red-50'
+                      : 'border-gray-200'
+                  }`}>
                     <div className="flex items-center space-x-3 mb-6">
                       <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                         <Target className="w-4 h-4 text-gray-600" />
@@ -1287,7 +1430,11 @@ export default function CreateAgentPage() {
 
                   {/* Competitor Selection - Only show when monitoring type is selected */}
                   {newAgent.type && (
-                    <div className="bg-white rounded-xl border border-gray-200 p-6">
+                    <div className={`bg-white rounded-xl border p-6 ${
+                      highlightedFields.has('competitors')
+                        ? 'border-red-300 bg-red-50'
+                        : 'border-gray-200'
+                    }`}>
                       <div className="flex items-center space-x-3 mb-6">
                         <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
                           <Users className="w-4 h-4 text-gray-600" />
@@ -1408,8 +1555,8 @@ export default function CreateAgentPage() {
                         </div>
                         <button
                           onClick={handleAIConfiguration}
-                          disabled={!newAgent.name || !newAgent.type || newAgent.competitor_ids.length === 0 || isResearching}
-                          className="calendly-btn-primary flex items-center space-x-3"
+                          disabled={isResearching}
+                          className="calendly-btn-primary flex items-center space-x-3 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           {isResearching ? (
                             <>
@@ -1448,8 +1595,8 @@ export default function CreateAgentPage() {
                   {/* Regenerate Button */}
                   <button
                     onClick={() => handleAIConfiguration()}
-                    disabled={!newAgent.name || !newAgent.type || newAgent.competitor_ids.length === 0 || isResearching}
-                    className="calendly-btn-primary flex items-center space-x-2"
+                    disabled={isResearching}
+                    className="calendly-btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     title="Regenerate AI configuration based on current monitoring type and competitors"
                   >
                     {isResearching ? (
@@ -2000,15 +2147,24 @@ export default function CreateAgentPage() {
                     </div>
                   )}
 
-                  {/* Review Button */}
+                  {/* Create Agent Button */}
                   <div className="flex justify-center mt-8 pt-6 border-t border-gray-200">
                     <button
-                      onClick={handleReviewAgent}
-                      className="calendly-btn-primary flex items-center space-x-2"
+                      onClick={handleSaveAgent}
+                      disabled={isCreating || !canCreateAgent}
+                      className="calendly-btn-primary flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <Eye className="w-5 h-5" />
-                      <span>Review Agent Configuration</span>
-                      <ArrowRight className="w-4 h-4" />
+                      {isCreating ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Creating...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5" />
+                          <span>Create AI Agent</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -2017,8 +2173,8 @@ export default function CreateAgentPage() {
             </div>
           )}
 
-          {/* Step 3: Review & Create */}
-          {(researchComplete || isEditMode) && (isEditMode || !stepsCollapsed.step3) && (
+          {/* Removed Step 3 - Direct creation from Step 2 */}
+          {false && (
             <div id="step-3" className="calendly-card-static" style={{ marginBottom: '24px' }}>
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-6">
