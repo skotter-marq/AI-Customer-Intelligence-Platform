@@ -304,13 +304,13 @@ export default function DashboardPage() {
                       <p className="calendly-label" style={{ marginBottom: '4px' }}>{stat.label}</p>
                       <p className="calendly-h2" style={{ marginBottom: 0 }}>{stat.value}</p>
                     </div>
-                    <Icon className="w-8 h-8" style={{ color: stat.color }} />
+                    <Icon className="w-8 h-8 text-blue-600" />
                   </div>
                   <div className="flex items-center space-x-2">
                     {stat.trend === 'up' ? (
-                      <TrendingUp className="w-4 h-4" style={{ color: '#10b981' }} />
+                      <TrendingUp className="w-4 h-4 text-green-500" />
                     ) : stat.trend === 'down' ? (
-                      <TrendingUp className="w-4 h-4 rotate-180" style={{ color: '#ef4444' }} />
+                      <TrendingUp className="w-4 h-4 rotate-180 text-red-500" />
                     ) : (
                       <div className="w-4 h-4 border-t-2" style={{ borderColor: '#718096' }}></div>
                     )}

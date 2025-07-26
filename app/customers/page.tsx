@@ -1057,7 +1057,7 @@ export default function CustomersPage() {
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Timeline:</span>
-                            <span className="font-medium">{Math.ceil(agentConfig.max_attempts * (agentConfig.outreach_frequency === 'daily' ? 1 : agentConfig.outreach_frequency === '3days' ? 3 : 7))} days</span>
+                            <span className="font-medium">{Math.ceil(agentConfig.max_attempts * (String(agentConfig.outreach_frequency) === 'daily' ? 1 : String(agentConfig.outreach_frequency) === '3days' ? 3 : 7))} days</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-gray-600">Success Rate:</span>

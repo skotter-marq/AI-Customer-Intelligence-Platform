@@ -83,7 +83,7 @@ interface AgentProfile {
 export default function AgentProfilePage() {
  const router = useRouter();
  const params = useParams();
- const agentId = params.id as string;
+ const agentId = params?.id as string;
  
  const [agent, setAgent] = useState<AgentProfile | null>(null);
  const [loading, setLoading] = useState(true);

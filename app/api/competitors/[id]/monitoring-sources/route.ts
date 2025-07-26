@@ -8,13 +8,14 @@ const supabase = createClient(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { data: sources, error } = await supabase
       .from('monitoring_sources')
       .select('*')
-      .eq('competitor_id', params.id)
+      .eq('competitor_id', id)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -35,9 +36,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     
     // Validate required fields
@@ -52,7 +54,7 @@ export async function POST(
     const { data: source, error } = await supabase
       .from('monitoring_sources')
       .insert({
-        competitor_id: params.id,
+        competitor_id: id,
         source_type: body.source_type,
         source_url: body.source_url,
         source_name: body.source_name,

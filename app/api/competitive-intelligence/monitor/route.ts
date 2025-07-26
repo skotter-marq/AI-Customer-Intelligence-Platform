@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
         competitors_monitored: 0,
         sources_checked: 0,
         signals_detected: 0,
-        errors: []
+        errors: [] as any[]
       };
 
       for (const competitorId of competitor_ids) {

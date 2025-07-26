@@ -8,9 +8,10 @@ const supabase = createClient(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { data: competitor, error } = await supabase
       .from('competitors')
       .select(`
@@ -29,7 +30,7 @@ export async function GET(
         competitor_features (*),
         pricing_intelligence (*)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
 
     if (error) {
@@ -56,9 +57,10 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     
     // Update competitor
@@ -85,7 +87,7 @@ export async function PUT(
         status: body.status,
         notes: body.notes
       })
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
 
@@ -113,13 +115,14 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { error } = await supabase
       .from('competitors')
       .delete()
-      .eq('id', params.id);
+      .eq('id', id);
 
     if (error) {
       console.error('Database error:', error);

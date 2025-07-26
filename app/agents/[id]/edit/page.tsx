@@ -61,7 +61,7 @@ interface CompetitorProfile {
 export default function CreateAgentPage() {
   const router = useRouter();
   const params = useParams();
-  const editId = params.id as string;
+  const editId = params?.id as string;
   const isEditMode = true; // Always in edit mode for this page
   const step1Ref = useRef<HTMLDivElement>(null);
   const aiConfigRef = useRef<HTMLDivElement>(null);
@@ -2616,8 +2616,8 @@ export default function CreateAgentPage() {
                   <div className="flex items-center space-x-3 mb-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedAgentType?.color || 'bg-gray-100'}`}>
                       {selectedAgentType && (() => {
-                        const IconComponent = selectedAgentType.icon;
-                        return <IconComponent className="w-4 h-4" />;
+                        const IconComponent = selectedAgentType?.icon as any;
+                        return IconComponent ? <IconComponent className="w-4 h-4" /> : null;
                       })()}
                     </div>
                     <div>

@@ -407,7 +407,7 @@ export default function CompetitorsPage() {
     
     return Object.entries(matrix).map(([company, data]) => ({
       'Company': company,
-      ...data
+      ...(data as Record<string, any>)
     }));
   };
 

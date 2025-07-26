@@ -726,12 +726,12 @@ export default function PublishedContentPage() {
           }
           break;
         case 'list':
-          const listItems = section.content.split('\n').filter(item => item.trim().length > 0);
+          const listItems = section.content.split('\n').filter((item: string) => item.trim().length > 0);
           html += `
             <div class="mb-8">
               <h2 class="text-2xl font-bold text-gray-900 mb-4">${section.title}</h2>
               <ul class="space-y-2">
-                ${listItems.map(item => `<li class="flex items-start space-x-2"><span class="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span><span class="text-gray-700">${item.trim()}</span></li>`).join('')}
+                ${listItems.map((item: string) => `<li class="flex items-start space-x-2"><span class="w-2 h-2 bg-blue-600 rounded-full mt-2 flex-shrink-0"></span><span class="text-gray-700">${item.trim()}</span></li>`).join('')}
               </ul>
             </div>
           `;

@@ -183,8 +183,7 @@ export default function Navigation() {
                 e.currentTarget.style.background = 'transparent';
               } : undefined}
             >
-              <Icon className={`flex-shrink-0 w-5 h-5 ${isActive ? 'text-white' : ''}`} 
-                    style={!isActive ? { color: '#718096' } : {}} />
+              <Icon className={`flex-shrink-0 w-5 h-5 ${isActive ? 'text-white' : 'text-gray-500'}`} />
               {!isCollapsed && (
                 <span className="ml-3 truncate">{item.label}</span>
               )}

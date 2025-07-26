@@ -186,7 +186,7 @@ interface CompetitorProfile {
 export default function CompetitorProfilePage() {
  const router = useRouter();
  const params = useParams();
- const competitorId = params.id as string;
+ const competitorId = params?.id as string;
  
  const [competitor, setCompetitor] = useState<CompetitorProfile | null>(null);
  const [loading, setLoading] = useState(true);
@@ -920,10 +920,10 @@ export default function CompetitorProfilePage() {
  };
 
  const exportToCSV = () => {
- if (!competitor?.recentActivities) return;
+ if (!competitor?.activityFeed) return;
 
  // Filter activities by date range
- const filteredActivities = competitor.recentActivities.filter(activity => {
+ const filteredActivities = competitor.activityFeed.filter(activity => {
   const activityDate = new Date(activity.timestamp);
   return activityDate >= csvDateRange.start && activityDate <= csvDateRange.end;
  });
@@ -1021,9 +1021,9 @@ export default function CompetitorProfilePage() {
  };
 
  const getFilteredActivities = () => {
- return competitor.activityFeed.filter(activity => 
+ return competitor?.activityFeed?.filter(activity => 
   feedFilter === 'all' || activity.type === feedFilter
- );
+ ) || [];
  };
 
  const getPaginatedActivities = () => {
@@ -1332,7 +1332,7 @@ export default function CompetitorProfilePage() {
        
        <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
        <span className="text-xs text-gray-500">
-        {competitor?.recentActivities?.filter(activity => {
+        {competitor?.activityFeed?.filter(activity => {
         const activityDate = new Date(activity.timestamp);
         return activityDate >= csvDateRange.start && activityDate <= csvDateRange.end;
         }).length || 0} activities in range

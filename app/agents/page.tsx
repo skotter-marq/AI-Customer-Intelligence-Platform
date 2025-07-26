@@ -505,7 +505,7 @@ export default function AgentsPage() {
       };
     });
     
-    return analytics.sort((a, b) => parseInt(b['Efficiency Score']) - parseInt(a['Efficiency Score']));
+    return analytics.sort((a, b) => parseInt(String(b['Efficiency Score'])) - parseInt(String(a['Efficiency Score'])));
   };
 
   // Generate Agent Health & Monitoring data

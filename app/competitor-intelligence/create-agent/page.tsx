@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft,
@@ -57,7 +57,7 @@ interface CompetitorProfile {
   website: string;
 }
 
-export default function CreateAgentPage() {
+function CreateAgentPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams?.get('edit');
@@ -2192,8 +2192,8 @@ export default function CreateAgentPage() {
                   <div className="flex items-center space-x-3 mb-3">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${selectedAgentType?.color || 'bg-gray-100'}`}>
                       {selectedAgentType && (() => {
-                        const IconComponent = selectedAgentType.icon;
-                        return <IconComponent className="w-4 h-4" />;
+                        const IconComponent = selectedAgentType?.icon as any;
+                        return IconComponent ? <IconComponent className="w-4 h-4" /> : null;
                       })()}
                     </div>
                     <div>
@@ -2341,5 +2341,24 @@ export default function CreateAgentPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CreateAgentPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <CreateAgentPageContent />
+    </Suspense>
   );
 }

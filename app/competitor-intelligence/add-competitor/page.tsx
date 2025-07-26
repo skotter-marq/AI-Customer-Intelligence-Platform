@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   ArrowLeft,
@@ -41,7 +41,7 @@ interface NewCompetitor {
   weaknesses: string[];
 }
 
-export default function AddCompetitorPage() {
+function AddCompetitorPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams?.get('edit');
@@ -489,6 +489,8 @@ export default function AddCompetitorPage() {
         ].filter(source => source.source_url && source.source_url !== '')
       };
 
+      let result: any = null;
+
       if (isEditMode) {
         const response = await fetch(`/api/competitors/${editId}`, {
           method: 'PUT',
@@ -521,7 +523,7 @@ export default function AddCompetitorPage() {
           throw new Error(error.error || 'Failed to create competitor');
         }
 
-        const result = await response.json();
+        result = await response.json();
         console.log('✅ Competitor created successfully:', result.competitor);
       }
       
@@ -548,7 +550,7 @@ export default function AddCompetitorPage() {
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'creating'} competitor:`, error);
       // You could add a toast notification here
-      alert(`Failed to ${isEditMode ? 'update' : 'create'} competitor: ${error.message}`);
+      alert(`Failed to ${isEditMode ? 'update' : 'create'} competitor: ${error instanceof Error ? error.message : String(error)}`);
     } finally {
       setIsCreating(false);
     }
@@ -2609,5 +2611,24 @@ export default function AddCompetitorPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function AddCompetitorPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
+        <div className="p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    }>
+      <AddCompetitorPageContent />
+    </Suspense>
   );
 }

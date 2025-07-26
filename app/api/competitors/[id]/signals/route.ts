@@ -8,9 +8,10 @@ const supabase = createClient(
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const signalType = searchParams.get('signal_type');
     const days = parseInt(searchParams.get('days') || '30');
@@ -26,7 +27,7 @@ export async function GET(
           source_url
         )
       `)
-      .eq('competitor_id', params.id)
+      .eq('competitor_id', id)
       .gte('detected_at', new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString())
       .order('detected_at', { ascending: false })
       .limit(limit);
@@ -55,9 +56,10 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     
     // Validate required fields
@@ -72,7 +74,7 @@ export async function POST(
     const { data: signal, error } = await supabase
       .from('intelligence_signals')
       .insert({
-        competitor_id: params.id,
+        competitor_id: id,
         source_id: body.source_id,
         signal_type: body.signal_type,
         title: body.title,
