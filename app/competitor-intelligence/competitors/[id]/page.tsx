@@ -51,7 +51,6 @@ import {
  ThumbsUp,
  ThumbsDown,
  Filter,
- Bell,
  Bookmark,
  Heart,
  Flame,
@@ -190,7 +189,7 @@ export default function CompetitorProfilePage() {
  
  const [competitor, setCompetitor] = useState<CompetitorProfile | null>(null);
  const [loading, setLoading] = useState(true);
- const [activeSection, setActiveSection] = useState<'overview' | 'insights' | 'features' | 'pricing' | 'integrations' | 'feed'>('overview');
+ const [activeSection, setActiveSection] = useState<'feed' | 'insights' | 'features' | 'agents'>('feed');
  const [editingSection, setEditingSection] = useState<string | null>(null);
  const [editContent, setEditContent] = useState<string>('');
  const [isGenerating, setIsGenerating] = useState<string | null>(null);
@@ -1083,26 +1082,6 @@ export default function CompetitorProfilePage() {
  }
  };
 
- const getAgentStatusColor = (status: string) => {
- switch (status) {
-  case 'active': return 'bg-green-100 text-green-800 border-green-200';
-  case 'paused': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-  case 'error': return 'bg-red-100 text-red-800 border-red-200';
-  default: return 'bg-gray-100 text-gray-800 border-gray-200';
- }
- };
-
- const getAgentIcon = (type: string) => {
- switch (type) {
-  case 'pricing': return DollarSign;
-  case 'product': return Package;
-  case 'marketing': return TrendingUp;
-  case 'hiring': return Users;
-  case 'social': return MessageSquare;
-  case 'news': return FileText;
-  default: return Activity;
- }
- };
 
  if (loading) {
  return (
@@ -1248,17 +1227,41 @@ export default function CompetitorProfilePage() {
    </div>
    </div>
 
-   {/* Navigation Tabs - Hidden as only overview remains */}
+   {/* Navigation Tabs */}
+   <div className="calendly-card-static" style={{ marginBottom: '24px' }}>
+     <div className="border-b border-gray-200">
+       <nav className="-mb-px flex space-x-8">
+         {[
+           { key: 'feed', label: 'Intelligence Feed', icon: Activity },
+           { key: 'insights', label: 'Key Insights', icon: Lightbulb },
+           { key: 'features', label: 'Product Features', icon: Package },
+           { key: 'agents', label: 'AI Agents', icon: Bot }
+         ].map(({ key, label, icon: Icon }) => (
+           <button
+             key={key}
+             onClick={() => setActiveSection(key as any)}
+             className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+               activeSection === key
+                 ? 'border-blue-500 text-blue-600'
+                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+             }`}
+           >
+             <Icon className="w-4 h-4" />
+             <span>{label}</span>
+           </button>
+         ))}
+       </nav>
+     </div>
+   </div>
 
    {/* Main Content */}
    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
    {/* Main Content Area */}
    <div className="lg:col-span-3 space-y-6">
     
-    {/* Overview Section */}
-    {activeSection === 'overview' && (
-    <>
-     {/* Intelligence Feed */}
+
+    {/* Intelligence Feed Section */}
+    {activeSection === 'feed' && (
     <div className="calendly-card">
     <div className="flex items-center justify-between mb-6">
      <div className="flex items-center space-x-3">
@@ -1531,8 +1534,10 @@ export default function CompetitorProfilePage() {
      )}
     </div>
     </div>
+    )}
 
-    {/* Competitive Analysis */}
+    {/* Key Insights Section */}
+    {activeSection === 'insights' && (
     <div className="calendly-card">
     <div className="flex items-center space-x-3 mb-6">
      <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
@@ -1635,8 +1640,10 @@ export default function CompetitorProfilePage() {
      </div>
     </div>
     </div>
+    )}
 
-    {/* Detailed Competitive Comparison */}
+    {/* Product Features Section */}
+    {activeSection === 'features' && (
     <div className="calendly-card">
     <div className="flex items-center space-x-3 mb-6">
      <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center">
@@ -1765,9 +1772,99 @@ export default function CompetitorProfilePage() {
      </div>
     </div>
     </div>
-    </>
     )}
 
+    {/* AI Agents Section */}
+    {activeSection === 'agents' && (
+      <div className="calendly-card p-6">
+        <div className="flex items-center space-x-3 mb-6">
+          <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center">
+            <Bot className="w-5 h-5 text-indigo-600" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">AI Monitoring Agents</h2>
+            <p className="text-sm text-gray-600">Automated agents tracking this competitor</p>
+          </div>
+        </div>
+
+        {competitor?.agents && competitor.agents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {competitor.agents.map((agent, index) => (
+              <div 
+                key={agent.id} 
+                onClick={() => router.push(`/agents/${agent.id}`)}
+                className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all duration-200 cursor-pointer"
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-900">{agent.name}</h3>
+                      <p className="text-sm text-gray-500">{agent.type} agent</p>
+                    </div>
+                  </div>
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                    agent.status === 'active' 
+                      ? 'bg-green-100 text-green-700 border border-green-200' 
+                      : agent.status === 'paused'
+                      ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                      : 'bg-red-100 text-red-700 border border-red-200'
+                  }`}>
+                    {agent.status.toUpperCase()}
+                  </span>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Last Run:</span>
+                    <span className="font-medium text-gray-900">
+                      {agent.lastRun ? new Date(agent.lastRun).toLocaleDateString() : 'Never'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Frequency:</span>
+                    <span className="font-medium text-gray-900">{agent.frequency}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-500">Insights:</span>
+                    <span className="font-medium text-gray-900">{agent.insights}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      router.push(`/agents/${agent.id}/edit`);
+                    }}
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                  >
+                    Configure
+                  </button>
+                  <span className="text-sm text-gray-600">
+                    View Profile →
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <Bot className="w-16 h-16 mx-auto mb-4" style={{ color: '#a0aec0' }} />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No AI Agents Configured</h3>
+            <p className="text-gray-600 mb-4">Set up automated monitoring agents to track this competitor's activities</p>
+            <button
+              onClick={() => router.push(`/agents/create?competitor=${competitorId}`)}
+              className="calendly-btn-primary"
+            >
+              Create First Agent
+            </button>
+          </div>
+        )}
+      </div>
+    )}
 
     
    </div>
@@ -1838,65 +1935,6 @@ export default function CompetitorProfilePage() {
     </div>
     </div>
 
-    {/* AI Agents */}
-    <div className="calendly-card">
-    <h3 className="text-lg font-semibold text-gray-900 mb-4">AI Agents</h3>
-    <div className="space-y-3">
-     {competitor.agents.map((agent) => {
-     const AgentIcon = getAgentIcon(agent.type);
-     return (
-      <button 
-      key={agent.id} 
-      onClick={() => router.push(`/agents/${agent.id}`)}
-      className="w-full bg-gray-50 rounded-lg p-3 text-left cursor-pointer focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-      >
-      <div className="flex items-start justify-between mb-2">
-       <div className="flex items-center space-x-2">
-       <AgentIcon className="w-4 h-4 text-gray-600" />
-       <span className="text-sm font-medium text-gray-900">{agent.name}</span>
-       </div>
-       <span className={`px-2 py-1 text-xs font-medium rounded-full border ${getAgentStatusColor(agent.status)}`}>
-       {agent.status.toUpperCase()}
-       </span>
-      </div>
-      <p className="text-xs text-gray-600 mb-2">{agent.description}</p>
-      <div className="flex items-center justify-between text-xs text-gray-500">
-       <span>{agent.insights} insights</span>
-       <span className="text-indigo-600 font-medium">
-       View Details →
-       </span>
-      </div>
-      </button>
-     );
-     })}
-    </div>
-    </div>
-
-    {/* Actions */}
-    <div className="calendly-card">
-    <h3 className="text-lg font-semibold text-gray-900 mb-4">Actions</h3>
-    <div className="space-y-2">
-     <button
-     onClick={() => setIsEditing(true)}
-     className="w-full flex items-center space-x-3 p-3 text-left rounded-lg group border border-transparent"
-     >
-     <Edit3 className="w-4 h-4 text-gray-600 " />
-     <span className="text-sm text-gray-900 ">Edit Competitor</span>
-     </button>
-     <button className="w-full flex items-center space-x-3 p-3 text-left rounded-lg group border border-transparent">
-     <Bell className="w-4 h-4 text-gray-600 " />
-     <span className="text-sm text-gray-900 ">Create Alert</span>
-     </button>
-     <button className="w-full flex items-center space-x-3 p-3 text-left rounded-lg group border border-transparent">
-     <MessageSquare className="w-4 h-4 text-gray-600 " />
-     <span className="text-sm text-gray-900 ">Add Note</span>
-     </button>
-     <button className="w-full flex items-center space-x-3 p-3 text-left rounded-lg group border border-transparent">
-     <Download className="w-4 h-4 text-gray-600 " />
-     <span className="text-sm text-gray-900 ">Export Profile</span>
-     </button>
-    </div>
-    </div>
    </div>
    </div>
   </div>

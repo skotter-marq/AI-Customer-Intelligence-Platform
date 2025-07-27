@@ -30,7 +30,8 @@ import {
  Info,
  ExternalLink,
  Download,
- X
+ X,
+ GitBranch
 } from 'lucide-react';
 
 interface AgentInsight {
@@ -78,6 +79,18 @@ interface AgentProfile {
   totalRuns: number;
   successfulRuns: number;
  };
+ // New fields from agent creation
+ workflow?: {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+ };
+ parameters?: Record<string, any>;
+ schedule?: {
+  frequency: 'daily' | 'weekly' | 'monthly';
+  time: string;
+ };
 }
 
 export default function AgentProfilePage() {
@@ -90,6 +103,7 @@ export default function AgentProfilePage() {
  const [activeSection, setActiveSection] = useState('overview');
  const [insightFilter, setInsightFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
  const [navigationSource, setNavigationSource] = useState<'dashboard' | 'competitor' | 'agents'>('dashboard');
+ const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'competitors'>('overview');
  
  // CSV export states
  const [csvDateRange, setCsvDateRange] = useState({
@@ -125,10 +139,10 @@ export default function AgentProfilePage() {
    // Mock data for now - replace with API call
    const mockAgent: AgentProfile = {
     id: agentId,
-    name: agentId === 'sf-pricing-agent' ? 'Salesforce Pricing Monitor' 
-       : agentId === 'hs-product-agent' ? 'HubSpot Product Intelligence'
-       : agentId === 'pd-product-agent' ? 'Pipedrive Feature Tracker'
-       : 'Market Intelligence Agent',
+    name: agentId === 'sf-pricing-agent' ? 'My Salesforce Pricing Monitor' 
+       : agentId === 'hs-product-agent' ? 'My HubSpot Product Intelligence'  
+       : agentId === 'pd-product-agent' ? 'My Pipedrive Feature Tracker'
+       : 'My Market Intelligence Agent',
     type: agentId?.includes('pricing') ? 'pricing'
        : agentId?.includes('product') ? 'product'
        : agentId?.includes('marketing') ? 'marketing'
@@ -136,12 +150,12 @@ export default function AgentProfilePage() {
        : 'product',
     status: agentId?.includes('error') ? 'error' : 'active',
     description: agentId === 'sf-pricing-agent' 
-     ? 'Monitors Salesforce pricing changes, new tiers, and promotional offers across all products with real-time alerts and competitive analysis.'
+     ? 'Custom agent that monitors Salesforce pricing changes and sends alerts to my team when significant updates are detected.'
      : agentId === 'hs-product-agent'
-     ? 'Tracks HubSpot product updates, new AI features, and integration releases with impact assessment and competitive positioning.'
+     ? 'Personal agent tracking HubSpot product updates and AI features that might impact our competitive positioning.'
      : agentId === 'pd-product-agent'
-     ? 'Monitors Pipedrive feature releases, mobile updates, and platform improvements with SMB market focus.'
-     : 'Advanced AI agent for comprehensive market intelligence and competitive monitoring.',
+     ? 'Dedicated monitoring agent for Pipedrive feature releases with focus on mobile and SMB market changes.'
+     : 'My personalized AI agent for comprehensive market intelligence and competitive monitoring.',
     frequency: 'Every 4 hours',
     lastRun: '2024-01-15T14:30:00Z',
     nextRun: '2024-01-15T18:30:00Z',
@@ -219,6 +233,25 @@ export default function AgentProfilePage() {
      avgRunTime: 3.4,
      totalRuns: 1847,
      successfulRuns: 1740
+    },
+    // New fields from agent creation
+    workflow: {
+     id: 'wf-003',
+     name: 'Competitive Intelligence Monitor',
+     description: 'Automated competitor tracking with real-time alerts and market analysis',
+     category: 'competitive-intel'
+    },
+    parameters: {
+     primaryCompetitors: agentId?.includes('sf') ? 'Salesforce' : agentId?.includes('hs') ? 'HubSpot' : 'All Major Competitors',
+     monitoringAreas: 'Pricing Changes',
+     alertThreshold: 'High Priority Only',
+     analysisDepth: 'Detailed Analysis',
+     includeMetrics: true,
+     maxCompetitors: 5
+    },
+    schedule: {
+     frequency: 'daily' as const,
+     time: '09:00'
     }
    };
 
@@ -463,7 +496,7 @@ export default function AgentProfilePage() {
        <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 text-sm text-gray-600">
         <div className="flex items-center space-x-1">
          <Clock className="w-4 h-4" />
-         <span>Runs {agent.frequency}</span>
+         <span>Runs {agent.schedule ? `${agent.schedule.frequency} at ${agent.schedule.time}` : agent.frequency}</span>
         </div>
         <div className="flex items-center space-x-1">
          <Calendar className="w-4 h-4" />
@@ -555,8 +588,98 @@ export default function AgentProfilePage() {
        </div>
       </div>
 
-      {/* Generated Insights */}
-      <div className="calendly-card p-6">
+      {/* Navigation Tabs */}
+      <div className="calendly-card-static" style={{ marginBottom: '24px' }}>
+        <div className="border-b border-gray-200">
+          <nav className="-mb-px flex space-x-8">
+            {[
+              { key: 'overview', label: 'Overview', icon: Eye },
+              { key: 'insights', label: 'Generated Insights', icon: Lightbulb },
+              { key: 'competitors', label: 'Linked Competitors', icon: Building2 }
+            ].map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key as any)}
+                className={`py-4 px-1 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                  activeTab === key
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{label}</span>
+              </button>
+            ))}
+          </nav>
+        </div>
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === 'overview' && (
+        <>
+      {/* Workflow Configuration */}
+      {agent.workflow && (
+        <div className="calendly-card p-6">
+          <div className="flex items-center space-x-3 mb-6">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center">
+              <Settings className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Workflow Configuration</h2>
+              <p className="text-sm text-gray-600">n8n workflow and parameter settings</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Workflow Info */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center space-x-2">
+                <GitBranch className="w-4 h-4 text-blue-600" />
+                <span>Active Workflow</span>
+              </h3>
+              <div className="space-y-2">
+                <div>
+                  <p className="font-medium text-gray-900">{agent.workflow.name}</p>
+                  <p className="text-sm text-gray-600">{agent.workflow.description}</p>
+                </div>
+                <div className="flex items-center space-x-2 text-xs">
+                  <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                    {agent.workflow.category}
+                  </span>
+                  <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                    ID: {agent.workflow.id}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {/* Parameters */}
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-3 flex items-center space-x-2">
+                <Settings className="w-4 h-4 text-green-600" />
+                <span>Configured Parameters</span>
+              </h3>
+              <div className="space-y-2">
+                {agent.parameters && Object.entries(agent.parameters).map(([key, value]) => (
+                  <div key={key} className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600 capitalize">
+                      {key.replace(/([A-Z])/g, ' $1').trim()}:
+                    </span>
+                    <span className="font-medium text-gray-900 text-right max-w-[60%] truncate">
+                      {typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {activeTab === 'insights' && (
+        <div className="calendly-card p-6">
        <div className="flex items-center justify-between mb-6">
         <div className="flex items-center space-x-3">
          <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -716,52 +839,54 @@ export default function AgentProfilePage() {
         })}
        </div>
       </div>
+      )}
+
+      {activeTab === 'competitors' && (
+        <div className="calendly-card p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
+            <Building2 className="w-5 h-5 text-blue-600" />
+            <span>Linked Competitors</span>
+          </h3>
+          <div className="space-y-3">
+            {agent.linkedCompetitors.map((competitor) => (
+              <button
+                key={competitor.id}
+                onClick={() => router.push(`/competitors/${competitor.id}`)}
+                className="w-full bg-gray-50 rounded-lg p-4 text-left cursor-pointer"
+              >
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                    <Building2 className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-gray-900">{competitor.name}</h4>
+                    <div className="flex items-center space-x-2 text-xs text-gray-500">
+                      <span className={`px-1.5 py-0.5 rounded-full ${
+                        competitor.relationship === 'primary' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        {competitor.relationship}
+                      </span>
+                      <span>{competitor.insightsCount} insights</span>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">
+                    Updated {new Date(competitor.lastUpdate).toLocaleDateString()}
+                  </span>
+                  <span className="text-xs text-blue-600 font-medium">
+                    View Profile →
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
      </div>
 
      {/* Sidebar */}
      <div className="space-y-6">
-      {/* Linked Competitors */}
-      <div className="calendly-card p-6">
-       <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center space-x-2">
-        <Building2 className="w-5 h-5 text-blue-600" />
-        <span>Linked Competitors</span>
-       </h3>
-       <div className="space-y-3">
-        {agent.linkedCompetitors.map((competitor) => (
-         <button
-          key={competitor.id}
-          onClick={() => router.push(`/competitors/${competitor.id}`)}
-          className="w-full bg-gray-50 rounded-lg p-4 text-left cursor-pointer"
-         >
-          <div className="flex items-center space-x-3 mb-2">
-           <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-            <Building2 className="w-4 h-4 text-blue-600" />
-           </div>
-           <div className="flex-1">
-            <h4 className="font-medium text-gray-900">{competitor.name}</h4>
-            <div className="flex items-center space-x-2 text-xs text-gray-500">
-             <span className={`px-1.5 py-0.5 rounded-full ${
-              competitor.relationship === 'primary' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'
-             }`}>
-              {competitor.relationship}
-             </span>
-             <span>{competitor.insightsCount} insights</span>
-            </div>
-           </div>
-          </div>
-          <div className="flex items-center justify-between">
-           <span className="text-xs text-gray-500">
-            Updated {new Date(competitor.lastUpdate).toLocaleDateString()}
-           </span>
-           <span className="text-xs text-blue-600 font-medium">
-            View Profile →
-           </span>
-          </div>
-         </button>
-        ))}
-       </div>
-      </div>
-
       {/* Performance Stats */}
       <div className="calendly-card p-6">
        <h3 className="text-lg font-semibold text-gray-900 mb-4">Performance Stats</h3>

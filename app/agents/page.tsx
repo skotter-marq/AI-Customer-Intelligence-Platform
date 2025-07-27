@@ -713,8 +713,12 @@ export default function AgentsPage() {
   });
 
   const handleAgentAction = (agentId: string, action: 'start' | 'pause' | 'stop' | 'edit') => {
-    // Simulate agent action
-    console.log(`${action} agent ${agentId}`);
+    if (action === 'edit') {
+      router.push(`/agents/${agentId}/edit`);
+    } else {
+      // Simulate other agent actions
+      console.log(`${action} agent ${agentId}`);
+    }
   };
 
   const handleAgentClick = (agentId: string) => {

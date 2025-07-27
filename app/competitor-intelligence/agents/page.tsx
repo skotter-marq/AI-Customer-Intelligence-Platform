@@ -256,7 +256,7 @@ export default function AllAgentsPage() {
 
 
                 <button 
-                  onClick={() => router.push('/competitor-intelligence/create-agent')}
+                  onClick={() => router.push('/agents/create')}
                   className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg"
                 >
                   <Plus className="w-4 h-4" />
@@ -272,7 +272,7 @@ export default function AllAgentsPage() {
               <div 
                 key={agent.id} 
                 onClick={() => router.push(`/agents/${agent.id}`)}
-                className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[200px] flex flex-col cursor-pointer"
+                className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[200px] flex flex-col cursor-pointer focus:outline-none"
               >
                 <div className="p-4 flex-1">
                   <div className="flex items-center space-x-3 mb-3">
@@ -307,7 +307,7 @@ export default function AllAgentsPage() {
                       <button 
                         onClick={(e) => {
                           e.stopPropagation();
-                          router.push(`/competitor-intelligence/create-agent?edit=${agent.id}`);
+                          router.push(`/agents/${agent.id}/edit`);
                         }}
                         className="flex items-center space-x-1 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md transition-colors"
                       >
@@ -343,7 +343,7 @@ export default function AllAgentsPage() {
               <h3 className="text-lg font-medium text-gray-900 mb-2">No agents found</h3>
               <p className="text-gray-600 mb-4">Try adjusting your search or filters, or create a new agent to get started.</p>
               <button 
-                onClick={() => router.push('/competitor-intelligence/create-agent')}
+                onClick={() => router.push('/agents/create')}
                 className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-200 shadow-md hover:shadow-lg mx-auto"
               >
                 <Plus className="w-4 h-4" />

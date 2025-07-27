@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Bot, Settings, GitBranch, Play, Pause, Edit3, Plus, ExternalLink } from 'lucide-react';
 
 interface Workflow {
@@ -19,6 +20,7 @@ interface Workflow {
 }
 
 export default function WorkflowsPage() {
+  const router = useRouter();
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'customer-health' | 'competitive-intel' | 'content-generation' | 'automation'>('all');
@@ -266,7 +268,11 @@ export default function WorkflowsPage() {
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {filteredWorkflows.map((workflow) => (
-                <div key={workflow.id} className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                <div 
+                  key={workflow.id} 
+                  onClick={() => router.push(`/workflows/${workflow.id}`)}
+                  className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-6 hover:shadow-md hover:border-indigo-300 transition-all duration-200 cursor-pointer focus:outline-none"
+                >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center space-x-3">
                       <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-lg">
@@ -314,13 +320,19 @@ export default function WorkflowsPage() {
 
                   <div className="flex space-x-2">
                     <button 
-                      onClick={() => window.location.href = `/workflows/${workflow.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        router.push(`/workflows/${workflow.id}`);
+                      }}
                       className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                     >
                       View Details
                     </button>
                     <button 
-                      onClick={() => window.open(`https://n8n.io/workflow/${workflow.n8n_id}`, '_blank')}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        window.open(`https://n8n.io/workflow/${workflow.n8n_id}`, '_blank');
+                      }}
                       className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
                     >
                       Edit in n8n

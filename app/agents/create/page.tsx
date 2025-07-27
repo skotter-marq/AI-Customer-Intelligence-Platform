@@ -521,7 +521,8 @@ export default function CreateAgentPage() {
   );
 
 
-  const renderParametersConfiguration = () => (
+  const renderParametersConfiguration = function() {
+    return (
     <div id="parameters-section" className="calendly-card-static" style={{ marginBottom: '24px' }}>
       <div className="p-6">
         <div className="space-y-6">
@@ -837,7 +838,7 @@ export default function CreateAgentPage() {
                           
                           {/* Quick Action Buttons */}
                           {(() => {
-                            const getPresets = (fieldName) => {
+                            const getPresets = (fieldName: string) => {
                               const lowerFieldName = fieldName.toLowerCase();
                               if (lowerFieldName.includes('days')) {
                                 return [
@@ -1123,11 +1124,13 @@ export default function CreateAgentPage() {
         </div>
       </div>
     </div>
-  );
+    </div>
+    );
+  };
 
-
-  const renderReview = () => (
-    <div id="review-section" className="calendly-card-static" style={{ marginBottom: '24px' }}>
+  const renderReview = function() {
+    return (
+      <div id="review-section" className="calendly-card-static" style={{ marginBottom: '24px' }}>
       <div className="p-6">
         <div className="space-y-6">
           <div>
@@ -1212,7 +1215,8 @@ export default function CreateAgentPage() {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   return (
     <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>

@@ -255,7 +255,7 @@ export default function AllCompetitorsPage() {
               <div 
                 key={competitor.id} 
                 onClick={() => router.push(`/competitor-intelligence/competitors/${competitor.id}`)}
-                className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[220px] flex flex-col cursor-pointer"
+                className="bg-white rounded-xl shadow-sm border-2 border-gray-200 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[220px] flex flex-col cursor-pointer focus:outline-none"
               >
                 <div className="p-4 flex-1 flex flex-col">
                   <div className="flex items-center space-x-3 mb-3">
