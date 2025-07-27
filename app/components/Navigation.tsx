@@ -17,7 +17,8 @@ import {
   HeadphonesIcon,
   Package,
   TrendingUp,
-  Bot
+  Bot,
+  Workflow
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -65,10 +66,16 @@ export default function Navigation() {
       description: 'Competitive intelligence' 
     },
     { 
+      href: '/workflows', 
+      label: 'Workflows', 
+      icon: GitBranch, 
+      description: 'n8n business logic & automation' 
+    },
+    { 
       href: '/agents', 
       label: 'Agents', 
       icon: Bot, 
-      description: 'AI agent management' 
+      description: 'Automated & manual workflow execution' 
     },
     { 
       href: '/support', 

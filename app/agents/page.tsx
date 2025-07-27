@@ -864,7 +864,7 @@ export default function AgentsPage() {
                 className="calendly-btn-primary flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
-                <span>New Agent</span>
+                <span>Create Agent</span>
               </button>
             </div>
           </div>
