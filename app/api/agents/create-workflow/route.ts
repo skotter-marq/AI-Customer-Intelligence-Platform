@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { n8nIntegration } from '@/lib/n8n-integration';
-import type { AgentWorkflowConfig } from '@/lib/n8n-integration';
+import { n8nIntegration } from '../../../../lib/n8n-integration';
+import type { AgentWorkflowConfig } from '../../../../lib/n8n-integration';
 
 export async function POST(request: NextRequest) {
   try {

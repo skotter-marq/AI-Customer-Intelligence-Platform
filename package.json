@@ -110,7 +110,6 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@next/bundle-analyzer": "^15.0.0",
-    "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.1.5",
     "@testing-library/react": "^16.0.0",
     "@types/bcryptjs": "^2.4.6",
@@ -137,7 +136,7 @@
     "prettier": "^3.1.0",
     "prettier-plugin-tailwindcss": "^0.5.7",
     "supertest": "^6.3.3",
-    "tailwindcss": "^4",
+    "tailwindcss": "^3.4.0",
     "typescript": "^5"
   },
   "engines": {
