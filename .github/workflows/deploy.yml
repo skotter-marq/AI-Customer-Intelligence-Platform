@@ -101,67 +101,8 @@ jobs:
           OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
           ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    environment: production
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.7.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
-        
-    - name: Deploy to production server
-      run: |
-        ssh -o StrictHostKeyChecking=no ${{ secrets.SSH_USERNAME }}@${{ secrets.SSH_HOST }} '
-          cd /opt/customer-intelligence-platform
-          docker-compose down
-          docker-compose pull
-          docker-compose up -d
-          
-          # Wait for health check
-          echo "Waiting for application to be ready..."
-          for i in {1..30}; do
-            if curl -f http://localhost:3000/api/health; then
-              echo "Application is healthy!"
-              break
-            fi
-            echo "Attempt $i failed, retrying in 10 seconds..."
-            sleep 10
-          done
-          
-          # Verify deployment
-          docker-compose ps
-          docker-compose logs --tail=50 app
-        '
-        
-    - name: Run post-deployment tests
-      run: |
-        # Add your post-deployment tests here
-        # For example, API smoke tests
-        echo "Running post-deployment tests..."
-        
-    - name: Notify deployment success
-      if: success()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: success
-        text: '✅ Production deployment successful!'
-        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
-        
-    - name: Notify deployment failure
-      if: failure()
-      uses: 8398a7/action-slack@v3
-      with:
-        status: failure
-        text: '❌ Production deployment failed!'
-        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+  # Docker image built and pushed successfully
+  # Vercel handles the actual deployment automatically
 
   security-scan:
     runs-on: ubuntu-latest
