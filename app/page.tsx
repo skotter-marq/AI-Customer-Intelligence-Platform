@@ -319,36 +319,6 @@ export default function DashboardPage() {
             <p className="calendly-body">Analyze customer data, track trends, and generate insights with AI-powered tools</p>
           </div>
 
-          {/* Approval Queue Alert */}
-          {recentChangelogEntries.filter(entry => entry.approval_status === 'pending').length > 0 && (
-            <div className="calendly-card" style={{ marginBottom: '32px', background: '#fff3cd', borderColor: '#ffeaa7' }}>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <AlertCircle className="w-5 h-5 text-orange-600" />
-                  <div>
-                    <h4 className="calendly-body font-medium text-orange-800">Changelog Entries Pending Approval</h4>
-                    <p className="calendly-body-sm text-orange-700">
-                      You have {recentChangelogEntries.filter(entry => entry.approval_status === 'pending').length} changelog entries waiting for review and publication
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Link 
-                    href="/approval"
-                    className="px-4 py-2 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700 transition-colors"
-                  >
-                    Review Now
-                  </Link>
-                  <Link 
-                    href="/product"
-                    className="px-4 py-2 bg-white border border-orange-300 text-orange-700 text-sm rounded-md hover:bg-orange-50 transition-colors"
-                  >
-                    Go to Product Page
-                  </Link>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* AI Assistant Section */}
           <div className="calendly-card" style={{ marginBottom: '32px' }}>
