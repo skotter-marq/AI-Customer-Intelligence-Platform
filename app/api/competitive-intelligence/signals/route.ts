@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '../../../../lib/supabase-client';
 
 export async function GET(request: NextRequest) {
   try {
+    // Handle missing Supabase client during build
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Database connection not available' },
+        { status: 503 }
+      );
+    }
+    
     const { searchParams } = new URL(request.url);
     const signalType = searchParams.get('signal_type');
     const competitorId = searchParams.get('competitor_id');
@@ -107,6 +110,14 @@ export async function GET(request: NextRequest) {
 // POST endpoint for manually creating signals (for testing or manual input)
 export async function POST(request: NextRequest) {
   try {
+    // Handle missing Supabase client during build
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Database connection not available' },
+        { status: 503 }
+      );
+    }
+    
     const body = await request.json();
     
     // Validate required fields

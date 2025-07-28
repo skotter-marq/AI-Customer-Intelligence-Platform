@@ -1,13 +1,20 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '../../../lib/supabase-client';
 
 export async function GET() {
   try {
+    // Handle missing Supabase client during build
+    if (!supabase) {
+      return NextResponse.json({
+        status: 'degraded',
+        timestamp: new Date().toISOString(),
+        services: {
+          database: { status: 'unavailable', message: 'Connection not configured' },
+          api: { status: 'ok' }
+        }
+      });
+    }
+    
     const health = {
       status: 'healthy',
       timestamp: new Date().toISOString(),
