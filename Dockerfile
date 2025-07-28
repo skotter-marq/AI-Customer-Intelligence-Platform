@@ -3,11 +3,11 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package files and npm configuration
+COPY package*.json .npmrc ./
 
-# Install dependencies
-RUN npm ci --only=production
+# Install dependencies with legacy peer deps support
+RUN npm ci --only=production --legacy-peer-deps
 
 # Copy source code
 COPY . .

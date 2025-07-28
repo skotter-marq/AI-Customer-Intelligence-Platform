@@ -112,7 +112,7 @@
     "@next/bundle-analyzer": "^15.0.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.1.5",
-    "@testing-library/react": "^15.0.0",
+    "@testing-library/react": "^16.0.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/jsonwebtoken": "^9.0.5",
@@ -147,8 +147,13 @@
   "overrides": {
     "@testing-library/react": {
       "react": "19.1.0",
-      "react-dom": "19.1.0"
+      "react-dom": "19.1.0",
+      "@types/react": "^19"
     }
+  },
+  "resolutions": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19"
   },
   "browserslist": {
     "production": [
