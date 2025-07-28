@@ -20,7 +20,15 @@ import {
   AlertCircle,
   Zap,
   CheckCircle,
-  Building
+  Building,
+  GitBranch,
+  Package,
+  ThumbsUp,
+  Star,
+  FileText,
+  Settings,
+  ExternalLink,
+  Edit
 } from 'lucide-react';
 
 interface QuickStat {
@@ -42,21 +50,34 @@ interface RecentInsight {
   source: string;
 }
 
+interface ChangelogEntry {
+  id: string;
+  version: string;
+  title: string;
+  category: 'Added' | 'Fixed' | 'Improved' | 'Security' | 'Deprecated';
+  description: string;
+  release_date: string;
+  approval_status: 'pending' | 'approved' | 'published';
+  view_count: number;
+  upvotes: number;
+  jira_story_key?: string;
+}
+
 export default function DashboardPage() {
   // AI Assistant state
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  // Mock quick stats
+  // Mock quick stats - general platform metrics
   const quickStats: QuickStat[] = [
     {
-      label: 'Active Agents',
-      value: '8',
-      change: '0%',
-      icon: Bot,
-      color: '#6366f1',
-      trend: 'stable'
+      label: 'Active Customers',
+      value: '847',
+      change: '+12% this month',
+      icon: Users,
+      color: '#4285f4',
+      trend: 'up'
     },
     {
       label: 'Weekly Meetings',
@@ -67,7 +88,7 @@ export default function DashboardPage() {
       trend: 'up'
     },
     {
-      label: 'Insights Generated',
+      label: 'AI Insights',
       value: '42',
       change: '+18%',
       icon: Lightbulb,
@@ -75,52 +96,104 @@ export default function DashboardPage() {
       trend: 'up'
     },
     {
-      label: 'Stories Completed',
-      value: '18',
-      change: '+25%',
-      icon: CheckCircle,
-      color: '#10b981',
+      label: 'Product Updates',
+      value: '12',
+      change: '+3 this week',
+      icon: Package,
+      color: '#6366f1',
       trend: 'up'
     }
   ];
 
-  // Mock recent insights
+  // Recent changelog entries
+  const recentChangelogEntries: ChangelogEntry[] = [
+    {
+      id: 'changelog-v2.4.2',
+      version: 'v2.4.2',
+      title: 'Real-time Analytics Dashboard',
+      category: 'Added',
+      description: 'Introducing our new analytics dashboard with live data updates, customizable widgets, and advanced filtering capabilities.',
+      release_date: '2024-01-20T00:00:00Z',
+      approval_status: 'published',
+      view_count: 1247,
+      upvotes: 89,
+      jira_story_key: 'PLAT-245'
+    },
+    {
+      id: 'changelog-pending-001',
+      version: 'v2.5.0',
+      title: 'Mobile App Offline Mode',
+      category: 'Added',
+      description: 'Users can now access critical features and view cached data when offline, syncing automatically when connection is restored.',
+      release_date: '2024-01-25T00:00:00Z',
+      approval_status: 'pending',
+      view_count: 0,
+      upvotes: 0,
+      jira_story_key: 'PLAT-189'
+    },
+    {
+      id: 'changelog-v2.4.1',
+      version: 'v2.4.1',
+      title: 'Enhanced Security & Multi-Factor Authentication',
+      category: 'Security',
+      description: 'We\'ve strengthened our security infrastructure with multi-factor authentication, improved session management, and advanced threat detection.',
+      release_date: '2024-01-15T00:00:00Z',
+      approval_status: 'published',
+      view_count: 2156,
+      upvotes: 156,
+      jira_story_key: 'PLAT-267'
+    },
+    {
+      id: 'changelog-pending-002',
+      version: 'v2.4.3',
+      title: 'API Performance Improvements',
+      category: 'Improved',
+      description: 'Optimized API endpoints for 40% faster response times and improved rate limiting for enterprise customers.',
+      release_date: '2024-01-22T00:00:00Z',
+      approval_status: 'pending',
+      view_count: 0,
+      upvotes: 0,
+      jira_story_key: 'PLAT-301'
+    }
+  ];
+
+  // Mock recent insights - general platform insights with some product alerts
   const recentInsights: RecentInsight[] = [
     {
       id: '1',
+      title: '4 product updates awaiting approval',
+      description: 'New changelog entries from JIRA are ready for review. Click to approve and publish to customers.',
+      type: 'product',
+      priority: 'high',
+      timestamp: '2 hours ago',
+      source: 'Product System'
+    },
+    {
+      id: '2',
       title: 'High-value deal stalled in negotiation',
       description: 'MarketingCorp deal ($45K) has been in negotiation stage for 12 days. Consider follow-up.',
       type: 'sales',
       priority: 'high',
-      timestamp: '2 hours ago',
+      timestamp: '4 hours ago',
       source: 'HubSpot Pipeline'
     },
     {
-      id: '2',
+      id: '3',
       title: 'Positive sentiment spike in customer meetings',
       description: 'Recent Grain recordings show 85% positive sentiment, up from 72% last week.',
       type: 'meetings',
       priority: 'medium',
-      timestamp: '4 hours ago',
+      timestamp: '6 hours ago',
       source: 'Grain Analysis'
     },
     {
-      id: '3',
+      id: '4',
       title: 'Competitor pricing change detected',
       description: 'Salesforce announced 15% price increase for enterprise plans effective Feb 1st.',
       type: 'competitive',
       priority: 'high',
-      timestamp: '6 hours ago',
-      source: 'Pricing Monitor Agent'
-    },
-    {
-      id: '4',
-      title: 'Support ticket volume decreasing',
-      description: 'Weekly support tickets down 15% with faster resolution times. Customer satisfaction improving.',
-      type: 'support',
-      priority: 'medium',
       timestamp: '8 hours ago',
-      source: 'Support Analytics'
+      source: 'Pricing Monitor Agent'
     },
     {
       id: '5',
@@ -173,7 +246,7 @@ export default function DashboardPage() {
     // Navigate to relevant source based on insight type
     switch (insight.type) {
       case 'sales':
-        window.location.href = '/customers';
+        window.location.href = '/meetings';
         break;
       case 'meetings':
         window.location.href = '/meetings';
@@ -208,9 +281,31 @@ export default function DashboardPage() {
       case 'meetings': return MessageSquare;
       case 'competitive': return Activity;
       case 'support': return AlertCircle;
-      case 'product': return Zap;
+      case 'product': return Package;
       case 'customer': return Users;
       default: return Lightbulb;
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Added': return '🆕';
+      case 'Improved': return '⚡';
+      case 'Fixed': return '🔧';
+      case 'Security': return '🔒';
+      case 'Deprecated': return '⚠️';
+      default: return '📝';
+    }
+  };
+
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'Added': return 'bg-green-100 text-green-800 border-green-300';
+      case 'Improved': return 'bg-blue-100 text-blue-800 border-blue-300';
+      case 'Fixed': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case 'Security': return 'bg-red-100 text-red-800 border-red-300';
+      case 'Deprecated': return 'bg-orange-100 text-orange-800 border-orange-300';
+      default: return 'bg-gray-100 text-gray-800 border-gray-300';
     }
   };
 
@@ -223,6 +318,37 @@ export default function DashboardPage() {
             <h1 className="calendly-h1">AI Customer Intelligence</h1>
             <p className="calendly-body">Analyze customer data, track trends, and generate insights with AI-powered tools</p>
           </div>
+
+          {/* Approval Queue Alert */}
+          {recentChangelogEntries.filter(entry => entry.approval_status === 'pending').length > 0 && (
+            <div className="calendly-card" style={{ marginBottom: '32px', background: '#fff3cd', borderColor: '#ffeaa7' }}>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <AlertCircle className="w-5 h-5 text-orange-600" />
+                  <div>
+                    <h4 className="calendly-body font-medium text-orange-800">Changelog Entries Pending Approval</h4>
+                    <p className="calendly-body-sm text-orange-700">
+                      You have {recentChangelogEntries.filter(entry => entry.approval_status === 'pending').length} changelog entries waiting for review and publication
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Link 
+                    href="/approval"
+                    className="px-4 py-2 bg-orange-600 text-white text-sm rounded-md hover:bg-orange-700 transition-colors"
+                  >
+                    Review Now
+                  </Link>
+                  <Link 
+                    href="/product"
+                    className="px-4 py-2 bg-white border border-orange-300 text-orange-700 text-sm rounded-md hover:bg-orange-50 transition-colors"
+                  >
+                    Go to Product Page
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* AI Assistant Section */}
           <div className="calendly-card" style={{ marginBottom: '32px' }}>
@@ -325,6 +451,7 @@ export default function DashboardPage() {
             })}
           </div>
 
+
           {/* Recent Insights */}
           <div className="calendly-card" style={{ marginBottom: '32px' }}>
             <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
@@ -332,10 +459,10 @@ export default function DashboardPage() {
                 <Lightbulb className="w-6 h-6" style={{ color: '#4285f4' }} />
                 <div>
                   <h2 className="calendly-h2" style={{ marginBottom: '4px' }}>Recent Insights</h2>
-                  <p className="calendly-body-sm">AI-generated insights from your data</p>
+                  <p className="calendly-body-sm">AI-generated insights from your customer data and product analytics</p>
                 </div>
               </div>
-              <Link href="/insights" className="calendly-btn-secondary flex items-center space-x-2">
+              <Link href="/product" className="calendly-btn-secondary flex items-center space-x-2">
                 <span>View All</span>
                 <ArrowRight className="w-4 h-4" />
               </Link>
@@ -405,16 +532,16 @@ export default function DashboardPage() {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <Link href="/customers" className="calendly-card cursor-pointer transition-all duration-200 hover:shadow-md">
+            <Link href="/meetings" className="calendly-card cursor-pointer transition-all duration-200 hover:shadow-md">
               <div className="flex items-center space-x-3" style={{ marginBottom: '16px' }}>
-                <Building className="w-6 h-6" style={{ color: '#4285f4' }} />
-                <h3 className="calendly-h3" style={{ marginBottom: 0 }}>Accounts</h3>
+                <MessageSquare className="w-6 h-6" style={{ color: '#4285f4' }} />
+                <h3 className="calendly-h3" style={{ marginBottom: 0 }}>Meetings</h3>
               </div>
               <p className="calendly-body-sm" style={{ marginBottom: '12px' }}>
-                Manage accounts and assign to workflows
+                Review meeting recordings and AI-generated insights
               </p>
               <div className="flex items-center space-x-2">
-                <span className="calendly-label-sm" style={{ color: '#4285f4' }}>Manage accounts</span>
+                <span className="calendly-label-sm" style={{ color: '#4285f4' }}>View meetings</span>
                 <ArrowRight className="w-4 h-4" style={{ color: '#4285f4' }} />
               </div>
             </Link>
@@ -433,30 +560,30 @@ export default function DashboardPage() {
               </div>
             </Link>
 
+            <Link href="/product" className="calendly-card cursor-pointer transition-all duration-200 hover:shadow-md">
+              <div className="flex items-center space-x-3" style={{ marginBottom: '16px' }}>
+                <Package className="w-6 h-6" style={{ color: '#f59e0b' }} />
+                <h3 className="calendly-h3" style={{ marginBottom: 0 }}>Product Updates</h3>
+              </div>
+              <p className="calendly-body-sm" style={{ marginBottom: '12px' }}>
+                Manage changelog entries and product roadmap
+              </p>
+              <div className="flex items-center space-x-2">
+                <span className="calendly-label-sm" style={{ color: '#f59e0b' }}>Manage updates</span>
+                <ArrowRight className="w-4 h-4" style={{ color: '#f59e0b' }} />
+              </div>
+            </Link>
+
             <Link href="/competitors" className="calendly-card cursor-pointer transition-all duration-200 hover:shadow-md">
               <div className="flex items-center space-x-3" style={{ marginBottom: '16px' }}>
-                <Target className="w-6 h-6" style={{ color: '#f59e0b' }} />
+                <Target className="w-6 h-6" style={{ color: '#6366f1' }} />
                 <h3 className="calendly-h3" style={{ marginBottom: 0 }}>Competitors</h3>
               </div>
               <p className="calendly-body-sm" style={{ marginBottom: '12px' }}>
                 Monitor competitive intelligence and analysis
               </p>
               <div className="flex items-center space-x-2">
-                <span className="calendly-label-sm" style={{ color: '#f59e0b' }}>View analysis</span>
-                <ArrowRight className="w-4 h-4" style={{ color: '#f59e0b' }} />
-              </div>
-            </Link>
-
-            <Link href="/agents" className="calendly-card cursor-pointer transition-all duration-200 hover:shadow-md">
-              <div className="flex items-center space-x-3" style={{ marginBottom: '16px' }}>
-                <Bot className="w-6 h-6" style={{ color: '#6366f1' }} />
-                <h3 className="calendly-h3" style={{ marginBottom: 0 }}>AI Agents</h3>
-              </div>
-              <p className="calendly-body-sm" style={{ marginBottom: '12px' }}>
-                Manage intelligent monitoring agents
-              </p>
-              <div className="flex items-center space-x-2">
-                <span className="calendly-label-sm" style={{ color: '#6366f1' }}>Manage agents</span>
+                <span className="calendly-label-sm" style={{ color: '#6366f1' }}>View analysis</span>
                 <ArrowRight className="w-4 h-4" style={{ color: '#6366f1' }} />
               </div>
             </Link>

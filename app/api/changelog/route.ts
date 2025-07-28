@@ -15,9 +15,60 @@ export async function GET(request: Request) {
     const category = searchParams.get('category');
     const audience = searchParams.get('audience');
     const timeRange = searchParams.get('timeRange');
+    const status = searchParams.get('status'); // 'pending', 'approved', 'published', 'all'
 
-    // Mock data for now - in production, this would come from Supabase
-    const mockEntries = [
+    // Fetch real data from Supabase
+    let query = supabase
+      .from('generated_content')
+      .select('*')
+      .eq('content_type', 'changelog_entry')
+      .order('created_at', { ascending: false });
+
+    // Apply status filters
+    if (status && status !== 'all') {
+      if (status === 'pending') {
+        query = query.eq('approval_status', 'pending');
+      } else if (status === 'approved') {
+        query = query.eq('approval_status', 'approved');
+      } else if (status === 'published') {
+        query = query.eq('approval_status', 'approved').eq('is_public', true);
+      }
+    }
+
+    // Apply category filter
+    if (category && category !== 'all') {
+      query = query.eq('update_category', category.toLowerCase());
+    }
+
+    // Apply audience filter
+    if (audience && audience !== 'all') {
+      query = query.eq('target_audience', audience);
+    }
+
+    // Apply time range filter
+    if (timeRange && timeRange !== 'all') {
+      const now = new Date();
+      const timeRangeInDays: { [key: string]: number } = {
+        '7d': 7,
+        '30d': 30,
+        '90d': 90
+      };
+      
+      const days = timeRangeInDays[timeRange];
+      if (days) {
+        const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+        query = query.gte('created_at', cutoffDate.toISOString());
+      }
+    }
+
+    const { data: entries, error, count } = await query
+      .range(offset, offset + limit - 1)
+      .limit(limit);
+
+    if (error) {
+      console.error('Database error:', error);
+      // Fallback to mock data if database fails
+      const mockEntries = [
       {
         id: 'entry_001',
         content_title: 'New Dashboard Analytics Feature',
@@ -110,57 +161,74 @@ export async function GET(request: Request) {
       }
     ];
 
-    // Apply filters to mock data
+    // Apply filters to mock data (fallback only)
     let filteredEntries = [...mockEntries];
-
-    // Apply filters
     if (contentType && contentType !== 'all') {
       filteredEntries = filteredEntries.filter(entry => entry.content_type === contentType);
     }
-
-    if (audience && audience !== 'all') {
-      filteredEntries = filteredEntries.filter(entry => entry.target_audience === audience);
-    }
-
-    if (category && category !== 'all') {
-      filteredEntries = filteredEntries.filter(entry => entry.update_category === category);
-    }
-
-    // Apply time range filter
-    if (timeRange && timeRange !== 'all') {
-      const now = new Date();
-      const timeRangeInDays: { [key: string]: number } = {
-        '7d': 7,
-        '30d': 30,
-        '90d': 90
-      };
-      
-      const days = timeRangeInDays[timeRange];
-      if (days) {
-        const cutoffDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
-        filteredEntries = filteredEntries.filter(entry => new Date(entry.published_at) >= cutoffDate);
-      }
-    }
-
-    // Sort by published date (newest first)
-    filteredEntries.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
-
-    // Apply pagination
-    const totalCount = filteredEntries.length;
-    const paginatedEntries = filteredEntries.slice(offset, offset + limit);
+    // Apply pagination to mock data
+    const totalMockCount = filteredEntries.length;
+    const paginatedMockEntries = filteredEntries.slice(offset, offset + limit);
 
     return NextResponse.json({
       success: true,
-      entries: paginatedEntries,
+      entries: paginatedMockEntries,
       pagination: {
         limit,
         offset,
-        total: totalCount,
-        hasMore: (offset + limit) < totalCount
+        total: totalMockCount,
+        hasMore: (offset + limit) < totalMockCount
       },
       metadata: {
-        totalPublished: totalCount,
-        lastUpdated: new Date().toISOString()
+        totalPublished: totalMockCount,
+        lastUpdated: new Date().toISOString(),
+        usingFallbackData: true
+      }
+    });
+    }
+
+    // Transform database results to match frontend interface
+    const transformedEntries = (entries || []).map((entry: any) => ({
+      id: entry.id,
+      content_title: entry.content_title,
+      generated_content: entry.generated_content,
+      content_type: 'changelog_entry',
+      target_audience: entry.target_audience || 'customers',
+      status: entry.status,
+      approval_status: entry.approval_status,
+      quality_score: entry.quality_score || 0.85,
+      published_at: entry.release_date || entry.created_at,
+      tldr_summary: entry.tldr_summary || entry.content_title,
+      tldr_bullet_points: entry.tldr_bullet_points || [],
+      update_category: entry.update_category,
+      layout_template: entry.layout_template || 'standard',
+      importance_score: entry.importance_score || 0.7,
+      breaking_changes: entry.breaking_changes || false,
+      migration_notes: entry.migration_notes,
+      affected_users: entry.affected_users,
+      tags: entry.tags || [],
+      is_public: entry.is_public || false,
+      public_changelog_visible: entry.public_changelog_visible || false,
+      version: entry.version,
+      release_date: entry.release_date,
+      created_at: entry.created_at,
+      updated_at: entry.updated_at,
+      metadata: entry.metadata || {}
+    }));
+
+    return NextResponse.json({
+      success: true,
+      entries: transformedEntries,
+      pagination: {
+        limit,
+        offset,
+        total: count || transformedEntries.length,
+        hasMore: (offset + limit) < (count || transformedEntries.length)
+      },
+      metadata: {
+        totalPublished: count || transformedEntries.length,
+        lastUpdated: new Date().toISOString(),
+        usingFallbackData: false
       }
     });
 
@@ -197,6 +265,110 @@ export async function POST(request: Request) {
 
   } catch (error) {
     console.error('Changelog POST API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const entryId = searchParams.get('id');
+    
+    if (!entryId) {
+      return NextResponse.json(
+        { error: 'Entry ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const updates = await request.json();
+    
+    // Transform frontend data back to database format
+    const dbUpdates: any = {
+      updated_at: new Date().toISOString()
+    };
+
+    if (updates.customer_facing_title || updates.content_title) {
+      dbUpdates.content_title = updates.customer_facing_title || updates.content_title;
+    }
+    
+    if (updates.customer_facing_description || updates.generated_content) {
+      dbUpdates.generated_content = updates.customer_facing_description || updates.generated_content;
+    }
+    
+    if (updates.category) {
+      dbUpdates.update_category = updates.category.toLowerCase();
+    }
+    
+    if (updates.highlights || updates.tldr_bullet_points) {
+      dbUpdates.tldr_bullet_points = updates.highlights || updates.tldr_bullet_points;
+    }
+    
+    if (updates.breaking_changes !== undefined) {
+      dbUpdates.breaking_changes = updates.breaking_changes;
+    }
+    
+    if (updates.migration_notes !== undefined) {
+      dbUpdates.migration_notes = updates.migration_notes;
+    }
+    
+    if (updates.layout_template) {
+      dbUpdates.layout_template = updates.layout_template;
+    }
+    
+    if (updates.approval_status) {
+      dbUpdates.approval_status = updates.approval_status;
+      
+      // If approving, set additional fields
+      if (updates.approval_status === 'approved') {
+        dbUpdates.approved_at = new Date().toISOString();
+        
+        if (updates.public_visibility !== undefined) {
+          dbUpdates.is_public = updates.public_visibility;
+          dbUpdates.public_changelog_visible = updates.public_visibility;
+        }
+        
+        if (updates.version) {
+          dbUpdates.version = updates.version;
+        }
+        
+        if (updates.release_date) {
+          dbUpdates.release_date = updates.release_date;
+        }
+      }
+    }
+    
+    if (updates.public_visibility !== undefined) {
+      dbUpdates.is_public = updates.public_visibility;
+      dbUpdates.public_changelog_visible = updates.public_visibility;
+    }
+
+    const { data, error } = await supabase
+      .from('generated_content')
+      .update(dbUpdates)
+      .eq('id', entryId)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Database update error:', error);
+      return NextResponse.json(
+        { error: 'Failed to update entry' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      entry: data,
+      message: 'Entry updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Changelog PUT error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

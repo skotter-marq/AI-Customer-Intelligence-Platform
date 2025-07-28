@@ -14,11 +14,8 @@ import {
   Menu,
   Users,
   MessageSquare,
-  HeadphonesIcon,
   Package,
-  TrendingUp,
   Bot,
-  Workflow
 } from 'lucide-react';
 
 interface NavigationItem {
@@ -48,12 +45,6 @@ export default function Navigation() {
       description: 'AI Assistant & overview' 
     },
     { 
-      href: '/customers', 
-      label: 'Customers', 
-      icon: Users, 
-      description: 'HubSpot pipeline & contacts' 
-    },
-    { 
       href: '/meetings', 
       label: 'Meetings', 
       icon: MessageSquare, 
@@ -78,22 +69,10 @@ export default function Navigation() {
       description: 'Automated & manual workflow execution' 
     },
     { 
-      href: '/support', 
-      label: 'Support', 
-      icon: HeadphonesIcon, 
-      description: 'Customer support tickets' 
-    },
-    { 
       href: '/product', 
       label: 'Product', 
       icon: Package, 
       description: 'Updates & changelog' 
-    },
-    { 
-      href: '/insights', 
-      label: 'Insights', 
-      icon: TrendingUp, 
-      description: 'Analytics & reports' 
     },
     { 
       href: '/content-pipeline', 

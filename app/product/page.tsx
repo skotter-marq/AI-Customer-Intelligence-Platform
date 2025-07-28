@@ -56,27 +56,34 @@ interface ProductUpdate {
   related_tickets: string[];
 }
 
-interface ChangelogEntry {
+interface EnhancedChangelogEntry {
   id: string;
-  title: string;
-  description: string;
   version: string;
-  published_at: string;
-  type: 'feature' | 'improvement' | 'fix' | 'security';
+  release_date: string;
+  category: 'Added' | 'Fixed' | 'Improved' | 'Deprecated' | 'Security';
+  customer_facing_title: string;
+  customer_facing_description: string;
   highlights: string[];
-  breaking_changes: string[];
+  breaking_changes: boolean;
   migration_notes?: string;
+  affected_users?: number;
   view_count: number;
   upvotes: number;
   feedback_count: number;
+  jira_story_key?: string;
+  approval_status: 'pending' | 'approved' | 'published';
+  public_visibility: boolean;
+  layout_template?: 'standard' | 'feature_spotlight' | 'technical_update' | 'security_notice' | 'deprecation_warning' | 'minimal';
 }
 
 export default function ProductPage() {
-  const [activeTab, setActiveTab] = useState<'updates' | 'changelog' | 'roadmap'>('updates');
+  const [activeTab, setActiveTab] = useState<'changelog' | 'approval'>('changelog');
   const [productUpdates, setProductUpdates] = useState<ProductUpdate[]>([]);
-  const [changelogEntries, setChangelogEntries] = useState<ChangelogEntry[]>([]);
+  const [changelogEntries, setChangelogEntries] = useState<EnhancedChangelogEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<Partial<EnhancedChangelogEntry>>({});
   
   // Updates filters
   const [typeFilter, setTypeFilter] = useState<'all' | string>('all');
@@ -172,77 +179,177 @@ export default function ProductPage() {
     }
   ];
 
-  // Mock changelog entries
-  const mockChangelogEntries: ChangelogEntry[] = [
+  // Enhanced changelog entries following TextMagic patterns
+  const mockChangelogEntries: EnhancedChangelogEntry[] = [
     {
-      id: 'changelog-001',
-      title: 'v2.4.1 - Enhanced Analytics & Performance',
-      description: 'Major improvements to dashboard analytics with real-time data updates and performance optimizations.',
+      id: 'changelog-v2.4.2',
+      version: 'v2.4.2',
+      release_date: '2024-01-20T00:00:00Z',
+      category: 'Added',
+      customer_facing_title: 'Real-time Analytics Dashboard',
+      customer_facing_description: 'Introducing our new analytics dashboard with live data updates, customizable widgets, and advanced filtering capabilities.',
+      highlights: [
+        'Live data streaming for real-time insights',
+        'Drag-and-drop dashboard customization',
+        'Advanced filtering and date range selection',
+        'Export analytics to PDF and CSV formats',
+        '40% faster data loading performance'
+      ],
+      breaking_changes: false,
+      affected_users: 2500,
+      view_count: 1247,
+      upvotes: 89,
+      feedback_count: 23,
+      jira_story_key: 'PLAT-245',
+      approval_status: 'published',
+      public_visibility: true
+    },
+    {
+      id: 'changelog-v2.4.1',
       version: 'v2.4.1',
-      published_at: '2024-01-15T14:00:00Z',
-      type: 'feature',
+      release_date: '2024-01-15T00:00:00Z',
+      category: 'Security',
+      customer_facing_title: 'Enhanced Security & Multi-Factor Authentication',
+      customer_facing_description: 'We\'ve strengthened our security infrastructure with multi-factor authentication, improved session management, and advanced threat detection.',
       highlights: [
-        'Real-time dashboard analytics',
-        'Customizable widget layouts',
-        '40% faster page load times',
-        'New data visualization options'
+        'Multi-factor authentication now available for all users',
+        'Enhanced session security with automatic timeout',
+        'Real-time threat detection and alerts',
+        'Improved password strength requirements',
+        'Security audit logs for enterprise customers'
       ],
-      breaking_changes: [],
-      view_count: 342,
-      upvotes: 28,
-      feedback_count: 12
+      breaking_changes: true,
+      migration_notes: 'All users will be prompted to set up MFA on their next login. API users need to update authentication headers.',
+      affected_users: 5000,
+      view_count: 2156,
+      upvotes: 156,
+      feedback_count: 45,
+      jira_story_key: 'PLAT-267',
+      approval_status: 'published',
+      public_visibility: true
     },
     {
-      id: 'changelog-002',
-      title: 'v2.4.0 - Export Improvements & Bug Fixes',
-      description: 'Significant improvements to data export functionality with performance enhancements and bug fixes.',
+      id: 'changelog-v2.4.0',
       version: 'v2.4.0',
-      published_at: '2024-01-13T10:00:00Z',
-      type: 'improvement',
+      release_date: '2024-01-10T00:00:00Z',
+      category: 'Fixed',
+      customer_facing_title: 'Export Performance Improvements',
+      customer_facing_description: 'Resolved critical performance issues with data exports and significantly improved processing speeds for large datasets.',
       highlights: [
-        'Export speed improved by 65%',
-        'Support for larger datasets',
-        'Fixed memory leak issues',
-        'Better error handling'
+        'Export speed increased by 65% for large datasets',
+        'Fixed memory leak causing export timeouts',
+        'Better error handling and progress indicators',
+        'Support for exporting up to 1M records',
+        'Automatic retry mechanism for failed exports'
       ],
-      breaking_changes: [],
-      migration_notes: 'No migration required for this update.',
-      view_count: 189,
-      upvotes: 15,
-      feedback_count: 8
+      breaking_changes: false,
+      affected_users: 1200,
+      view_count: 892,
+      upvotes: 67,
+      feedback_count: 18,
+      jira_story_key: 'PLAT-298',
+      approval_status: 'published',
+      public_visibility: true
     },
     {
-      id: 'changelog-003',
-      title: 'v2.3.5 - Security Updates',
-      description: 'Important security updates and vulnerability patches.',
-      version: 'v2.3.5',
-      published_at: '2024-01-08T09:30:00Z',
-      type: 'security',
+      id: 'changelog-pending-001',
+      version: 'v2.5.0',
+      release_date: '2024-01-25T00:00:00Z',
+      category: 'Added',
+      customer_facing_title: 'Mobile App Offline Mode',
+      customer_facing_description: 'Users can now access critical features and view cached data when offline, syncing automatically when connection is restored.',
       highlights: [
-        'Enhanced authentication security',
-        'API vulnerability patches',
-        'Updated dependencies',
-        'Improved access controls'
+        'Full offline functionality for core features',
+        'Automatic background sync when online',
+        'Cached data storage up to 30 days',
+        'Offline data visualization and reports',
+        'Smart conflict resolution for data sync'
       ],
-      breaking_changes: [
-        'API authentication now requires additional headers'
-      ],
-      migration_notes: 'Update your API calls to include the new X-API-Version header.',
-      view_count: 267,
-      upvotes: 22,
-      feedback_count: 5
+      breaking_changes: false,
+      affected_users: 800,
+      view_count: 0,
+      upvotes: 0,
+      feedback_count: 0,
+      jira_story_key: 'PLAT-189',
+      approval_status: 'pending',
+      public_visibility: false
     }
   ];
 
   useEffect(() => {
-    // Simulate API call
-    setLoading(true);
-    setTimeout(() => {
-      setProductUpdates(mockProductUpdates);
-      setChangelogEntries(mockChangelogEntries);
-      setLoading(false);
-    }, 1000);
+    fetchChangelogData();
   }, []);
+
+  const fetchChangelogData = async () => {
+    setLoading(true);
+    try {
+      // Fetch all changelog entries
+      const response = await fetch('/api/changelog?status=all&limit=100');
+      const data = await response.json();
+      
+      if (data.success) {
+        // Transform API data to match component interface
+        const transformedEntries = data.entries.map((entry: any) => ({
+          id: entry.id,
+          version: entry.version || 'TBD',
+          release_date: entry.release_date || entry.created_at,
+          category: capitalizeCategory(entry.update_category),
+          customer_facing_title: entry.content_title,
+          customer_facing_description: entry.generated_content,
+          highlights: entry.tldr_bullet_points || [],
+          breaking_changes: entry.breaking_changes || false,
+          migration_notes: entry.migration_notes,
+          affected_users: entry.affected_users,
+          view_count: entry.view_count || 0,
+          upvotes: entry.upvotes || 0,
+          feedback_count: entry.feedback_count || 0,
+          jira_story_key: entry.metadata?.jira_story_key,
+          approval_status: entry.approval_status,
+          public_visibility: entry.is_public && entry.public_changelog_visible,
+          layout_template: entry.layout_template || 'standard'
+        }));
+        
+        setChangelogEntries(transformedEntries);
+      } else {
+        console.error('Failed to fetch changelog data:', data.error);
+        // Fallback to mock data
+        setChangelogEntries(mockChangelogEntries);
+      }
+    } catch (error) {
+      console.error('Error fetching changelog data:', error);
+      // Fallback to mock data
+      setChangelogEntries(mockChangelogEntries);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const capitalizeCategory = (category: string): 'Added' | 'Fixed' | 'Improved' | 'Deprecated' | 'Security' => {
+    const capitalized = category?.charAt(0).toUpperCase() + category?.slice(1).toLowerCase();
+    
+    switch (capitalized?.toLowerCase()) {
+      case 'added':
+      case 'new':
+      case 'feature':
+        return 'Added';
+      case 'fixed':
+      case 'bug':
+      case 'bugfix':
+        return 'Fixed';
+      case 'improved':
+      case 'enhancement':
+      case 'update':
+        return 'Improved';
+      case 'deprecated':
+      case 'removal':
+        return 'Deprecated';
+      case 'security':
+      case 'auth':
+        return 'Security';
+      default:
+        return 'Improved';
+    }
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -287,13 +394,25 @@ export default function ProductPage() {
     }
   };
 
-  const getChangelogTypeColor = (type: string) => {
-    switch (type) {
-      case 'feature': return 'calendly-badge-success';
-      case 'improvement': return 'calendly-badge-info';
-      case 'fix': return 'calendly-badge-warning';
-      case 'security': return 'calendly-badge-danger';
+  const getCategoryColor = (category: string) => {
+    switch (category) {
+      case 'Added': return 'calendly-badge-success';
+      case 'Improved': return 'calendly-badge-info';
+      case 'Fixed': return 'calendly-badge-warning';
+      case 'Security': return 'calendly-badge-danger';
+      case 'Deprecated': return 'bg-orange-100 text-orange-800';
       default: return 'calendly-badge-info';
+    }
+  };
+
+  const getCategoryIcon = (category: string) => {
+    switch (category) {
+      case 'Added': return '🆕';
+      case 'Improved': return '⚡';
+      case 'Fixed': return '🔧';
+      case 'Security': return '🔒';
+      case 'Deprecated': return '⚠️';
+      default: return '📝';
     }
   };
 
@@ -311,15 +430,18 @@ export default function ProductPage() {
   });
 
   const filteredChangelog = changelogEntries.filter(entry => {
+    // Only show approved and published entries in Changelog Management tab
+    const isApproved = entry.approval_status === 'approved' || entry.approval_status === 'published';
+    
     const matchesSearch = !searchQuery || 
-      entry.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.customer_facing_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      entry.customer_facing_description.toLowerCase().includes(searchQuery.toLowerCase()) ||
       entry.version.toLowerCase().includes(searchQuery.toLowerCase());
     
     const matchesVersion = versionFilter === 'all' || entry.version === versionFilter;
-    const matchesType = changelogTypeFilter === 'all' || entry.type === changelogTypeFilter;
+    const matchesType = changelogTypeFilter === 'all' || entry.category === changelogTypeFilter;
     
-    return matchesSearch && matchesVersion && matchesType;
+    return isApproved && matchesSearch && matchesVersion && matchesType;
   });
 
   const handleUpdateClick = (updateId: string) => {
@@ -328,6 +450,173 @@ export default function ProductPage() {
 
   const handleChangelogClick = (entryId: string) => {
     console.log('View changelog:', entryId);
+  };
+
+  const handleEditEntry = (entry: EnhancedChangelogEntry) => {
+    setEditingEntryId(entry.id);
+    setEditForm({
+      customer_facing_title: entry.customer_facing_title,
+      customer_facing_description: entry.customer_facing_description,
+      highlights: [...entry.highlights],
+      category: entry.category,
+      breaking_changes: entry.breaking_changes,
+      migration_notes: entry.migration_notes,
+      layout_template: entry.layout_template || 'standard'
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingEntryId) return;
+    
+    try {
+      const response = await fetch(`/api/changelog?id=${editingEntryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editForm),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the entry in the state
+        setChangelogEntries(prev => prev.map(entry => 
+          entry.id === editingEntryId 
+            ? { ...entry, ...editForm }
+            : entry
+        ));
+        
+        // Send Slack notification if approval status changed
+        if (editForm.approval_status === 'approved') {
+          await sendSlackNotification({
+            type: 'approval',
+            message: `✅ Changelog entry approved: ${editForm.customer_facing_title || 'Untitled Entry'}`,
+            metadata: {
+              entryId: editingEntryId,
+              category: editForm.category,
+              jira_key: editForm.jira_story_key
+            }
+          });
+        }
+        
+        console.log('Successfully saved changes for entry:', editingEntryId);
+      } else {
+        console.error('Failed to save changes:', data.error);
+        alert('Failed to save changes. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      alert('Failed to save changes. Please try again.');
+    }
+    
+    // Reset editing state
+    setEditingEntryId(null);
+    setEditForm({});
+  };
+
+  const sendSlackNotification = async (notificationData: any) => {
+    try {
+      const response = await fetch('/api/slack', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'send_notification',
+          message: notificationData.message,
+          type: notificationData.type,
+          metadata: notificationData.metadata
+        }),
+      });
+      
+      if (response.ok) {
+        console.log('Slack notification sent successfully');
+      } else {
+        console.warn('Failed to send Slack notification');
+      }
+    } catch (error) {
+      console.warn('Error sending Slack notification:', error);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingEntryId(null);
+    setEditForm({});
+  };
+
+  const updateEditForm = (field: string, value: any) => {
+    setEditForm(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleToggleVisibility = async (entryId: string) => {
+    const entry = changelogEntries.find(e => e.id === entryId);
+    if (!entry) return;
+    
+    try {
+      const response = await fetch(`/api/changelog?id=${entryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          public_visibility: !entry.public_visibility
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setChangelogEntries(prev => prev.map(entry => 
+          entry.id === entryId 
+            ? { ...entry, public_visibility: !entry.public_visibility }
+            : entry
+        ));
+        console.log('Successfully toggled visibility for entry:', entryId);
+      } else {
+        console.error('Failed to toggle visibility:', data.error);
+        alert('Failed to update visibility. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error toggling visibility:', error);
+      alert('Failed to update visibility. Please try again.');
+    }
+  };
+
+  const handleToggleApprovalVisibility = async (entryId: string) => {
+    const entry = changelogEntries.find(e => e.id === entryId);
+    if (!entry) return;
+    
+    const newHiddenState = !(entry as any).hidden_from_approval;
+    
+    try {
+      const response = await fetch(`/api/changelog?id=${entryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          approval_status: newHiddenState ? 'hidden' : 'pending'
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setChangelogEntries(prev => prev.map(entry => 
+          entry.id === entryId 
+            ? { ...entry, hidden_from_approval: newHiddenState }
+            : entry
+        ));
+        console.log('Successfully toggled approval queue visibility for entry:', entryId);
+      } else {
+        console.error('Failed to toggle approval visibility:', data.error);
+        alert('Failed to update approval visibility. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error toggling approval visibility:', error);
+      alert('Failed to update approval visibility. Please try again.');
+    }
   };
 
   if (loading) {
@@ -354,94 +643,107 @@ export default function ProductPage() {
           {/* Header */}
           <div className="flex items-center justify-between" style={{ marginBottom: '32px' }}>
             <div>
-              <h1 className="calendly-h1">Product</h1>
-              <p className="calendly-body">Product updates, changelog, and development roadmap</p>
+              <h1 className="calendly-h1">Product Changelog</h1>
+              <p className="calendly-body">Manage published changelog entries, review pending updates, and track customer engagement</p>
             </div>
             <div className="flex items-center space-x-3">
+              <Link 
+                href="/public-changelog"
+                className="calendly-btn-secondary flex items-center space-x-2"
+              >
+                <ExternalLink className="w-4 h-4" />
+                <span>View Public</span>
+              </Link>
               <button className="calendly-btn-secondary flex items-center space-x-2">
                 <Download className="w-4 h-4" />
                 <span>Export</span>
               </button>
-              {activeTab === 'updates' && (
-                <button className="calendly-btn-primary flex items-center space-x-2">
-                  <Plus className="w-4 h-4" />
-                  <span>New Update</span>
-                </button>
-              )}
+              <button className="calendly-btn-primary flex items-center space-x-2">
+                <Plus className="w-4 h-4" />
+                <span>New Entry</span>
+              </button>
             </div>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4" style={{ marginBottom: '24px' }}>
+          {/* Changelog-Focused Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4" style={{ marginBottom: '24px' }}>
             <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Total Updates</p>
-                  <p className="calendly-h2" style={{ marginBottom: 0 }}>{productUpdates.length}</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Published Entries</p>
+                  <p className="calendly-h2" style={{ marginBottom: 0 }}>
+                    {changelogEntries.filter(e => e.approval_status === 'approved' || e.approval_status === 'published').length}
+                  </p>
                 </div>
-                <Package className="w-8 h-8" style={{ color: '#4285f4' }} />
+                <GitBranch className="w-8 h-8" style={{ color: '#10b981' }} />
               </div>
             </div>
             
             <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="calendly-label" style={{ marginBottom: '4px' }}>In Development</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Pending Review</p>
                   <p className="calendly-h2" style={{ marginBottom: 0 }}>
-                    {productUpdates.filter(u => u.status === 'development').length}
+                    {changelogEntries.filter(e => e.approval_status === 'pending').length}
                   </p>
                 </div>
-                <Settings className="w-8 h-8" style={{ color: '#f59e0b' }} />
+                <Clock className="w-8 h-8" style={{ color: '#f59e0b' }} />
               </div>
             </div>
             
             <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Published</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Total Views</p>
                   <p className="calendly-h2" style={{ marginBottom: 0 }}>
-                    {productUpdates.filter(u => u.status === 'published').length}
+                    {changelogEntries
+                      .filter(e => e.approval_status === 'approved' || e.approval_status === 'published')
+                      .reduce((sum, e) => sum + e.view_count, 0).toLocaleString()}
                   </p>
                 </div>
-                <CheckCircle className="w-8 h-8" style={{ color: '#10b981' }} />
+                <Eye className="w-8 h-8" style={{ color: '#4285f4' }} />
               </div>
             </div>
             
             <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Affected Users</p>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Total Upvotes</p>
                   <p className="calendly-h2" style={{ marginBottom: 0 }}>
-                    {productUpdates.reduce((sum, u) => sum + u.affected_customers, 0).toLocaleString()}
+                    {changelogEntries
+                      .filter(e => e.approval_status === 'approved' || e.approval_status === 'published')
+                      .reduce((sum, e) => sum + e.upvotes, 0)}
                   </p>
                 </div>
-                <Users className="w-8 h-8" style={{ color: '#6366f1' }} />
+                <Star className="w-8 h-8" style={{ color: '#6366f1' }} />
+              </div>
+            </div>
+            
+            <div className="calendly-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="calendly-label" style={{ marginBottom: '4px' }}>Avg. Engagement</p>
+                  <p className="calendly-h2" style={{ marginBottom: 0 }}>
+                    {(() => {
+                      const approvedEntries = changelogEntries.filter(e => e.approval_status === 'approved' || e.approval_status === 'published');
+                      return approvedEntries.length > 0 
+                        ? (approvedEntries.reduce((sum, e) => sum + e.upvotes, 0) / approvedEntries.length).toFixed(1)
+                        : '0';
+                    })()}
+                  </p>
+                </div>
+                <Activity className="w-8 h-8" style={{ color: '#8b5cf6' }} />
               </div>
             </div>
           </div>
 
-          {/* Tab Navigation */}
+
+          {/* Tab Navigation - Changelog First */}
           <div className="calendly-card" style={{ marginBottom: '24px', padding: 0 }}>
             <div className="flex border-b" style={{ borderColor: '#e2e8f0' }}>
               <button
-                onClick={() => setActiveTab('updates')}
-                className="py-4 px-6 border-b-2 calendly-body-sm font-medium transition-colors"
-                style={activeTab === 'updates' ? {
-                  borderBottomColor: '#4285f4',
-                  color: '#4285f4'
-                } : {
-                  borderBottomColor: 'transparent',
-                  color: '#718096'
-                }}
-              >
-                <div className="flex items-center space-x-2">
-                  <Settings className="w-4 h-4" />
-                  <span>Product Updates</span>
-                </div>
-              </button>
-              <button
                 onClick={() => setActiveTab('changelog')}
-                className="py-4 px-6 border-b-2 calendly-body-sm font-medium transition-colors"
+                className="py-4 px-6 border-b-2 calendly-body-sm font-medium transition-colors relative"
                 style={activeTab === 'changelog' ? {
                   borderBottomColor: '#4285f4',
                   color: '#4285f4'
@@ -452,13 +754,13 @@ export default function ProductPage() {
               >
                 <div className="flex items-center space-x-2">
                   <GitBranch className="w-4 h-4" />
-                  <span>Changelog</span>
+                  <span>Published Changelog</span>
                 </div>
               </button>
               <button
-                onClick={() => setActiveTab('roadmap')}
-                className="py-4 px-6 border-b-2 calendly-body-sm font-medium transition-colors"
-                style={activeTab === 'roadmap' ? {
+                onClick={() => setActiveTab('approval')}
+                className="py-4 px-6 border-b-2 calendly-body-sm font-medium transition-colors relative"
+                style={activeTab === 'approval' ? {
                   borderBottomColor: '#4285f4',
                   color: '#4285f4'
                 } : {
@@ -467,8 +769,13 @@ export default function ProductPage() {
                 }}
               >
                 <div className="flex items-center space-x-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>Roadmap</span>
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Approval Dashboard</span>
+                  {changelogEntries.filter(entry => entry.approval_status === 'pending').length > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                      {changelogEntries.filter(entry => entry.approval_status === 'pending').length}
+                    </span>
+                  )}
                 </div>
               </button>
             </div>
@@ -530,7 +837,6 @@ export default function ProductPage() {
                     >
                       <option value="all">All Status</option>
                       <option value="planning">Planning</option>
-                      <option value="development">Development</option>
                       <option value="testing">Testing</option>
                       <option value="deployed">Deployed</option>
                       <option value="published">Published</option>
@@ -557,11 +863,12 @@ export default function ProductPage() {
                       className="px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200"
                       style={{ border: '1px solid #e2e8f0', background: 'white' }}
                     >
-                      <option value="all">All Types</option>
-                      <option value="feature">Features</option>
-                      <option value="improvement">Improvements</option>
-                      <option value="fix">Bug Fixes</option>
-                      <option value="security">Security</option>
+                      <option value="all">All Categories</option>
+                      <option value="Added">🆕 Added</option>
+                      <option value="Improved">⚡ Improved</option>
+                      <option value="Fixed">🔧 Fixed</option>
+                      <option value="Security">🔒 Security</option>
+                      <option value="Deprecated">⚠️ Deprecated</option>
                     </select>
                   </>
                 )}
@@ -588,188 +895,13 @@ export default function ProductPage() {
           </div>
 
           {/* Content Display */}
-          {activeTab === 'updates' ? (
-            viewMode === 'cards' ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {filteredUpdates.map((update) => {
-                  const TypeIcon = getTypeIcon(update.type);
-                  return (
-                    <div
-                      key={update.id}
-                      onClick={() => handleUpdateClick(update.id)}
-                      className="calendly-card cursor-pointer transition-all duration-200"
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)';
-                      }}
-                    >
-                      {/* Update Header */}
-                      <div className="flex items-start justify-between" style={{ marginBottom: '12px' }}>
-                        <div className="flex items-center space-x-3">
-                          <TypeIcon className="w-6 h-6" style={{ color: '#4285f4' }} />
-                          <div className="flex-1">
-                            <h3 className="calendly-h3" style={{ marginBottom: '2px' }}>{update.title}</h3>
-                            <p className="calendly-label-sm">{update.jira_story_key} • {update.release_version}</p>
-                          </div>
-                        </div>
-                        <div className="flex flex-col space-y-1 ml-4">
-                          <span className={`calendly-badge ${getStatusColor(update.status)}`}>
-                            {update.status.replace('_', ' ')}
-                          </span>
-                          <span className={`calendly-badge ${getPriorityColor(update.priority)}`}>
-                            {update.priority}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Description */}
-                      <p className="calendly-body-sm line-clamp-2" style={{ marginBottom: '16px' }}>
-                        {update.description}
-                      </p>
-
-                      {/* Metrics */}
-                      <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '16px' }}>
-                        <div>
-                          <p className="calendly-label-sm">Affected Customers</p>
-                          <p className="calendly-body font-medium">{update.affected_customers.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="calendly-label-sm">Team</p>
-                          <p className="calendly-body font-medium">{update.assigned_team}</p>
-                        </div>
-                      </div>
-
-                      {/* Tags */}
-                      <div style={{ marginBottom: '16px' }}>
-                        <div className="flex flex-wrap gap-2">
-                          {update.tags.slice(0, 3).map((tag, index) => (
-                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                              {tag}
-                            </span>
-                          ))}
-                          {update.tags.length > 3 && (
-                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                              +{update.tags.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Footer */}
-                      <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #f1f5f9' }}>
-                        <div className="flex items-center space-x-2">
-                          <span className={`calendly-badge ${getTypeColor(update.type)}`}>
-                            {update.type.replace('_', ' ')}
-                          </span>
-                          {update.changelog_published && (
-                            <CheckCircle className="w-4 h-4 text-green-500" />
-                          )}
-                        </div>
-                        <span className="calendly-label-sm">
-                          {update.completion_date 
-                            ? formatDistanceToNow(new Date(update.completion_date), { addSuffix: true })
-                            : 'In progress'
-                          }
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              /* Updates Table View */
-              <div className="calendly-card" style={{ padding: 0 }}>
-                <div className="overflow-x-auto">
-                  <table className="calendly-table">
-                    <thead>
-                      <tr>
-                        <th>Update</th>
-                        <th>Type</th>
-                        <th>Status</th>
-                        <th>Priority</th>
-                        <th>Version</th>
-                        <th>Team</th>
-                        <th>Completed</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUpdates.map((update) => {
-                        const TypeIcon = getTypeIcon(update.type);
-                        return (
-                          <tr key={update.id} className="cursor-pointer" onClick={() => handleUpdateClick(update.id)}>
-                            <td>
-                              <div className="flex items-center space-x-3">
-                                <TypeIcon className="w-5 h-5" style={{ color: '#4285f4' }} />
-                                <div>
-                                  <div className="font-medium">{update.title}</div>
-                                  <div className="text-sm text-gray-600">{update.jira_story_key}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td>
-                              <span className={`calendly-badge ${getTypeColor(update.type)}`}>
-                                {update.type.replace('_', ' ')}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`calendly-badge ${getStatusColor(update.status)}`}>
-                                {update.status.replace('_', ' ')}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`calendly-badge ${getPriorityColor(update.priority)}`}>
-                                {update.priority}
-                              </span>
-                            </td>
-                            <td>{update.release_version}</td>
-                            <td>{update.assigned_team}</td>
-                            <td>
-                              {update.completion_date 
-                                ? formatDistanceToNow(new Date(update.completion_date), { addSuffix: true })
-                                : '-'
-                              }
-                            </td>
-                            <td>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleUpdateClick(update.id);
-                                }}
-                                className="p-1 rounded transition-colors"
-                                style={{ color: '#718096' }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = '#f1f5f9';
-                                  e.currentTarget.style.color = '#4285f4';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'transparent';
-                                  e.currentTarget.style.color = '#718096';
-                                }}
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )
-          ) : activeTab === 'changelog' ? (
-            /* Changelog Display */
+          {activeTab === 'changelog' ? (
             <div className="space-y-6">
+              {/* Enhanced Changelog Display */}
               {filteredChangelog.map((entry) => (
                 <div
                   key={entry.id}
-                  onClick={() => handleChangelogClick(entry.id)}
-                  className="calendly-card cursor-pointer transition-all duration-200"
+                  className="calendly-card transition-all duration-200"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
                     e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
@@ -779,58 +911,568 @@ export default function ProductPage() {
                     e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)';
                   }}
                 >
-                  {/* Changelog Header */}
-                  <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
-                    <div className="flex items-center space-x-3">
-                      <GitBranch className="w-6 h-6" style={{ color: '#4285f4' }} />
-                      <div>
-                        <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>{entry.title}</h3>
-                        <p className="calendly-label-sm">
-                          {formatDistanceToNow(new Date(entry.published_at), { addSuffix: true })}
-                        </p>
+                  {editingEntryId === entry.id ? (
+                    <>
+                      {/* Edit Mode */}
+                      {/* Edit Header */}
+                      <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
+                        <div className="flex items-center space-x-3 flex-1">
+                          <div className="text-2xl">{getCategoryIcon(editForm.category || entry.category)}</div>
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              value={editForm.customer_facing_title || ''}
+                              onChange={(e) => updateEditForm('customer_facing_title', e.target.value)}
+                              className="calendly-h3 w-full border-0 border-b-2 border-blue-300 bg-transparent focus:outline-none focus:border-blue-500"
+                              style={{ marginBottom: '4px' }}
+                              placeholder="Entry title..."
+                            />
+                            <p className="calendly-label-sm">
+                              {formatDistanceToNow(new Date(entry.release_date), { addSuffix: true })}
+                              {entry.jira_story_key && (
+                                <span className="ml-2 text-blue-600">• {entry.jira_story_key}</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end space-y-2">
+                          <select
+                            value={editForm.category || entry.category}
+                            onChange={(e) => updateEditForm('category', e.target.value)}
+                            className="px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            style={{ background: 'white' }}
+                          >
+                            <option value="Added">🆕 Added</option>
+                            <option value="Improved">⚡ Improved</option>
+                            <option value="Fixed">🔧 Fixed</option>
+                            <option value="Security">🔒 Security</option>
+                            <option value="Deprecated">⚠️ Deprecated</option>
+                          </select>
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`calendly-badge ${getChangelogTypeColor(entry.type)}`}>
-                        {entry.type}
-                      </span>
-                    </div>
-                  </div>
 
-                  {/* Description */}
-                  <p className="calendly-body-sm" style={{ marginBottom: '16px' }}>
-                    {entry.description}
-                  </p>
+                      {/* Layout Template Selector */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label className="block text-sm font-medium text-gray-900 mb-2">
+                          Changelog Layout Template
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                          <div 
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                              (editForm.layout_template || 'standard') === 'standard' 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateEditForm('layout_template', 'standard')}
+                          >
+                            <div className="text-sm font-medium mb-1">📝 Standard</div>
+                            <div className="text-xs text-gray-600">Title + Description + Bullet highlights</div>
+                          </div>
+                          
+                          <div 
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                              (editForm.layout_template || 'standard') === 'feature_spotlight' 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateEditForm('layout_template', 'feature_spotlight')}
+                          >
+                            <div className="text-sm font-medium mb-1">🌟 Feature Spotlight</div>
+                            <div className="text-xs text-gray-600">Hero layout with key benefits & demo</div>
+                          </div>
+                          
+                          <div 
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                              (editForm.layout_template || 'standard') === 'technical_update' 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateEditForm('layout_template', 'technical_update')}
+                          >
+                            <div className="text-sm font-medium mb-1">⚙️ Technical Update</div>
+                            <div className="text-xs text-gray-600">Structured with before/after & impact</div>
+                          </div>
+                          
+                          <div 
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                              (editForm.layout_template || 'standard') === 'security_notice' 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateEditForm('layout_template', 'security_notice')}
+                          >
+                            <div className="text-sm font-medium mb-1">🔒 Security Notice</div>
+                            <div className="text-xs text-gray-600">Prominent alert with action items</div>
+                          </div>
+                          
+                          <div 
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                              (editForm.layout_template || 'standard') === 'deprecation_warning' 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateEditForm('layout_template', 'deprecation_warning')}
+                          >
+                            <div className="text-sm font-medium mb-1">⚠️ Deprecation</div>
+                            <div className="text-xs text-gray-600">Timeline + migration guide layout</div>
+                          </div>
+                          
+                          <div 
+                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                              (editForm.layout_template || 'standard') === 'minimal' 
+                                ? 'border-blue-500 bg-blue-50' 
+                                : 'border-gray-200 hover:border-gray-300'
+                            }`}
+                            onClick={() => updateEditForm('layout_template', 'minimal')}
+                          >
+                            <div className="text-sm font-medium mb-1">✨ Minimal</div>
+                            <div className="text-xs text-gray-600">Clean, simple single-paragraph style</div>
+                          </div>
+                        </div>
+                        
+                        {/* Template Preview */}
+                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                          <div className="text-xs font-medium text-gray-700 mb-2">Preview Layout:</div>
+                          <div className="text-xs text-gray-600">
+                            {(() => {
+                              switch (editForm.layout_template || 'standard') {
+                                case 'feature_spotlight':
+                                  return 'Large title → Hero description → Key benefits grid → Call-to-action';
+                                case 'technical_update':
+                                  return 'Title → Problem/Solution sections → Technical details → Impact metrics';
+                                case 'security_notice':
+                                  return 'Alert banner → Security summary → Action required → Additional resources';
+                                case 'deprecation_warning':
+                                  return 'Warning banner → Timeline → Migration steps → Support resources';
+                                case 'minimal':
+                                  return 'Simple title → Single paragraph → Optional link';
+                                default:
+                                  return 'Standard title → Description paragraph → Bulleted highlights list';
+                              }
+                            })()}
+                          </div>
+                        </div>
+                      </div>
 
-                  {/* Highlights */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Highlights</h4>
-                    <ul className="space-y-1">
-                      {entry.highlights.map((highlight, index) => (
-                        <li key={index} className="flex items-start space-x-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="calendly-body-sm">{highlight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+                      {/* Dynamic Fields Based on Template */}
+                      {(() => {
+                        const template = editForm.layout_template || 'standard';
+                        
+                        switch (template) {
+                          case 'feature_spotlight':
+                            return (
+                              <>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Hero Description
+                                  </label>
+                                  <textarea
+                                    value={editForm.customer_facing_description || ''}
+                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                    style={{ minHeight: '80px', background: 'white' }}
+                                    placeholder="Write a compelling description that highlights the main benefit of this feature..."
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Call-to-Action Text
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editForm.cta_text || ''}
+                                    onChange={(e) => updateEditForm('cta_text', e.target.value)}
+                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                    style={{ background: 'white' }}
+                                    placeholder="e.g., Try the new feature, Learn more, Get started"
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Call-to-Action Link
+                                  </label>
+                                  <input
+                                    type="url"
+                                    value={editForm.cta_link || ''}
+                                    onChange={(e) => updateEditForm('cta_link', e.target.value)}
+                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                    style={{ background: 'white' }}
+                                    placeholder="https://..."
+                                  />
+                                </div>
+                              </>
+                            );
+                            
+                          case 'technical_update':
+                            return (
+                              <>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Problem Statement
+                                  </label>
+                                  <textarea
+                                    value={editForm.problem_statement || ''}
+                                    onChange={(e) => updateEditForm('problem_statement', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                    style={{ minHeight: '60px', background: 'white' }}
+                                    placeholder="What issue or limitation did this update address?"
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Solution Description
+                                  </label>
+                                  <textarea
+                                    value={editForm.customer_facing_description || ''}
+                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                    style={{ minHeight: '60px', background: 'white' }}
+                                    placeholder="How does this update solve the problem?"
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Impact Metrics
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editForm.impact_metrics || ''}
+                                    onChange={(e) => updateEditForm('impact_metrics', e.target.value)}
+                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                    style={{ background: 'white' }}
+                                    placeholder="e.g., 40% faster, 99.9% uptime, Reduced by 2 clicks"
+                                  />
+                                </div>
+                              </>
+                            );
+                            
+                          case 'security_notice':
+                            return (
+                              <>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Security Summary
+                                  </label>
+                                  <textarea
+                                    value={editForm.customer_facing_description || ''}
+                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                    style={{ minHeight: '60px', background: 'white' }}
+                                    placeholder="Describe the security improvement or fix..."
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Action Required
+                                  </label>
+                                  <textarea
+                                    value={editForm.action_required || ''}
+                                    onChange={(e) => updateEditForm('action_required', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                    style={{ minHeight: '60px', background: 'white' }}
+                                    placeholder="What do users need to do? Leave empty if no action required."
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Additional Resources
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editForm.resource_links || ''}
+                                    onChange={(e) => updateEditForm('resource_links', e.target.value)}
+                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                    style={{ background: 'white' }}
+                                    placeholder="Links to documentation, guides, or support (comma-separated)"
+                                  />
+                                </div>
+                              </>
+                            );
+                            
+                          case 'deprecation_warning':
+                            return (
+                              <>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Deprecation Notice
+                                  </label>
+                                  <textarea
+                                    value={editForm.customer_facing_description || ''}
+                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                    style={{ minHeight: '60px', background: 'white' }}
+                                    placeholder="Explain what's being deprecated and why..."
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Timeline
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editForm.deprecation_timeline || ''}
+                                    onChange={(e) => updateEditForm('deprecation_timeline', e.target.value)}
+                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                    style={{ background: 'white' }}
+                                    placeholder="e.g., End of support: March 2024, Removal: June 2024"
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Recommended Alternative
+                                  </label>
+                                  <input
+                                    type="text"
+                                    value={editForm.recommended_alternative || ''}
+                                    onChange={(e) => updateEditForm('recommended_alternative', e.target.value)}
+                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                    style={{ background: 'white' }}
+                                    placeholder="What should users use instead?"
+                                  />
+                                </div>
+                              </>
+                            );
+                            
+                          case 'minimal':
+                            return (
+                              <>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Brief Description
+                                  </label>
+                                  <textarea
+                                    value={editForm.customer_facing_description || ''}
+                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                    style={{ minHeight: '60px', background: 'white' }}
+                                    placeholder="A concise, single-paragraph description of the change..."
+                                  />
+                                </div>
+                                <div style={{ marginBottom: '12px' }}>
+                                  <label className="block text-sm font-medium text-gray-900 mb-2">
+                                    Optional Link
+                                  </label>
+                                  <input
+                                    type="url"
+                                    value={editForm.optional_link || ''}
+                                    onChange={(e) => updateEditForm('optional_link', e.target.value)}
+                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                    style={{ background: 'white' }}
+                                    placeholder="https://... (optional)"
+                                  />
+                                </div>
+                              </>
+                            );
+                            
+                          default: // standard
+                            return (
+                              <div style={{ marginBottom: '12px' }}>
+                                <label className="block text-sm font-medium text-gray-900 mb-2">
+                                  Customer-Facing Description
+                                </label>
+                                <textarea
+                                  value={editForm.customer_facing_description || ''}
+                                  onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                  style={{ minHeight: '80px', background: 'white' }}
+                                  placeholder="Describe what changed and how it benefits customers..."
+                                />
+                              </div>
+                            );
+                        }
+                      })()}
 
-                  {/* Breaking Changes */}
-                  {entry.breaking_changes.length > 0 && (
+                    </>
+                  ) : (
+                    <>
+                      {/* View Mode */}
+                      {/* Changelog Header */}
+                      <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
+                        <div className="flex items-center space-x-3">
+                          <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
+                          <div>
+                            <div className="flex items-center space-x-2 mb-1">
+                              <h3 className="calendly-h3" style={{ marginBottom: 0 }}>{entry.customer_facing_title}</h3>
+                              <span className="text-sm font-medium text-gray-500">{entry.version}</span>
+                            </div>
+                            <p className="calendly-label-sm">
+                              {formatDistanceToNow(new Date(entry.release_date), { addSuffix: true })}
+                              {entry.jira_story_key && (
+                                <span className="ml-2 text-blue-600">• {entry.jira_story_key}</span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-col items-end space-y-2">
+                          <span className={`calendly-badge ${getCategoryColor(entry.category)}`}>
+                            {entry.category}
+                          </span>
+                          {!entry.public_visibility && (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                              Internal Only
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Description */}
+                      <p className="calendly-body-sm" style={{ marginBottom: '16px' }}>
+                        {entry.customer_facing_description}
+                      </p>
+                    </>
+                  )}
+
+
+                  {/* Highlights - Conditional based on template */}
+                  {(editingEntryId !== entry.id || !['minimal', 'deprecation_warning'].includes(editForm.layout_template || 'standard')) && (
                     <div style={{ marginBottom: '16px' }}>
-                      <h4 className="text-sm font-medium text-red-900 mb-2">Breaking Changes</h4>
-                      <ul className="space-y-1">
-                        {entry.breaking_changes.map((change, index) => (
-                          <li key={index} className="flex items-start space-x-2">
-                            <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" />
-                            <span className="calendly-body-sm text-red-700">{change}</span>
-                          </li>
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">
+                        {(() => {
+                          const template = editingEntryId === entry.id ? (editForm.layout_template || 'standard') : 'standard';
+                          switch (template) {
+                            case 'feature_spotlight': return 'Key Benefits';
+                            case 'technical_update': return 'Technical Details';
+                            case 'security_notice': return 'Security Improvements';
+                            default: return 'What\'s New';
+                          }
+                        })()}
+                      </h4>
+                      {editingEntryId === entry.id ? (
+                      <div className="space-y-2">
+                        {/* Edit Highlights */}
+                        {(editForm.highlights || []).map((highlight, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                            <input
+                              type="text"
+                              value={highlight}
+                              onChange={(e) => {
+                                const newHighlights = [...(editForm.highlights || [])];
+                                newHighlights[index] = e.target.value;
+                                updateEditForm('highlights', newHighlights);
+                              }}
+                              className="flex-1 px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                              style={{ background: 'white' }}
+                              placeholder="Highlight description..."
+                            />
+                            <button
+                              onClick={() => {
+                                const newHighlights = (editForm.highlights || []).filter((_, i) => i !== index);
+                                updateEditForm('highlights', newHighlights);
+                              }}
+                              className="text-red-500 hover:text-red-700 p-1"
+                            >
+                              ×
+                            </button>
+                          </div>
                         ))}
-                      </ul>
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => {
+                              const newHighlights = [...(editForm.highlights || []), ''];
+                              updateEditForm('highlights', newHighlights);
+                            }}
+                            className="px-3 py-2 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            + Add Highlight
+                          </button>
+                          <select
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                const newHighlights = [...(editForm.highlights || []), e.target.value];
+                                updateEditForm('highlights', newHighlights);
+                                e.target.value = ''; // Reset selection
+                              }
+                            }}
+                            className="px-3 py-2 calendly-body-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                            style={{ background: 'white' }}
+                          >
+                            <option value="">+ Add from template</option>
+                            <option value="Improved performance by [X]% faster loading times">Performance Improvement</option>
+                            <option value="Enhanced user interface with better navigation">UI Enhancement</option>
+                            <option value="Added support for [new integration/format]">New Integration</option>
+                            <option value="Streamlined workflow reduces clicks by [X]">Workflow Improvement</option>
+                            <option value="Better error handling and user feedback">Error Handling</option>
+                            <option value="Mobile-responsive design improvements">Mobile Enhancement</option>
+                            <option value="Advanced filtering and search capabilities">Search & Filter</option>
+                            <option value="Automated [process] saves time and reduces errors">Automation</option>
+                          </select>
+                        </div>
+                      </div>
+                      ) : (
+                        <ul className="space-y-1">
+                          {/* View Highlights */}
+                          {entry.highlights.map((highlight, index) => (
+                            <li key={index} className="flex items-start space-x-2">
+                              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                              <span className="calendly-body-sm">{highlight}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   )}
 
-                  {/* Footer */}
+                  {/* Breaking Changes Toggle (Edit Mode Only) */}
+                  {editingEntryId === entry.id && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id={`breaking-changes-${entry.id}`}
+                          checked={editForm.breaking_changes || false}
+                          onChange={(e) => updateEditForm('breaking_changes', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor={`breaking-changes-${entry.id}`} className="calendly-body-sm font-medium text-gray-900">
+                          This update includes breaking changes
+                        </label>
+                      </div>
+                      
+                      {/* Migration Notes (only if breaking changes checked) */}
+                      {editForm.breaking_changes && (
+                        <div style={{ marginTop: '12px' }}>
+                          <label className="block text-sm font-medium text-gray-900 mb-2">
+                            Migration Notes
+                          </label>
+                          <textarea
+                            value={editForm.migration_notes || ''}
+                            onChange={(e) => updateEditForm('migration_notes', e.target.value)}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                            style={{ minHeight: '60px', background: 'white' }}
+                            placeholder="Provide migration instructions for users..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Breaking Changes */}
+                  {entry.breaking_changes && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <h4 className="text-sm font-medium text-red-900 mb-2 flex items-center space-x-1">
+                        <AlertCircle className="w-4 h-4" />
+                        <span>Breaking Changes</span>
+                      </h4>
+                      <div className="p-3 bg-red-50 rounded-md border border-red-200">
+                        <span className="calendly-body-sm text-red-700">
+                          This update includes breaking changes. Please review the migration notes below.
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Migration Notes */}
+                  {entry.migration_notes && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <h4 className="text-sm font-medium text-orange-900 mb-2">Migration Notes</h4>
+                      <div className="p-3 bg-orange-50 rounded-md border border-orange-200">
+                        <span className="calendly-body-sm text-orange-800">{entry.migration_notes}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Footer with Published Entry Actions */}
                   <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #f1f5f9' }}>
                     <div className="flex items-center space-x-4">
                       <div className="flex items-center space-x-1">
@@ -846,38 +1488,503 @@ export default function ProductPage() {
                         <span className="calendly-label-sm">{entry.feedback_count} feedback</span>
                       </div>
                     </div>
-                    <ExternalLink className="w-4 h-4" style={{ color: '#718096' }} />
+                    <div className="flex items-center space-x-2">
+                      {editingEntryId === entry.id ? (
+                        <>
+                          {/* Edit Mode Buttons */}
+                          <button 
+                            className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                            onClick={handleSaveEdit}
+                          >
+                            Save Changes
+                          </button>
+                          <button 
+                            className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
+                            onClick={handleCancelEdit}
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          {/* View Mode Buttons */}
+                          <button 
+                            className="px-4 py-2 bg-blue-100 text-blue-700 calendly-body-sm rounded-lg hover:bg-blue-200 transition-colors font-medium"
+                            onClick={() => handleEditEntry(entry)}
+                          >
+                            Edit Entry
+                          </button>
+                          {entry.public_visibility && (
+                            <button 
+                              className="px-4 py-2 bg-gray-100 text-gray-700 calendly-body-sm rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2"
+                              onClick={() => {
+                                window.open('/public-changelog', '_blank');
+                              }}
+                            >
+                              <span>View Public</span>
+                              <ExternalLink className="w-4 h-4" />
+                            </button>
+                          )}
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs text-gray-600">Public:</span>
+                            <div className="flex items-center">
+                              <button
+                                onClick={() => handleToggleVisibility(entry.id)}
+                                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                  entry.public_visibility 
+                                    ? 'bg-green-600' 
+                                    : 'bg-gray-300'
+                                }`}
+                                title={entry.public_visibility ? 'Click to hide from public' : 'Click to show in public'}
+                              >
+                                <span
+                                  className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                    entry.public_visibility ? 'translate-x-5' : 'translate-x-1'
+                                  }`}
+                                />
+                              </button>
+                              <span className="ml-2 text-xs text-gray-500">
+                                {entry.public_visibility ? 'Visible' : 'Hidden'}
+                              </span>
+                            </div>
+                          </div>
+                          <button
+                            className="p-2 rounded-lg transition-colors"
+                            style={{ color: '#718096' }}
+                            onClick={() => {
+                              console.log('View entry details:', entry.id);
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#f1f5f9';
+                              e.currentTarget.style.color = '#4285f4';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = '#718096';
+                            }}
+                          >
+                            <ExternalLink className="w-5 h-5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          ) : (
-            /* Roadmap Placeholder */
-            <div className="calendly-card text-center py-12">
-              <Calendar className="w-16 h-16 mx-auto mb-4" style={{ color: '#a0aec0' }} />
-              <h3 className="calendly-h3" style={{ marginBottom: '8px' }}>Roadmap Coming Soon</h3>
-              <p className="calendly-body" style={{ marginBottom: '24px' }}>
-                Product roadmap visualization will be available in a future update
-              </p>
+          ) : activeTab === 'approval' ? (
+            <div className="space-y-6">
+              {/* Approval Dashboard */}
+              {changelogEntries.filter(entry => entry.approval_status === 'pending').length > 0 ? (
+                <>
+                  {/* Header with Bulk Actions */}
+                  <div className="calendly-card">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
+                          Review & Approve ({changelogEntries.filter(entry => entry.approval_status === 'pending' && !(entry as any).hidden_from_approval).length})
+                        </h3>
+                        <p className="calendly-body-sm text-gray-600">
+                          Review changelog entries before publishing to customers
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button 
+                          className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                          onClick={() => console.log('Bulk approve all')}
+                        >
+                          Approve All
+                        </button>
+                        <button 
+                          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
+                          onClick={() => console.log('Bulk edit')}
+                        >
+                          Bulk Edit
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Visible Pending Entries */}
+                  <div className="space-y-4">
+                    {changelogEntries
+                      .filter(entry => entry.approval_status === 'pending' && !(entry as any).hidden_from_approval)
+                      .map((entry) => (
+                        <div key={entry.id} className="calendly-card">
+                          {editingEntryId === entry.id ? (
+                            <>
+                              {/* Edit Mode - Same as changelog edit */}
+                              {/* Edit Header */}
+                              <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
+                                <div className="flex items-center space-x-3 flex-1">
+                                  <div className="text-2xl">{getCategoryIcon(editForm.category || entry.category)}</div>
+                                  <div className="flex-1">
+                                    <input
+                                      type="text"
+                                      value={editForm.customer_facing_title || ''}
+                                      onChange={(e) => updateEditForm('customer_facing_title', e.target.value)}
+                                      className="w-full text-lg font-medium calendly-body-sm border-0 border-b-2 border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent transition-all duration-200"
+                                      placeholder="Customer-facing title..."
+                                    />
+                                    <div className="flex items-center space-x-3 mt-2">
+                                      <input
+                                        type="text"
+                                        value={editForm.version || ''}
+                                        onChange={(e) => updateEditForm('version', e.target.value)}
+                                        className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        placeholder="v1.0.0"
+                                      />
+                                      <span className="text-sm text-gray-500">
+                                        {entry.jira_story_key && <span className="text-blue-600">{entry.jira_story_key}</span>}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <select
+                                  value={editForm.category || entry.category}
+                                  onChange={(e) => updateEditForm('category', e.target.value)}
+                                  className="px-3 py-2 calendly-body-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                  style={{ background: 'white' }}
+                                >
+                                  <option value="Added">Added</option>
+                                  <option value="Fixed">Fixed</option>
+                                  <option value="Improved">Improved</option>
+                                  <option value="Security">Security</option>
+                                  <option value="Deprecated">Deprecated</option>
+                                </select>
+                              </div>
+
+                              {/* Description Edit */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <label className="block text-sm font-medium text-gray-900 mb-2">
+                                  Customer Description
+                                </label>
+                                <textarea
+                                  value={editForm.customer_facing_description || ''}
+                                  onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                  style={{ minHeight: '80px', background: 'white' }}
+                                  placeholder="Describe what this update means for customers..."
+                                />
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* View Mode - Approval Dashboard View */}
+                              {/* Entry Header */}
+                              <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
+                                <div className="flex items-center space-x-3">
+                                  <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
+                                  <div>
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <h3 className="calendly-h3" style={{ marginBottom: 0 }}>{entry.customer_facing_title}</h3>
+                                      <span className="text-sm font-medium text-gray-500">{entry.version}</span>
+                                    </div>
+                                    <p className="calendly-label-sm">
+                                      {entry.jira_story_key && (
+                                        <span className="text-blue-600">{entry.jira_story_key} • </span>
+                                      )}
+                                      {formatDistanceToNow(new Date(entry.release_date), { addSuffix: true })}
+                                    </p>
+                                  </div>
+                                </div>
+                                <span className={`calendly-badge ${getCategoryColor(entry.category)}`}>
+                                  {entry.category}
+                                </span>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Shared content based on edit mode */}
+                          {editingEntryId === entry.id ? (
+                            <>
+                              {/* Highlights editing - same as changelog */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">What's New</h4>
+                                <div className="space-y-2">
+                                  {/* Edit Highlights */}
+                                  {(editForm.highlights || []).map((highlight, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                                      <input
+                                        type="text"
+                                        value={highlight}
+                                        onChange={(e) => {
+                                          const newHighlights = [...(editForm.highlights || [])];
+                                          newHighlights[index] = e.target.value;
+                                          updateEditForm('highlights', newHighlights);
+                                        }}
+                                        className="flex-1 px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                        style={{ background: 'white' }}
+                                        placeholder="Highlight description..."
+                                      />
+                                      <button
+                                        onClick={() => {
+                                          const newHighlights = (editForm.highlights || []).filter((_, i) => i !== index);
+                                          updateEditForm('highlights', newHighlights);
+                                        }}
+                                        className="text-red-500 hover:text-red-700 p-1"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <button
+                                    onClick={() => {
+                                      const newHighlights = [...(editForm.highlights || []), ''];
+                                      updateEditForm('highlights', newHighlights);
+                                    }}
+                                    className="px-3 py-2 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                                  >
+                                    + Add Highlight
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Breaking Changes Toggle */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <div className="flex items-center space-x-3">
+                                  <input
+                                    type="checkbox"
+                                    id={`breaking-changes-approval-${entry.id}`}
+                                    checked={editForm.breaking_changes || false}
+                                    onChange={(e) => updateEditForm('breaking_changes', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                  />
+                                  <label htmlFor={`breaking-changes-approval-${entry.id}`} className="calendly-body-sm font-medium text-gray-900">
+                                    This update includes breaking changes
+                                  </label>
+                                </div>
+                                
+                                {/* Migration Notes */}
+                                {editForm.breaking_changes && (
+                                  <div style={{ marginTop: '12px' }}>
+                                    <label className="block text-sm font-medium text-gray-900 mb-2">
+                                      Migration Notes
+                                    </label>
+                                    <textarea
+                                      value={editForm.migration_notes || ''}
+                                      onChange={(e) => updateEditForm('migration_notes', e.target.value)}
+                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                      style={{ minHeight: '60px', background: 'white' }}
+                                      placeholder="Provide migration instructions for users..."
+                                    />
+                                  </div>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* View Mode Content */}
+                              {/* Description */}
+                              <p className="calendly-body-sm" style={{ marginBottom: '16px' }}>
+                                {entry.customer_facing_description}
+                              </p>
+
+                              {/* Key Details */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ marginBottom: '16px' }}>
+                                {entry.affected_users && (
+                                  <div className="flex items-center space-x-2">
+                                    <Users className="w-4 h-4 text-blue-500" />
+                                    <span className="calendly-body-sm">
+                                      {entry.affected_users.toLocaleString()} users affected
+                                    </span>
+                                  </div>
+                                )}
+                                {entry.breaking_changes && (
+                                  <div className="flex items-center space-x-2">
+                                    <AlertCircle className="w-4 h-4 text-red-500" />
+                                    <span className="calendly-body-sm text-red-600">Breaking Changes</span>
+                                  </div>
+                                )}
+                                <div className="flex items-center space-x-2">
+                                  <Calendar className="w-4 h-4 text-gray-500" />
+                                  <span className="calendly-body-sm">
+                                    Release: {new Date(entry.release_date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Highlights Preview */}
+                              <div style={{ marginBottom: '20px' }}>
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">Key Changes:</h4>
+                                <ul className="space-y-1">
+                                  {entry.highlights.slice(0, 2).map((highlight, index) => (
+                                    <li key={index} className="flex items-start space-x-2">
+                                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                      <span className="calendly-body-sm">{highlight}</span>
+                                    </li>
+                                  ))}
+                                  {entry.highlights.length > 2 && (
+                                    <li className="calendly-body-sm text-gray-500 ml-6">
+                                      +{entry.highlights.length - 2} more changes
+                                    </li>
+                                  )}
+                                </ul>
+                              </div>
+                            </>
+                          )}
+
+                          {/* Approval Actions */}
+                          <div className="flex items-center justify-end space-x-3 pt-4" style={{ borderTop: '1px solid #e5e7eb' }}>
+                            {editingEntryId === entry.id ? (
+                              <>
+                                {/* Edit Mode Actions */}
+                                <button 
+                                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                                  onClick={handleSaveEdit}
+                                >
+                                  Save Changes
+                                </button>
+                                <button 
+                                  className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
+                                  onClick={handleCancelEdit}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {/* View Mode Actions */}
+                                <div className="flex items-center space-x-2">
+                                  <span className="text-xs text-gray-600">Show:</span>
+                                  <div className="flex items-center">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleApprovalVisibility(entry.id);
+                                      }}
+                                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                                        !(entry as any).hidden_from_approval
+                                          ? 'bg-blue-600' 
+                                          : 'bg-gray-300'
+                                      }`}
+                                      title="Toggle visibility in approval queue"
+                                    >
+                                      <span
+                                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                          !(entry as any).hidden_from_approval
+                                            ? 'translate-x-5' : 'translate-x-1'
+                                        }`}
+                                      />
+                                    </button>
+                                    <span className="ml-2 text-xs text-gray-500">
+                                      {!(entry as any).hidden_from_approval ? 'Visible' : 'Hidden'}
+                                    </span>
+                                  </div>
+                                </div>
+                                <button 
+                                  className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditEntry(entry);
+                                  }}
+                                >
+                                  Edit Details
+                                </button>
+                                <button 
+                                  className="px-6 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors font-medium"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    console.log('Approve entry:', entry.id);
+                                  }}
+                                >
+                                  Approve & Publish
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+
+                  {/* Hidden Entries Section */}
+                  {changelogEntries.filter(entry => entry.approval_status === 'pending' && (entry as any).hidden_from_approval).length > 0 && (
+                    <div className="mt-8">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <span className="text-sm font-medium text-gray-500">Hidden Entries</span>
+                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                          {changelogEntries.filter(entry => entry.approval_status === 'pending' && (entry as any).hidden_from_approval).length}
+                        </span>
+                      </div>
+                      <div className="space-y-4">
+                        {changelogEntries
+                          .filter(entry => entry.approval_status === 'pending' && (entry as any).hidden_from_approval)
+                          .map((entry) => (
+                            <div key={entry.id} className="calendly-card opacity-60 border-dashed">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center space-x-3">
+                                  <div className="text-2xl opacity-50">{getCategoryIcon(entry.category)}</div>
+                                  <div>
+                                    <div className="flex items-center space-x-2 mb-1">
+                                      <h3 className="calendly-h3 text-gray-500" style={{ marginBottom: 0 }}>{entry.customer_facing_title}</h3>
+                                      <span className="text-sm font-medium text-gray-400">{entry.version}</span>
+                                    </div>
+                                    <p className="calendly-label-sm text-gray-400">
+                                      {entry.jira_story_key && (
+                                        <span className="text-gray-400">{entry.jira_story_key} • </span>
+                                      )}
+                                      Hidden from approval queue
+                                    </p>
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                  <span className={`calendly-badge ${getCategoryColor(entry.category)} opacity-50`}>
+                                    {entry.category}
+                                  </span>
+                                  <div className="flex items-center space-x-2">
+                                    <span className="text-xs text-gray-600">Show:</span>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleToggleApprovalVisibility(entry.id);
+                                      }}
+                                      className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 bg-gray-300"
+                                      title="Click to show in approval queue"
+                                    >
+                                      <span className="inline-block h-3 w-3 transform rounded-full bg-white transition-transform translate-x-1" />
+                                    </button>
+                                    <span className="ml-2 text-xs text-gray-500">Hidden</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="calendly-card text-center py-12">
+                  {/* No Pending Entries */}
+                  <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
+                  <h3 className="calendly-h3" style={{ marginBottom: '8px' }}>All Caught Up!</h3>
+                  <p className="calendly-body" style={{ marginBottom: '24px' }}>
+                    No changelog entries are currently pending approval. New entries from JIRA will appear here automatically.
+                  </p>
+                  <div className="flex items-center justify-center space-x-4">
+                    <button 
+                      className="calendly-btn-secondary"
+                      onClick={() => setActiveTab('changelog')}
+                    >
+                      View Published Entries
+                    </button>
+                    <button className="calendly-btn-primary">
+                      Create Manual Entry
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          ) : null}
 
           {/* Empty State */}
-          {((activeTab === 'updates' && filteredUpdates.length === 0) || 
-            (activeTab === 'changelog' && filteredChangelog.length === 0)) && (
+          {activeTab === 'changelog' && filteredChangelog.length === 0 && (
             <div className="calendly-card text-center py-12">
-              {activeTab === 'updates' ? (
-                <Package className="w-16 h-16 mx-auto mb-4" style={{ color: '#a0aec0' }} />
-              ) : (
-                <GitBranch className="w-16 h-16 mx-auto mb-4" style={{ color: '#a0aec0' }} />
-              )}
-              <h3 className="calendly-h3" style={{ marginBottom: '8px' }}>
-                No {activeTab === 'updates' ? 'updates' : 'changelog entries'} found
-              </h3>
-              <p className="calendly-body" style={{ marginBottom: '24px' }}>
-                {searchQuery || (activeTab === 'updates' ? (typeFilter !== 'all' || statusFilter !== 'all') : changelogTypeFilter !== 'all')
-                  ? 'Try adjusting your search or filters' 
-                  : `${activeTab === 'updates' ? 'Product updates' : 'Changelog entries'} will appear here`}
+              <Package className="w-16 h-16 mx-auto mb-4" style={{ color: '#a0aec0' }} />
+              <h3 className="calendly-h3" style={{ marginBottom: '8px' }}>No Changelog Entries</h3>
+              <p className="calendly-body">
+                No changelog entries match your current filters. Try adjusting your search or filters.
               </p>
             </div>
           )}
