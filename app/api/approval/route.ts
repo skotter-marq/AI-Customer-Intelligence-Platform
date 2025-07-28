@@ -1,10 +1,20 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+// Handle missing environment variables during build
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    // Return null during build time when env vars aren't available
+    return null;
+  }
+  
+  return createClient(supabaseUrl, supabaseKey);
+}
+
+const supabase = createSupabaseClient();
 
 interface ApprovalAction {
   action: 'approve' | 'reject' | 'request_changes' | 'get_pending' | 'get_history';
@@ -16,6 +26,14 @@ interface ApprovalAction {
 
 export async function GET(request: Request) {
   try {
+    // Handle missing Supabase client during build
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Database connection not available' },
+        { status: 503 }
+      );
+    }
+    
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status') || 'pending';
     const reviewerId = searchParams.get('reviewer_id');
@@ -92,6 +110,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    // Handle missing Supabase client during build
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Database connection not available' },
+        { status: 503 }
+      );
+    }
+    
     const body: ApprovalAction = await request.json();
     const { action, contentId, reviewerId, comments, changes } = body;
 
