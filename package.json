@@ -201,16 +201,5 @@
     "plugins": [
       "prettier-plugin-tailwindcss"
     ]
-  },
-  "eslintConfig": {
-    "extends": [
-      "next/core-web-vitals",
-      "@typescript-eslint/recommended"
-    ],
-    "rules": {
-      "react-hooks/exhaustive-deps": "warn",
-      "@typescript-eslint/no-unused-vars": "error",
-      "no-console": "warn"
-    }
   }
 }
