@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '../../../../lib/supabase-client';
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
+  
   try {
     const resolvedParams = await params;
     const meetingId = resolvedParams.id;
@@ -146,6 +145,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 }
 
 export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
+  
   try {
     const resolvedParams = await params;
     const meetingId = resolvedParams.id;

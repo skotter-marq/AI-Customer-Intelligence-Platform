@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '../../../lib/supabase-client';
 
 interface CSQueryRequest {
   action: 'search_customer' | 'get_interactions' | 'get_insights' | 'get_history' | 'quick_search' | 'get_context' | 'get_product_impact' | 'get_customers';
@@ -94,6 +89,10 @@ interface CustomerProductImpact {
 }
 
 export async function GET(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
+  
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'quick_search';
@@ -130,6 +129,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
+  
   try {
     const body: CSQueryRequest = await request.json();
     const { action, ...params } = body;

@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '../../../lib/supabase-client';
 
 interface ContentEditRequest {
   action: 'get' | 'update' | 'save_draft' | 'get_versions' | 'restore_version';
@@ -23,6 +18,10 @@ interface ContentEditRequest {
 }
 
 export async function GET(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
+  
   try {
     const { searchParams } = new URL(request.url);
     const contentId = searchParams.get('content_id');
@@ -57,6 +56,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
+  
   try {
     const body: ContentEditRequest = await request.json();
     const { action, contentId, editorId, updates, versionId, saveAsDraft } = body;

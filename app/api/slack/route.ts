@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '../../../lib/supabase-client';
 
 // Mock Slack configuration - in production, these would be environment variables
 const SLACK_CONFIG = {
@@ -39,6 +34,10 @@ interface SlackCommand {
 }
 
 export async function POST(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
+  
   try {
     const body = await request.json();
     const { action, ...params } = body;
@@ -72,6 +71,10 @@ export async function POST(request: Request) {
 
 // Handle Slack slash commands
 export async function GET(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
+  
   try {
     const { searchParams } = new URL(request.url);
     const command = searchParams.get('command');
