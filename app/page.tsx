@@ -72,10 +72,10 @@ export default function DashboardPage() {
   // Mock quick stats - general platform metrics
   const quickStats: QuickStat[] = [
     {
-      label: 'Active Customers',
-      value: '847',
-      change: '+12% this month',
-      icon: Users,
+      label: 'Content Posts Created',
+      value: '127',
+      change: '+18% this month',
+      icon: FileText,
       color: '#4285f4',
       trend: 'up'
     },

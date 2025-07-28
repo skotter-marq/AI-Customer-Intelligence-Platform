@@ -82,9 +82,9 @@ export default function Navigation() {
     },
     { 
       href: '/integrations', 
-      label: 'Integrations', 
-      icon: Settings, 
-      description: 'System connections' 
+      label: 'App Marketplace', 
+      icon: Package, 
+      description: 'Browse and manage apps' 
     }
   ];
 
