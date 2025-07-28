@@ -323,9 +323,9 @@ export default function AppMarketplace() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-12">
-            <div className="text-center flex-1">
+            <div className="flex-1">
               <h1 className="calendly-h1 mb-4">App Marketplace</h1>
-              <p className="calendly-body text-gray-600 max-w-2xl mx-auto">
+              <p className="calendly-body text-gray-600 max-w-2xl">
                 Discover powerful apps and tools built by our product team to supercharge your customer intelligence workflow
               </p>
             </div>
