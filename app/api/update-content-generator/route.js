@@ -5,18 +5,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+const { supabase } = require('../../../lib/supabase-client');
 
 // Initialize update content generator
 async function getUpdateContentGenerator() {
   const { default: UpdateContentGenerator } = await import('../../../lib/update-content-generator.js');
   return new UpdateContentGenerator();
 }
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 /**
  * GET /api/update-content-generator
@@ -459,6 +454,11 @@ async function handleBulkGeneration(generator, params) {
  */
 async function getUpdateById(updateId) {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const { data: update } = await supabase
       .from('product_updates')
       .select('*')
@@ -477,6 +477,11 @@ async function getUpdateById(updateId) {
  */
 async function getRecentUpdates() {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const { data: updates } = await supabase
       .from('product_updates')
       .select('*')

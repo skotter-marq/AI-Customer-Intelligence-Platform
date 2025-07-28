@@ -5,18 +5,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+const { supabase } = require('../../../lib/supabase-client');
 
 // Initialize update content validator
 async function getUpdateContentValidator() {
   const { default: UpdateContentValidator } = await import('../../../lib/update-content-validator.js');
   return new UpdateContentValidator();
 }
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 /**
  * GET /api/update-content-validator
@@ -635,6 +630,11 @@ async function handleGetRecommendations(validator, params) {
  */
 async function getContentById(contentId) {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const { data: content } = await supabase
       .from('generated_content')
       .select('*')
@@ -653,6 +653,11 @@ async function getContentById(contentId) {
  */
 async function getContentsByIds(contentIds) {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const { data: contents } = await supabase
       .from('generated_content')
       .select('*')

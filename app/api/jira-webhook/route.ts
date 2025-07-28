@@ -1,10 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { supabase } from '../../../lib/supabase-client';
 
 interface JiraWebhookPayload {
   webhookEvent: string;
@@ -393,6 +388,11 @@ function mapJiraPriorityToChangelog(jiraPriority: string): 'low' | 'medium' | 'h
 
 async function saveForApproval(changelogEntry: any) {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     // In production, save to your Supabase table
     console.log('💾 Saving changelog entry for approval:', changelogEntry.jira_story_key);
     

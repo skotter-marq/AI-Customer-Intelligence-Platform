@@ -5,18 +5,13 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+const { supabase } = require('../../../lib/supabase-client');
 
 // Import the orchestrator (dynamic import for API routes)
 async function getOrchestrator() {
   const { default: ContentPipelineOrchestrator } = await import('../../../lib/content-pipeline-orchestrator.js');
   return new ContentPipelineOrchestrator();
 }
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 /**
  * GET /api/content-pipeline
@@ -415,6 +410,11 @@ function extractVariablesFromContent(content) {
  */
 async function getPipelineAnalytics() {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const { data: generatedContent } = await supabase
       .from('generated_content')
       .select('quality_score, readability_score, engagement_prediction, content_type, status, created_at')
@@ -490,6 +490,11 @@ async function getPipelineAnalytics() {
  */
 async function getAvailableTemplates() {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const { data: templates } = await supabase
       .from('content_templates')
       .select('id, template_name, template_type, template_category, template_description, target_audience, validation_score')

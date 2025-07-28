@@ -5,7 +5,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+const { supabase } = require('../../../lib/supabase-client');
 
 // Global monitor instance
 let monitorInstance = null;
@@ -18,11 +18,6 @@ async function getMonitor() {
   }
   return monitorInstance;
 }
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
 
 /**
  * GET /api/monitoring
@@ -337,6 +332,11 @@ function generateAlertSummary(alerts) {
  */
 async function getHistoricalMetrics(timeframe) {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const hours = parseTimeframe(timeframe);
     const startTime = new Date(Date.now() - hours * 60 * 60 * 1000);
     
@@ -391,6 +391,11 @@ async function getRecentAlerts() {
  */
 async function getPerformanceMetrics(timeframe) {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const hours = parseTimeframe(timeframe);
     const startTime = new Date(Date.now() - hours * 60 * 60 * 1000);
     
@@ -440,6 +445,11 @@ async function getPerformanceMetrics(timeframe) {
  */
 async function getDashboardData() {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     const monitor = await getMonitor();
     const status = monitor.getStatus();
     const metrics = monitor.getMetrics();

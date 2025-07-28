@@ -1,9 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const { supabase } = require('../../../lib/supabase-client');
 
 export async function POST(request) {
   try {
@@ -44,6 +39,11 @@ async function handleMeetingRecorded(data) {
     // Extract meeting data from Grain webhook
     const meetingData = extractMeetingData(data);
     
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     // Save basic meeting record to database
     const { data: savedMeeting, error } = await supabase
       .from('meetings')
@@ -95,6 +95,11 @@ async function handleMeetingTranscribed(data) {
     
     const grainMeetingId = data.meeting?.id || data.meeting_id;
     
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     // Update meeting with transcript
     const { data: meeting, error: updateError } = await supabase
       .from('meetings')
@@ -135,6 +140,11 @@ async function handleMeetingShared(data) {
     
     const grainMeetingId = data.meeting?.id || data.meeting_id;
     
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     // Update meeting with share URL
     const { error } = await supabase
       .from('meetings')
@@ -178,6 +188,11 @@ async function analyzeMeetingWithAI(meeting) {
     console.log('🧠 Analyzing meeting with AI...');
     const analysis = await aiProvider.analyzeMeetingContent(analysisData);
     
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
     // Update meeting with AI analysis results
     await supabase
       .from('meetings')
@@ -207,23 +222,29 @@ async function analyzeMeetingWithAI(meeting) {
     console.error('AI analysis failed:', error);
     
     // Update meeting status to indicate analysis failure
-    await supabase
-      .from('meetings')
-      .update({
-        status: 'transcribed',
-        processing_stage: 'analysis_failed',
-        metadata: {
-          ...meeting.metadata,
-          analysis_error: error.message,
-          analysis_failed_at: new Date().toISOString()
-        }
-      })
-      .eq('id', meeting.id);
+    if (supabase) {
+      await supabase
+        .from('meetings')
+        .update({
+          status: 'transcribed',
+          processing_stage: 'analysis_failed',
+          metadata: {
+            ...meeting.metadata,
+            analysis_error: error.message,
+            analysis_failed_at: new Date().toISOString()
+          }
+        })
+        .eq('id', meeting.id);
+    }
   }
 }
 
 async function saveInsightsToDatabase(meetingId, analysis) {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
     // Save meeting insights
     if (analysis.insights && analysis.insights.length > 0) {
       const insights = analysis.insights.map(insight => ({

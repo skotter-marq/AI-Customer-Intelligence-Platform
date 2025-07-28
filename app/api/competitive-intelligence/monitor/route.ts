@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { supabase } from '../../../../lib/supabase-client';
 const CompetitiveIntelligence = require('../../../../lib/competitive-intelligence.js');
 
 export async function POST(request: NextRequest) {
@@ -23,12 +24,10 @@ export async function POST(request: NextRequest) {
 
       for (const competitorId of competitor_ids) {
         try {
-          // Get competitor data
-          const { createClient } = require('@supabase/supabase-js');
-          const supabase = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-          );
+          // Check if Supabase client is available
+          if (!supabase) {
+            throw new Error('Database connection not available');
+          }
 
           const { data: competitor, error } = await supabase
             .from('competitors')
