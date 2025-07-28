@@ -69,6 +69,20 @@ export default function AppMarketplace() {
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCreateApp, setShowCreateApp] = useState(false);
+  const [newAppData, setNewAppData] = useState({
+    name: '',
+    developer: '',
+    description: '',
+    longDescription: '',
+    category: 'analytics',
+    type: 'webapp',
+    url: '',
+    tags: '',
+    features: '',
+    integrations: '',
+    popular: false,
+    featured: false
+  });
 
   useEffect(() => {
     fetchApps();
@@ -326,6 +340,186 @@ export default function AppMarketplace() {
             </div>
           </div>
 
+          {/* Create App Form */}
+          {showCreateApp && (
+            <div className="calendly-card mb-8">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-gray-900">Add New App</h2>
+                <button
+                  onClick={() => setShowCreateApp(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <span className="sr-only">Close</span>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <form className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">App Name</label>
+                    <input
+                      type="text"
+                      value={newAppData.name}
+                      onChange={(e) => setNewAppData(prev => ({ ...prev, name: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Enter app name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Developer Team</label>
+                    <input
+                      type="text"
+                      value={newAppData.developer}
+                      onChange={(e) => setNewAppData(prev => ({ ...prev, developer: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g., Product Team"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Short Description</label>
+                  <input
+                    type="text"
+                    value={newAppData.description}
+                    onChange={(e) => setNewAppData(prev => ({ ...prev, description: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Brief description for app cards"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Long Description</label>
+                  <textarea
+                    rows={3}
+                    value={newAppData.longDescription}
+                    onChange={(e) => setNewAppData(prev => ({ ...prev, longDescription: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Detailed description of the app's purpose and capabilities"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+                    <select 
+                      value={newAppData.category}
+                      onChange={(e) => setNewAppData(prev => ({ ...prev, category: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="analytics">Analytics</option>
+                      <option value="ai">AI & ML</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="sales">Sales</option>
+                      <option value="support">Support</option>
+                      <option value="productivity">Productivity</option>
+                      <option value="developer">Developer</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">App Type</label>
+                    <select 
+                      value={newAppData.type}
+                      onChange={(e) => setNewAppData(prev => ({ ...prev, type: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="webapp">Web App</option>
+                      <option value="mobile">Mobile App</option>
+                      <option value="desktop">Desktop App</option>
+                      <option value="api">API/SDK</option>
+                      <option value="widget">Widget</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">App URL</label>
+                  <input
+                    type="url"
+                    value={newAppData.url}
+                    onChange={(e) => setNewAppData(prev => ({ ...prev, url: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="https://app.company.com"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
+                    <input
+                      type="text"
+                      value={newAppData.tags}
+                      onChange={(e) => setNewAppData(prev => ({ ...prev, tags: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="AI, Analytics, Dashboard (comma separated)"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Integrations</label>
+                    <input
+                      type="text"
+                      value={newAppData.integrations}
+                      onChange={(e) => setNewAppData(prev => ({ ...prev, integrations: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="HubSpot, Salesforce, Slack (comma separated)"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Key Features</label>
+                  <textarea
+                    rows={2}
+                    value={newAppData.features}
+                    onChange={(e) => setNewAppData(prev => ({ ...prev, features: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Real-time Analytics, AI Insights, Custom Reports (comma separated)"
+                  />
+                </div>
+
+                <div className="flex items-center space-x-4">
+                  <label className="flex items-center">
+                    <input 
+                      type="checkbox" 
+                      checked={newAppData.popular}
+                      onChange={(e) => setNewAppData(prev => ({ ...prev, popular: e.target.checked }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Mark as Popular</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input 
+                      type="checkbox" 
+                      checked={newAppData.featured}
+                      onChange={(e) => setNewAppData(prev => ({ ...prev, featured: e.target.checked }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Featured App</span>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-end space-x-3 pt-6 border-t">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateApp(false)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                  >
+                    Add App
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           {/* Search and Filters */}
           <div className="calendly-card mb-8">
             <div className="flex flex-col lg:flex-row gap-4">
@@ -487,154 +681,6 @@ export default function AppMarketplace() {
           </div>
 
 
-          {/* Create App Modal */}
-          {showCreateApp && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="calendly-h2">Add New App</h2>
-                    <button
-                      onClick={() => setShowCreateApp(false)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <span className="sr-only">Close</span>
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-
-                  <form className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">App Name</label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Enter app name"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Developer Team</label>
-                        <input
-                          type="text"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="e.g., Product Team"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Short Description</label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Brief description for app cards"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Long Description</label>
-                      <textarea
-                        rows={3}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Detailed description of the app's purpose and capabilities"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
-                        <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="analytics">Analytics</option>
-                          <option value="ai">AI & ML</option>
-                          <option value="marketing">Marketing</option>
-                          <option value="sales">Sales</option>
-                          <option value="support">Support</option>
-                          <option value="productivity">Productivity</option>
-                          <option value="developer">Developer</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">App Type</label>
-                        <select className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
-                          <option value="webapp">Web App</option>
-                          <option value="mobile">Mobile App</option>
-                          <option value="desktop">Desktop App</option>
-                          <option value="api">API/SDK</option>
-                          <option value="widget">Widget</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">App URL</label>
-                      <input
-                        type="url"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="https://app.company.com"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="AI, Analytics, Dashboard (comma separated)"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Key Features</label>
-                      <textarea
-                        rows={2}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Real-time Analytics, AI Insights, Custom Reports (comma separated)"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Integrations</label>
-                      <input
-                        type="text"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="HubSpot, Salesforce, Slack (comma separated)"
-                      />
-                    </div>
-
-                    <div className="flex items-center space-x-4">
-                      <label className="flex items-center">
-                        <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        <span className="ml-2 text-sm text-gray-700">Mark as Popular</span>
-                      </label>
-                      <label className="flex items-center">
-                        <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        <span className="ml-2 text-sm text-gray-700">Featured App</span>
-                      </label>
-                    </div>
-
-                    <div className="flex items-center justify-end space-x-3 pt-6 border-t">
-                      <button
-                        type="button"
-                        onClick={() => setShowCreateApp(false)}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-                      >
-                        Add App
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
