@@ -6,9 +6,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const meetingId = params.id;
+    const resolvedParams = await params;
+    const meetingId = resolvedParams.id;
 
     // Fetch comprehensive meeting data with all related information
     const { data: meeting, error: meetingError } = await supabase
@@ -144,9 +145,10 @@ export async function GET(request: Request, { params }: { params: { id: string }
   }
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+export async function PUT(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const meetingId = params.id;
+    const resolvedParams = await params;
+    const meetingId = resolvedParams.id;
     const body = await request.json();
     const { action, ...updateData } = body;
 
