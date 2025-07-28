@@ -126,7 +126,7 @@ function shouldProcessWebhook(payload: JiraWebhookPayload): boolean {
        item.toString?.toLowerCase().includes('released'))
     );
     
-    return statusChanges && statusChanges.length > 0;
+    return Boolean(statusChanges && statusChanges.length > 0);
   }
   
   // Process new issues that are already marked as customer facing
