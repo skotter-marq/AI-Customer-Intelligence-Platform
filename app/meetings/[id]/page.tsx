@@ -180,7 +180,9 @@ export default function MeetingProfilePage() {
     account: '',
     interviewer: '',
     csat: '',
-    status: 'New Interview',
+    status: 'Scheduled',
+    role: 'End User',
+    recording: '',
     initiative: ''
   });
   const [initiatives, setInitiatives] = useState<Array<{id: string, name: string}>>([]);
@@ -208,7 +210,9 @@ export default function MeetingProfilePage() {
         name: meeting.customer_name || '',
         account: meeting.customer_name || '',
         // Try to extract email from attendees if available
-        email: meeting.attendees?.find((a: any) => a.email && !a.email.includes('@company.com'))?.email || ''
+        email: meeting.attendees?.find((a: any) => a.email && !a.email.includes('@company.com'))?.email || '',
+        // Auto-populate recording URL if available
+        recording: meeting.recording_url || meeting.grain_share_url || ''
       }));
       
       // Fetch initiatives from Coda
@@ -409,7 +413,9 @@ export default function MeetingProfilePage() {
       account: '',
       interviewer: '',
       csat: '',
-      status: 'New Interview',
+      status: 'Scheduled',
+      role: 'End User',
+      recording: '',
       initiative: ''
     });
     setAiAnalysisConfig({
@@ -726,6 +732,44 @@ export default function MeetingProfilePage() {
                           onChange={(e) => setCodaFormData(prev => ({ ...prev, interviewer: e.target.value }))}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                           placeholder="Your name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <select
+                          value={codaFormData.status}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, status: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="Scheduled">Scheduled</option>
+                          <option value="Completed">Completed</option>
+                          <option value="No show">No show</option>
+                        </select>
+                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                        <select
+                          value={codaFormData.role}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, role: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="Account Owner">Account Owner</option>
+                          <option value="Template Admin">Template Admin</option>
+                          <option value="End User">End User</option>
+                          <option value="Team Admin">Team Admin</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Recording</label>
+                        <input
+                          type="url"
+                          value={codaFormData.recording}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, recording: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Link to recording"
                         />
                       </div>
                       <div>
