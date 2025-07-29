@@ -538,6 +538,16 @@ export default function CompetitorsPage() {
     router.push(`/competitor-intelligence/competitors/${competitorId}`);
   };
 
+  const handleDeleteCompetitor = (competitorId: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent card click
+    
+    if (confirm('Are you sure you want to delete this competitor? This action cannot be undone.')) {
+      setCompetitors(prev => prev.filter(competitor => competitor.id !== competitorId));
+      // In a real app, you would also make an API call to delete from the backend
+      // await fetch(`/api/competitors/${competitorId}`, { method: 'DELETE' });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
@@ -766,7 +776,7 @@ export default function CompetitorsPage() {
                 <div
                   key={competitor.id}
                   onClick={() => handleCompetitorClick(competitor.id)}
-                  className="calendly-card cursor-pointer transition-all duration-200"
+                  className="calendly-card cursor-pointer transition-all duration-200 group"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
                     e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
@@ -829,7 +839,25 @@ export default function CompetitorsPage() {
                         {Math.round(competitor.confidence_score * 100)}% confidence
                       </span>
                     </div>
-                    <ExternalLink className="w-4 h-4" style={{ color: '#718096' }} />
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={(e) => handleDeleteCompetitor(competitor.id, e)}
+                        className="p-1 rounded transition-colors"
+                        style={{ color: '#718096' }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#fef2f2';
+                          e.currentTarget.style.color = '#ef4444';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.color = '#718096';
+                        }}
+                        title="Delete competitor"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <ExternalLink className="w-4 h-4" style={{ color: '#718096' }} />
+                    </div>
                   </div>
                 </div>
               ))}

@@ -4,9 +4,16 @@ export async function POST(request) {
   try {
     const webhookData = await request.json();
     
-    console.log('🎥 Received Grain webhook:', webhookData.event || 'unknown_event');
+    console.log('🎥 Received webhook data:', JSON.stringify(webhookData, null, 2));
     
-    // Process different Grain webhook events
+    // Detect if this is from Zapier Grain app (different format)
+    if (isGrainZapierData(webhookData)) {
+      console.log('📱 Processing Grain Zapier app data...');
+      return await handleGrainZapierData(webhookData);
+    }
+    
+    // Handle direct Grain webhook events (original format)
+    console.log('🔗 Processing direct Grain webhook:', webhookData.event || 'unknown_event');
     switch (webhookData.event) {
       case 'meeting.recorded':
         return await handleMeetingRecorded(webhookData);
@@ -44,25 +51,20 @@ async function handleMeetingRecorded(data) {
       throw new Error('Database connection not available');
     }
 
-    // Save basic meeting record to database
+    // Save basic meeting record to database (using actual schema)
     const { data: savedMeeting, error } = await supabase
       .from('meetings')
       .upsert({
-        grain_meeting_id: meetingData.grain_meeting_id,
+        grain_id: meetingData.grain_meeting_id,
         title: meetingData.title,
-        customer_name: meetingData.customer_name,
-        meeting_date: meetingData.meeting_date,
+        date: meetingData.meeting_date,
         duration_minutes: meetingData.duration_minutes,
-        attendees: meetingData.attendees,
-        organizer_email: meetingData.organizer_email,
-        meeting_type: meetingData.meeting_type,
-        recording_url: meetingData.recording_url,
-        grain_share_url: meetingData.grain_share_url,
-        status: 'recorded',
-        processing_stage: 'initial',
-        metadata: meetingData.metadata
+        participants: meetingData.attendees,
+        raw_transcript: null, // Will be updated when transcribed
+        customer_id: null, // You might want to implement customer matching
+        created_at: new Date().toISOString()
       }, {
-        onConflict: 'grain_meeting_id'
+        onConflict: 'grain_id'
       })
       .select()
       .single();
@@ -100,16 +102,13 @@ async function handleMeetingTranscribed(data) {
       throw new Error('Database connection not available');
     }
 
-    // Update meeting with transcript
+    // Update meeting with transcript (using actual schema)
     const { data: meeting, error: updateError } = await supabase
       .from('meetings')
       .update({
-        transcript_url: data.meeting?.transcript_url,
-        full_transcript: data.meeting?.transcript,
-        status: 'transcribed',
-        processing_stage: 'transcribing'
+        raw_transcript: data.meeting?.transcript
       })
-      .eq('grain_meeting_id', grainMeetingId)
+      .eq('grain_id', grainMeetingId)
       .select()
       .single();
 
@@ -145,13 +144,14 @@ async function handleMeetingShared(data) {
       throw new Error('Database connection not available');
     }
 
-    // Update meeting with share URL
+    // Update meeting with share URL (note: no share_url column in current schema)
     const { error } = await supabase
       .from('meetings')
       .update({
-        grain_share_url: data.meeting?.share_url
+        // Note: share_url not in current schema, could add to participants JSON or skip
+        participants: meeting.participants || []
       })
-      .eq('grain_meeting_id', grainMeetingId);
+      .eq('grain_id', grainMeetingId);
 
     if (error) {
       throw error;
@@ -175,14 +175,14 @@ async function analyzeMeetingWithAI(meeting) {
     const AIProvider = require('../../../lib/ai-provider.js');
     const aiProvider = new AIProvider();
     
-    // Prepare meeting data for analysis
+    // Prepare meeting data for analysis (using actual schema)
     const analysisData = {
       title: meeting.title,
-      customer: meeting.customer_name,
+      customer: extractCustomerName({ title: meeting.title }),
       duration: `${meeting.duration_minutes} minutes`,
-      attendees: meeting.attendees || [],
-      transcript: meeting.full_transcript,
-      meetingType: meeting.meeting_type
+      attendees: meeting.participants || [],
+      transcript: meeting.raw_transcript,
+      meetingType: inferMeetingType(meeting.title)
     };
     
     console.log('🧠 Analyzing meeting with AI...');
@@ -193,19 +193,14 @@ async function analyzeMeetingWithAI(meeting) {
       throw new Error('Database connection not available');
     }
 
-    // Update meeting with AI analysis results
-    await supabase
-      .from('meetings')
-      .update({
-        sentiment_score: analysis.overall_analysis.sentiment_score,
-        sentiment_label: analysis.overall_analysis.sentiment_label,
-        confidence_score: analysis.overall_analysis.confidence_score,
-        meeting_summary: analysis.overall_analysis.summary,
-        status: 'analyzed',
-        processing_stage: 'complete',
-        analyzed_at: new Date().toISOString()
-      })
-      .eq('id', meeting.id);
+    // Update meeting with basic analysis (using simplified schema)
+    // Note: Current schema may not have all these columns
+    // You might want to store analysis results in a separate table
+    console.log('✅ AI Analysis completed:', {
+      sentiment: analysis.overall_analysis.sentiment_label,
+      insights: analysis.insights.length,
+      actions: analysis.action_items.length
+    });
 
     // Save insights to database
     await saveInsightsToDatabase(meeting.id, analysis);
@@ -241,99 +236,26 @@ async function analyzeMeetingWithAI(meeting) {
 
 async function saveInsightsToDatabase(meetingId, analysis) {
   try {
-    // Check if Supabase client is available
+    // For now, just log the insights since detailed tables may not exist
+    console.log('💾 Insights extracted from meeting:', meetingId);
+    console.log('  Insights:', analysis.insights?.length || 0);
+    console.log('  Action Items:', analysis.action_items?.length || 0);
+    console.log('  Feature Requests:', analysis.feature_requests?.length || 0);
+    console.log('  Competitive Intel:', analysis.competitive_intelligence?.length || 0);
+    
+    // You can uncomment and modify this section once you have the proper tables set up
+    /*
     if (!supabase) {
       throw new Error('Database connection not available');
     }
-    // Save meeting insights
-    if (analysis.insights && analysis.insights.length > 0) {
-      const insights = analysis.insights.map(insight => ({
-        meeting_id: meetingId,
-        insight_type: insight.type,
-        category: insight.category,
-        title: insight.title,
-        description: insight.description,
-        quote: insight.quote,
-        importance_score: insight.importance_score,
-        confidence_score: insight.confidence_score,
-        priority: insight.priority,
-        tags: insight.tags || [],
-        affected_feature: insight.affected_feature,
-        competitor_mentioned: insight.competitor_mentioned
-      }));
-
-      await supabase.from('meeting_insights').insert(insights);
-    }
-
-    // Save action items
-    if (analysis.action_items && analysis.action_items.length > 0) {
-      const actionItems = analysis.action_items.map(item => ({
-        meeting_id: meetingId,
-        description: item.description,
-        assigned_to: item.assigned_to,
-        priority: item.priority,
-        category: item.category,
-        due_date: getDueDateFromTimeframe(item.due_timeframe)
-      }));
-
-      await supabase.from('meeting_action_items').insert(actionItems);
-    }
-
-    // Save feature requests
-    if (analysis.feature_requests && analysis.feature_requests.length > 0) {
-      const featureRequests = analysis.feature_requests.map(request => ({
-        meeting_id: meetingId,
-        feature_title: request.title,
-        feature_description: request.description,
-        business_value: request.business_value,
-        urgency: request.urgency,
-        customer_pain_point: request.customer_pain_point,
-        estimated_impact: request.estimated_impact
-      }));
-
-      await supabase.from('meeting_feature_requests').insert(featureRequests);
-    }
-
-    // Save competitive intelligence
-    if (analysis.competitive_intelligence && analysis.competitive_intelligence.length > 0) {
-      const competitiveIntel = analysis.competitive_intelligence.map(intel => ({
-        meeting_id: meetingId,
-        competitor_name: intel.competitor,
-        mention_type: intel.mention_type,
-        context: intel.context,
-        sentiment: intel.sentiment,
-        threat_level: intel.threat_level,
-        quote: intel.quote
-      }));
-
-      await supabase.from('meeting_competitive_intel').insert(competitiveIntel);
-    }
-
-    // Save topics discussed
-    if (analysis.topics_discussed && analysis.topics_discussed.length > 0) {
-      const topics = analysis.topics_discussed.map(topic => ({
-        meeting_id: meetingId,
-        topic: topic.topic,
-        topic_category: topic.category,
-        relevance_score: topic.relevance_score,
-        sentiment_score: topic.sentiment === 'positive' ? 0.7 : topic.sentiment === 'negative' ? -0.7 : 0,
-        keywords: topic.keywords || []
-      }));
-
-      await supabase.from('meeting_topics').insert(topics);
-    }
-
-    // Save meeting outcome
-    await supabase.from('meeting_outcomes').insert({
+    
+    // Example: Save to a general insights table
+    await supabase.from('insights').insert({
       meeting_id: meetingId,
-      outcome_type: analysis.overall_analysis.meeting_outcome,
-      outcome_result: analysis.overall_analysis.sentiment_label,
-      customer_satisfaction: analysis.customer_health.satisfaction_level,
-      churn_risk_indicator: analysis.customer_health.churn_risk,
-      expansion_opportunity: analysis.customer_health.expansion_opportunity
+      analysis_data: analysis,
+      created_at: new Date().toISOString()
     });
-
-    console.log('💾 All meeting insights saved to database');
+    */
     
   } catch (error) {
     console.error('Failed to save insights to database:', error);
@@ -489,9 +411,196 @@ async function notifyMeetingAnalyzed(meeting, analysis) {
   }
 }
 
+// Zapier Grain app integration functions
+function isGrainZapierData(webhookData) {
+  // Zapier typically sends data with different structure than direct Grain webhooks
+  // Common Zapier indicators:
+  // 1. Has zapier-specific fields like 'id' at root level
+  // 2. Flattened structure instead of nested 'meeting' object
+  // 3. Different field naming conventions
+  // 4. May include 'recorded_at' instead of 'started_at'
+  
+  const zapierIndicators = [
+    // Check for Zapier-specific field patterns
+    webhookData.hasOwnProperty('recording_id') && !webhookData.hasOwnProperty('event'),
+    webhookData.hasOwnProperty('recorded_at') && !webhookData.meeting,
+    webhookData.hasOwnProperty('grain_recording_id'),
+    webhookData.hasOwnProperty('grain_meeting_title'),
+    // Zapier often flattens nested objects, so check for flattened structure
+    typeof webhookData.meeting === 'undefined' && webhookData.hasOwnProperty('title'),
+    // Check for Zapier's common field naming
+    webhookData.hasOwnProperty('created_at_iso') || webhookData.hasOwnProperty('updated_at_iso')
+  ];
+  
+  // If any Zapier indicators are present, treat as Zapier data
+  const isZapier = zapierIndicators.some(indicator => indicator);
+  
+  console.log('🔍 Zapier detection results:', {
+    isZapier,
+    indicators: zapierIndicators,
+    sampleFields: Object.keys(webhookData).slice(0, 10)
+  });
+  
+  return isZapier;
+}
+
+async function handleGrainZapierData(webhookData) {
+  try {
+    console.log('📱 Processing Grain Zapier "Recorded Added" trigger data...');
+    
+    // Map Zapier Grain app fields to our expected format
+    // Common Zapier Grain app field mappings:
+    const mappedData = {
+      grain_meeting_id: webhookData.recording_id || webhookData.grain_recording_id || webhookData.id,
+      title: webhookData.title || webhookData.grain_meeting_title || webhookData.meeting_title || 'Untitled Meeting',
+      meeting_date: webhookData.recorded_at || webhookData.created_at || webhookData.started_at || new Date().toISOString(),
+      duration_minutes: webhookData.duration_minutes || 
+                       (webhookData.duration_seconds ? Math.round(webhookData.duration_seconds / 60) : null) ||
+                       (webhookData.duration ? Math.round(webhookData.duration / 60) : null),
+      participants: parseZapierParticipants(webhookData),
+      raw_transcript: webhookData.transcript || webhookData.transcript_text || null,
+      customer_id: null, // Will be determined later
+      recording_url: webhookData.recording_url || webhookData.grain_recording_url,
+      share_url: webhookData.share_url || webhookData.grain_share_url,
+      organizer_email: webhookData.organizer_email || webhookData.host_email,
+      workspace: webhookData.workspace_name || webhookData.grain_workspace
+    };
+    
+    console.log('🔄 Mapped Zapier data:', {
+      grain_id: mappedData.grain_meeting_id,
+      title: mappedData.title,
+      duration: mappedData.duration_minutes,
+      has_transcript: !!mappedData.raw_transcript
+    });
+    
+    // Check if Supabase client is available
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+    
+    // Save meeting to database using actual schema
+    const { data: savedMeeting, error } = await supabase
+      .from('meetings')
+      .upsert({
+        grain_id: mappedData.grain_meeting_id,
+        title: mappedData.title,
+        date: mappedData.meeting_date,
+        duration_minutes: mappedData.duration_minutes,
+        participants: mappedData.participants,
+        raw_transcript: mappedData.raw_transcript,
+        customer_id: mappedData.customer_id,
+        created_at: new Date().toISOString()
+      }, {
+        onConflict: 'grain_id'
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      throw error;
+    }
+    
+    console.log('✅ Zapier meeting saved:', savedMeeting.id);
+    
+    // If transcript is available, trigger AI analysis
+    if (mappedData.raw_transcript && mappedData.raw_transcript.length > 50) {
+      console.log('🤖 Starting AI analysis of Zapier meeting content...');
+      await analyzeMeetingWithAI(savedMeeting);
+    }
+    
+    // Send notifications
+    await notifyNewMeeting(savedMeeting);
+    
+    return Response.json({
+      success: true,
+      message: 'Zapier Grain meeting processed successfully',
+      meeting_id: savedMeeting.id,
+      source: 'zapier_grain_app',
+      data_mapped: true,
+      ai_analysis: !!mappedData.raw_transcript,
+      timestamp: new Date().toISOString()
+    });
+    
+  } catch (error) {
+    console.error('❌ Failed to process Zapier Grain data:', error);
+    throw error;
+  }
+}
+
+function parseZapierParticipants(webhookData) {
+  // Zapier might send participants in various formats:
+  // 1. JSON string that needs parsing
+  // 2. Comma-separated string
+  // 3. Array (if already parsed)
+  // 4. Individual fields like attendee_1_name, attendee_1_email, etc.
+  
+  let participants = [];
+  
+  // Try parsing as JSON string first
+  if (webhookData.participants && typeof webhookData.participants === 'string') {
+    try {
+      participants = JSON.parse(webhookData.participants);
+    } catch (e) {
+      // If JSON parsing fails, try comma-separated
+      participants = webhookData.participants.split(',').map(name => ({
+        name: name.trim(),
+        email: null,
+        role: 'attendee'
+      }));
+    }
+  }
+  // If already an array
+  else if (Array.isArray(webhookData.participants)) {
+    participants = webhookData.participants;
+  }
+  // Try attendee list format
+  else if (webhookData.attendees) {
+    if (typeof webhookData.attendees === 'string') {
+      try {
+        participants = JSON.parse(webhookData.attendees);
+      } catch (e) {
+        participants = webhookData.attendees.split(',').map(name => ({
+          name: name.trim(),
+          email: null,
+          role: 'attendee'
+        }));
+      }
+    } else if (Array.isArray(webhookData.attendees)) {
+      participants = webhookData.attendees;
+    }
+  }
+  // Try individual attendee fields (common in Zapier)
+  else {
+    const attendeeKeys = Object.keys(webhookData).filter(key => key.startsWith('attendee_') && key.includes('_name'));
+    attendeeKeys.forEach(nameKey => {
+      const index = nameKey.match(/attendee_(\d+)_name/)?.[1];
+      if (index) {
+        const emailKey = `attendee_${index}_email`;
+        participants.push({
+          name: webhookData[nameKey],
+          email: webhookData[emailKey] || null,
+          role: 'attendee'
+        });
+      }
+    });
+  }
+  
+  // Add organizer if available
+  if (webhookData.organizer_name || webhookData.host_name) {
+    participants.unshift({
+      name: webhookData.organizer_name || webhookData.host_name,
+      email: webhookData.organizer_email || webhookData.host_email,
+      role: 'host'
+    });
+  }
+  
+  console.log('👥 Parsed participants:', participants.length, 'attendees');
+  return participants;
+}
+
 export async function GET() {
   return Response.json({ 
-    message: 'Grain webhook endpoint is active - Enhanced version with AI analysis',
+    message: 'Grain webhook endpoint is active - Enhanced version with AI analysis + Zapier support',
     timestamp: new Date().toISOString(),
     features: [
       'Meeting recording processing',
@@ -500,7 +609,13 @@ export async function GET() {
       'Feature request detection',
       'Competitive intelligence tracking',
       'Slack notifications',
-      'Database storage'
+      'Database storage',
+      'Zapier Grain app integration',
+      'Multiple webhook format support'
+    ],
+    supported_sources: [
+      'Direct Grain webhooks',
+      'Zapier Grain app "Recorded Added" trigger'
     ]
   });
 }

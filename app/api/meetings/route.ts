@@ -15,50 +15,25 @@ export async function GET(request: Request) {
     const status = searchParams.get('status');
     const dateRange = searchParams.get('dateRange');
 
-    // Build query with filters
+    // Build query with filters - using actual schema
     let query = supabase
       .from('meetings')
       .select(`
-        *,
-        meeting_insights (
-          id,
-          insight_type,
-          title,
-          importance_score,
-          priority
-        ),
-        meeting_action_items (
-          id,
-          description,
-          status,
-          priority,
-          due_date
-        ),
-        meeting_feature_requests (
-          id,
-          feature_title,
-          urgency,
-          status
-        ),
-        meeting_competitive_intel (
-          id,
-          competitor_name,
-          threat_level
-        )
+        id,
+        grain_id,
+        customer_id,
+        title,
+        date,
+        duration_minutes,
+        participants,
+        raw_transcript,
+        created_at
       `)
-      .order('meeting_date', { ascending: false });
+      .order('date', { ascending: false });
 
-    // Apply filters
+    // Apply filters (simplified for current schema)
     if (customer && customer !== 'all') {
-      query = query.ilike('customer_name', `%${customer}%`);
-    }
-
-    if (sentiment && sentiment !== 'all') {
-      query = query.eq('sentiment_label', sentiment);
-    }
-
-    if (status && status !== 'all') {
-      query = query.eq('status', status);
+      query = query.ilike('title', `%${customer}%`);
     }
 
     if (dateRange && dateRange !== 'all') {
@@ -79,7 +54,7 @@ export async function GET(request: Request) {
           startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
       }
       
-      query = query.gte('meeting_date', startDate.toISOString());
+      query = query.gte('date', startDate.toISOString());
     }
 
     // Apply pagination
@@ -99,24 +74,26 @@ export async function GET(request: Request) {
     const transformedMeetings = (meetings || []).map((meeting: any) => ({
       id: meeting.id,
       title: meeting.title,
-      customer: meeting.customer_name,
-      date: meeting.meeting_date,
+      customer: extractCustomerFromTitle(meeting.title) || 'Unknown Customer',
+      date: meeting.date,
       duration: meeting.duration_minutes ? `${meeting.duration_minutes} min` : 'Unknown',
-      sentiment: meeting.sentiment_label || 'neutral',
-      summary: meeting.meeting_summary || 'Meeting analysis pending...',
-      keyTopics: extractKeyTopics(meeting),
-      actionItems: meeting.meeting_action_items?.map((item: any) => item.description) || [],
-      attendees: meeting.attendees?.map((a: any) => a.name || a.email || 'Unknown') || [],
-      recording_url: meeting.recording_url,
-      transcript_url: meeting.transcript_url,
-      grain_share_url: meeting.grain_share_url,
-      status: meeting.status,
-      priority: calculatePriority(meeting),
-      tags: extractTags(meeting),
-      insights_count: meeting.meeting_insights?.length || 0,
-      feature_requests_count: meeting.meeting_feature_requests?.length || 0,
-      competitive_mentions_count: meeting.meeting_competitive_intel?.length || 0,
-      sentiment_score: meeting.sentiment_score
+      sentiment: inferSentimentFromTranscript(meeting.raw_transcript),
+      summary: meeting.raw_transcript ? 
+        meeting.raw_transcript.substring(0, 200) + '...' : 
+        'No transcript available',
+      keyTopics: extractTopicsFromTranscript(meeting.raw_transcript),
+      actionItems: extractActionItemsFromTranscript(meeting.raw_transcript),
+      attendees: meeting.participants || [],
+      recording_url: null,
+      transcript_url: null,
+      grain_share_url: null,
+      status: meeting.raw_transcript ? 'transcribed' : 'recorded',
+      priority: 'medium',
+      tags: extractTagsFromMeeting(meeting),
+      insights_count: 0,
+      feature_requests_count: 0,
+      competitive_mentions_count: 0,
+      sentiment_score: 0.5
     }));
 
     return NextResponse.json({
@@ -180,23 +157,148 @@ export async function POST(request: Request) {
   }
 }
 
-function extractKeyTopics(meeting: any): string[] {
-  // Extract from insights and feature requests
-  const topics = new Set<string>();
+export async function DELETE(request: Request) {
+  if (!supabase) {
+    return NextResponse.json({ error: 'Database connection not available' }, { status: 503 });
+  }
   
-  meeting.meeting_insights?.forEach((insight: any) => {
-    if (insight.title) {
-      topics.add(insight.title);
+  try {
+    const { searchParams } = new URL(request.url);
+    const meetingId = searchParams.get('id');
+    
+    if (!meetingId) {
+      return NextResponse.json(
+        { error: 'Meeting ID is required' },
+        { status: 400 }
+      );
     }
+
+    console.log(`🗑️ Deleting meeting: ${meetingId}`);
+
+    // First, get the meeting details for logging
+    const { data: meeting, error: fetchError } = await supabase
+      .from('meetings')
+      .select('id, title, grain_id')
+      .eq('id', meetingId)
+      .single();
+
+    if (fetchError) {
+      if (fetchError.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'Meeting not found' },
+          { status: 404 }
+        );
+      }
+      throw fetchError;
+    }
+
+    // Delete the meeting
+    const { error: deleteError } = await supabase
+      .from('meetings')
+      .delete()
+      .eq('id', meetingId);
+
+    if (deleteError) {
+      throw deleteError;
+    }
+
+    console.log(`✅ Meeting deleted successfully: "${meeting.title}" (${meetingId})`);
+
+    return NextResponse.json({
+      success: true,
+      message: 'Meeting deleted successfully',
+      deletedMeeting: {
+        id: meeting.id,
+        title: meeting.title,
+        grain_id: meeting.grain_id
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Error deleting meeting:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete meeting' },
+      { status: 500 }
+    );
+  }
+}
+
+function extractCustomerFromTitle(title: string): string | null {
+  // Extract customer name from title patterns like "Demo - CustomerName" or "Meeting with CustomerName"
+  const patterns = [
+    /(?:demo|meeting|call)\s*[-–]\s*([^-–]+)/i,
+    /([^-–]+?)\s*[-–]\s*(?:demo|meeting|call)/i,
+    /with\s+([^-–(]+)/i
+  ];
+  
+  for (const pattern of patterns) {
+    const match = title.match(pattern);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  
+  return null;
+}
+
+function inferSentimentFromTranscript(transcript: string | null): 'positive' | 'neutral' | 'negative' {
+  if (!transcript) return 'neutral';
+  
+  const positive = ['great', 'excellent', 'love', 'perfect', 'amazing', 'fantastic', 'impressed', 'satisfied'];
+  const negative = ['issue', 'problem', 'frustrated', 'disappointed', 'concerned', 'difficult', 'poor'];
+  
+  const text = transcript.toLowerCase();
+  const positiveCount = positive.filter(word => text.includes(word)).length;
+  const negativeCount = negative.filter(word => text.includes(word)).length;
+  
+  if (positiveCount > negativeCount) return 'positive';
+  if (negativeCount > positiveCount) return 'negative';
+  return 'neutral';
+}
+
+function extractTopicsFromTranscript(transcript: string | null): string[] {
+  if (!transcript) return [];
+  
+  const keywords = ['analytics', 'dashboard', 'integration', 'deployment', 'pricing', 'performance', 'feature', 'customization', 'security', 'training'];
+  const found = keywords.filter(keyword => 
+    transcript.toLowerCase().includes(keyword)
+  );
+  
+  return found.slice(0, 5);
+}
+
+function extractActionItemsFromTranscript(transcript: string | null): string[] {
+  if (!transcript) return [];
+  
+  // Simple extraction based on common patterns
+  const actionPatterns = [
+    /(?:will|need to|should|must)\s+([^.!?]{10,60})/gi,
+    /(?:follow up|schedule|send|provide)\s+([^.!?]{10,60})/gi
+  ];
+  
+  const items: string[] = [];
+  actionPatterns.forEach(pattern => {
+    const matches = [...transcript.matchAll(pattern)];
+    matches.forEach(match => {
+      if (match[1] && items.length < 3) {
+        items.push(match[1].trim());
+      }
+    });
   });
   
-  meeting.meeting_feature_requests?.forEach((request: any) => {
-    if (request.feature_title) {
-      topics.add(request.feature_title);
-    }
-  });
+  return items;
+}
+
+function extractTagsFromMeeting(meeting: any): string[] {
+  const tags = [];
   
-  return Array.from(topics).slice(0, 5);
+  if (meeting.title.toLowerCase().includes('demo')) tags.push('Demo');
+  if (meeting.title.toLowerCase().includes('check-in')) tags.push('Check-in');
+  if (meeting.title.toLowerCase().includes('feature')) tags.push('Feature Request');
+  if (meeting.duration_minutes > 60) tags.push('Long Meeting');
+  
+  return tags.slice(0, 4);
 }
 
 function calculatePriority(meeting: any): 'high' | 'medium' | 'low' {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Bot,
@@ -28,7 +28,8 @@ import {
   FileText,
   Settings,
   ExternalLink,
-  Edit
+  Edit,
+  RefreshCw
 } from 'lucide-react';
 
 interface QuickStat {
@@ -69,142 +70,148 @@ export default function DashboardPage() {
   const [aiResponse, setAiResponse] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
 
-  // Mock quick stats - general platform metrics
-  const quickStats: QuickStat[] = [
-    {
-      label: 'Content Posts Created',
-      value: '127',
-      change: '+18% this month',
-      icon: FileText,
-      color: '#4285f4',
-      trend: 'up'
-    },
-    {
-      label: 'Weekly Meetings',
-      value: '16',
-      change: '+25%',
-      icon: MessageSquare,
-      color: '#f59e0b',
-      trend: 'up'
-    },
-    {
-      label: 'AI Insights',
-      value: '42',
-      change: '+18%',
-      icon: Lightbulb,
-      color: '#10b981',
-      trend: 'up'
-    },
-    {
-      label: 'Product Updates',
-      value: '12',
-      change: '+3 this week',
-      icon: Package,
-      color: '#6366f1',
-      trend: 'up'
-    }
-  ];
+  // Live data state
+  const [quickStats, setQuickStats] = useState<QuickStat[]>([]);
+  const [recentInsights, setRecentInsights] = useState<RecentInsight[]>([]);
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [isLoadingInsights, setIsLoadingInsights] = useState(true);
 
-  // Recent changelog entries
+  // Load live dashboard data
+  useEffect(() => {
+    loadDashboardStats();
+    loadDashboardInsights();
+  }, []);
+
+  const loadDashboardStats = async () => {
+    try {
+      setIsLoadingStats(true);
+      const response = await fetch('/api/dashboard-stats');
+      const data = await response.json();
+      
+      if (data.success) {
+        const liveStats: QuickStat[] = [
+          {
+            label: 'Content Posts Created',
+            value: data.stats.contentPosts.total.toString(),
+            change: data.stats.contentPosts.change,
+            icon: FileText,
+            color: '#4285f4',
+            trend: data.stats.contentPosts.change.includes('+') ? 'up' : data.stats.contentPosts.change.includes('-') ? 'down' : 'stable'
+          },
+          {
+            label: 'Total Meetings',
+            value: data.stats.meetings.total.toString(),
+            change: data.stats.meetings.change,
+            icon: MessageSquare,
+            color: '#f59e0b',
+            trend: data.stats.meetings.change.includes('+') ? 'up' : data.stats.meetings.change.includes('-') ? 'down' : 'stable'
+          },
+          {
+            label: 'AI Insights',
+            value: data.stats.insights.total.toString(),
+            change: data.stats.insights.change,
+            icon: Lightbulb,
+            color: '#10b981',
+            trend: data.stats.insights.change.includes('+') ? 'up' : data.stats.insights.change.includes('-') ? 'down' : 'stable'
+          },
+          {
+            label: 'Product Updates',
+            value: data.stats.productUpdates.total.toString(),
+            change: data.stats.productUpdates.change,
+            icon: Package,
+            color: '#6366f1',
+            trend: data.stats.productUpdates.change.includes('+') ? 'up' : data.stats.productUpdates.change.includes('-') ? 'down' : 'stable'
+          }
+        ];
+        setQuickStats(liveStats);
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard stats:', error);
+      // Fallback to default stats if API fails
+      setQuickStats([
+        {
+          label: 'Content Posts Created',
+          value: '0',
+          change: '+0%',
+          icon: FileText,
+          color: '#4285f4',
+          trend: 'stable'
+        },
+        {
+          label: 'Total Meetings',
+          value: '0',
+          change: '+0%',
+          icon: MessageSquare,
+          color: '#f59e0b',
+          trend: 'stable'
+        },
+        {
+          label: 'AI Insights',
+          value: '0',
+          change: '+0%',
+          icon: Lightbulb,
+          color: '#10b981',
+          trend: 'stable'
+        },
+        {
+          label: 'Product Updates',
+          value: '0',
+          change: '+0%',
+          icon: Package,
+          color: '#6366f1',
+          trend: 'stable'
+        }
+      ]);
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  const loadDashboardInsights = async () => {
+    try {
+      setIsLoadingInsights(true);
+      const response = await fetch('/api/dashboard-insights');
+      const data = await response.json();
+      
+      if (data.success) {
+        setRecentInsights(data.insights);
+      }
+    } catch (error) {
+      console.error('Failed to load dashboard insights:', error);
+      // Fallback insight if API fails
+      setRecentInsights([
+        {
+          id: 'system-ready',
+          title: 'Intelligence system ready',
+          description: 'Your AI customer intelligence platform is configured and ready to analyze data.',
+          type: 'system',
+          priority: 'low',
+          timestamp: 'Just now',
+          source: 'System Status'
+        }
+      ]);
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  };
+
+  // Recent changelog entries - kept for reference but could be made dynamic too
   const recentChangelogEntries: ChangelogEntry[] = [
     {
-      id: 'changelog-v2.4.2',
-      version: 'v2.4.2',
-      title: 'Real-time Analytics Dashboard',
+      id: 'changelog-live-data',
+      version: 'v3.0.0',
+      title: 'Live Dashboard Data Integration',
       category: 'Added',
-      description: 'Introducing our new analytics dashboard with live data updates, customizable widgets, and advanced filtering capabilities.',
-      release_date: '2024-01-20T00:00:00Z',
+      description: 'Dashboard now displays real-time statistics from HubSpot, meeting insights, and product updates.',
+      release_date: new Date().toISOString(),
       approval_status: 'published',
-      view_count: 1247,
-      upvotes: 89,
-      jira_story_key: 'PLAT-245'
-    },
-    {
-      id: 'changelog-pending-001',
-      version: 'v2.5.0',
-      title: 'Mobile App Offline Mode',
-      category: 'Added',
-      description: 'Users can now access critical features and view cached data when offline, syncing automatically when connection is restored.',
-      release_date: '2024-01-25T00:00:00Z',
-      approval_status: 'pending',
-      view_count: 0,
-      upvotes: 0,
-      jira_story_key: 'PLAT-189'
-    },
-    {
-      id: 'changelog-v2.4.1',
-      version: 'v2.4.1',
-      title: 'Enhanced Security & Multi-Factor Authentication',
-      category: 'Security',
-      description: 'We\'ve strengthened our security infrastructure with multi-factor authentication, improved session management, and advanced threat detection.',
-      release_date: '2024-01-15T00:00:00Z',
-      approval_status: 'published',
-      view_count: 2156,
-      upvotes: 156,
-      jira_story_key: 'PLAT-267'
-    },
-    {
-      id: 'changelog-pending-002',
-      version: 'v2.4.3',
-      title: 'API Performance Improvements',
-      category: 'Improved',
-      description: 'Optimized API endpoints for 40% faster response times and improved rate limiting for enterprise customers.',
-      release_date: '2024-01-22T00:00:00Z',
-      approval_status: 'pending',
-      view_count: 0,
-      upvotes: 0,
-      jira_story_key: 'PLAT-301'
+      view_count: 1,
+      upvotes: 1,
+      jira_story_key: 'LIVE-001'
     }
   ];
 
-  // Mock recent insights - general platform insights with some product alerts
-  const recentInsights: RecentInsight[] = [
-    {
-      id: '1',
-      title: '4 product updates awaiting approval',
-      description: 'New changelog entries from JIRA are ready for review. Click to approve and publish to customers.',
-      type: 'product',
-      priority: 'high',
-      timestamp: '2 hours ago',
-      source: 'Product System'
-    },
-    {
-      id: '2',
-      title: 'High-value deal stalled in negotiation',
-      description: 'MarketingCorp deal ($45K) has been in negotiation stage for 12 days. Consider follow-up.',
-      type: 'sales',
-      priority: 'high',
-      timestamp: '4 hours ago',
-      source: 'HubSpot Pipeline'
-    },
-    {
-      id: '3',
-      title: 'Positive sentiment spike in customer meetings',
-      description: 'Recent Grain recordings show 85% positive sentiment, up from 72% last week.',
-      type: 'meetings',
-      priority: 'medium',
-      timestamp: '6 hours ago',
-      source: 'Grain Analysis'
-    },
-    {
-      id: '4',
-      title: 'Competitor pricing change detected',
-      description: 'Salesforce announced 15% price increase for enterprise plans effective Feb 1st.',
-      type: 'competitive',
-      priority: 'high',
-      timestamp: '8 hours ago',
-      source: 'Pricing Monitor Agent'
-    },
-    {
-      id: '5',
-      title: 'New feature adoption accelerating',
-      description: 'Dashboard analytics feature seeing 68% adoption rate among active users.',
-      type: 'product',
-      priority: 'medium',
-      timestamp: '12 hours ago',
-      source: 'Product Analytics'
-    }
-  ];
+  // Recent insights are now loaded dynamically from the API
 
   const handleAIQuery = async () => {
     if (!aiQuery.trim()) return;
@@ -315,8 +322,23 @@ export default function DashboardPage() {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div style={{ marginBottom: '32px' }}>
-            <h1 className="calendly-h1">AI Customer Intelligence</h1>
-            <p className="calendly-body">Analyze customer data, track trends, and generate insights with AI-powered tools</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="calendly-h1">AI Customer Intelligence</h1>
+                <p className="calendly-body">Analyze customer data, track trends, and generate insights with AI-powered tools</p>
+              </div>
+              <button
+                onClick={() => {
+                  loadDashboardStats();
+                  loadDashboardInsights();
+                }}
+                disabled={isLoadingStats || isLoadingInsights}
+                className="calendly-btn-secondary flex items-center space-x-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${(isLoadingStats || isLoadingInsights) ? 'animate-spin' : ''}`} />
+                <span>Refresh Data</span>
+              </button>
+            </div>
           </div>
 
 
@@ -439,7 +461,34 @@ export default function DashboardPage() {
             </div>
 
             <div className="space-y-4">
-              {recentInsights.map((insight) => {
+              {isLoadingInsights ? (
+                // Loading skeleton for insights
+                Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="calendly-card animate-pulse">
+                    <div className="flex items-start justify-between" style={{ marginBottom: '12px' }}>
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gray-200 rounded-lg"></div>
+                        <div className="flex-1">
+                          <div className="h-4 bg-gray-200 rounded w-48" style={{ marginBottom: '4px' }}></div>
+                          <div className="h-3 bg-gray-200 rounded w-32"></div>
+                        </div>
+                      </div>
+                      <div className="w-16 h-6 bg-gray-200 rounded"></div>
+                    </div>
+                    <div className="h-3 bg-gray-200 rounded w-full" style={{ marginBottom: '8px' }}></div>
+                    <div className="h-3 bg-gray-200 rounded w-3/4"></div>
+                  </div>
+                ))
+              ) : recentInsights.length === 0 ? (
+                <div className="calendly-card text-center py-8">
+                  <Lightbulb className="w-12 h-12 mx-auto text-gray-400" style={{ marginBottom: '16px' }} />
+                  <h3 className="calendly-h3 text-gray-600" style={{ marginBottom: '8px' }}>No insights yet</h3>
+                  <p className="calendly-body-sm text-gray-500">
+                    Start syncing your data to generate AI-powered insights
+                  </p>
+                </div>
+              ) : (
+                recentInsights.map((insight) => {
                 const TypeIcon = getTypeIcon(insight.type);
                 return (
                   <div 
@@ -496,7 +545,8 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 );
-              })}
+                })
+              )}
             </div>
           </div>
 

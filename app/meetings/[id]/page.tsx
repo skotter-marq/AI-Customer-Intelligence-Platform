@@ -34,8 +34,49 @@ import {
   Heart,
   ThumbsUp,
   ThumbsDown,
-  Minus
+  Minus,
+  Search,
+  X,
+  Database,
+  Bot,
+  ChevronRight
 } from 'lucide-react';
+
+// Helper function to safely format meeting dates
+const formatMeetingDate = (dateValue: string | null | undefined): string => {
+  if (!dateValue) {
+    return 'Date not available';
+  }
+  
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    return format(date, 'PPP');
+  } catch (error) {
+    console.error('Date formatting error:', error);
+    return 'Date not available';
+  }
+};
+
+// Helper function to safely format due dates
+const formatDueDate = (dateValue: string | null | undefined): string => {
+  if (!dateValue) {
+    return 'No due date';
+  }
+  
+  try {
+    const date = new Date(dateValue);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    return format(date, 'MMM d, yyyy');
+  } catch (error) {
+    console.error('Due date formatting error:', error);
+    return 'Invalid date';
+  }
+};
 
 interface MeetingDetail {
   id: string;
@@ -128,12 +169,73 @@ export default function MeetingProfilePage() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'transcript' | 'actions' | 'analysis'>('overview');
   const [transcriptSearchQuery, setTranscriptSearchQuery] = useState('');
+  
+  // Coda integration state
+  const [showCodaModal, setShowCodaModal] = useState(false);
+  const [isCreatingCodaRow, setIsCreatingCodaRow] = useState(false);
+  const [codaFormData, setCodaFormData] = useState({
+    name: '',
+    email: '',
+    account: '',
+    interviewer: '',
+    csat: '',
+    status: 'New Interview',
+    initiative: ''
+  });
+  const [initiatives, setInitiatives] = useState<Array<{id: string, name: string}>>([]);
+  const [aiAnalysisConfig, setAiAnalysisConfig] = useState({
+    enabled: true,
+    jtbdQuestions: [
+      { description: "", keywords: "" },
+      { description: "", keywords: "" },
+      { description: "", keywords: "" },
+      { description: "", keywords: "" }
+    ]
+  });
 
   useEffect(() => {
     if (meetingId) {
       fetchMeetingDetails();
     }
   }, [meetingId]);
+
+  // Auto-populate form when showing Coda modal
+  useEffect(() => {
+    if (showCodaModal && meeting) {
+      setCodaFormData(prev => ({
+        ...prev,
+        name: meeting.customer_name || '',
+        account: meeting.customer_name || '',
+        // Try to extract email from attendees if available
+        email: meeting.attendees?.find((a: any) => a.email && !a.email.includes('@company.com'))?.email || ''
+      }));
+      
+      // Fetch initiatives from Coda
+      fetchInitiatives();
+    }
+  }, [showCodaModal, meeting]);
+
+  const fetchInitiatives = async () => {
+    try {
+      const response = await fetch('/api/coda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'get_initiatives',
+          docId: 'qMDWed38ry',
+          tableId: 'grid-Wh9_yGcu3U' // Real initiatives table ID
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setInitiatives(data.initiatives || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch initiatives:', error);
+      setInitiatives([]);
+    }
+  };
 
   const fetchMeetingDetails = async () => {
     setLoading(true);
@@ -445,6 +547,68 @@ export default function MeetingProfilePage() {
     }
   };
 
+  // Coda integration handlers
+  const handleCodaCancel = () => {
+    setShowCodaModal(false);
+    setCodaFormData({
+      name: '',
+      email: '',
+      account: '',
+      interviewer: '',
+      csat: '',
+      status: 'New Interview',
+      initiative: ''
+    });
+    setAiAnalysisConfig({
+      enabled: true,
+      jtbdQuestions: [
+        { description: "", keywords: "" },
+        { description: "", keywords: "" },
+        { description: "", keywords: "" },
+        { description: "", keywords: "" }
+      ]
+    });
+  };
+
+  const handleCodaSubmit = async () => {
+    if (!meeting || !codaFormData.name || !codaFormData.account) {
+      alert('Please fill in required fields (Name and Account)');
+      return;
+    }
+
+    setIsCreatingCodaRow(true);
+    try {
+      const response = await fetch('/api/coda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'create_research_initiative',
+          meetingId: meeting.id,
+          docId: 'qMDWed38ry',
+          tableId: 'grid-ii5pzK6H7w',
+          formData: codaFormData,
+          aiAnalysisConfig: aiAnalysisConfig
+        })
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert('✅ Research initiative created successfully in Coda!');
+        setShowCodaModal(false);
+        handleCodaCancel();
+        // Refresh meeting data to show updated integration status
+        fetchMeetingDetails();
+      } else {
+        throw new Error(data.error || 'Failed to create research initiative');
+      }
+    } catch (error) {
+      console.error('Error creating Coda row:', error);
+      alert('❌ Failed to create research initiative: ' + (error as Error).message);
+    } finally {
+      setIsCreatingCodaRow(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
@@ -486,21 +650,55 @@ export default function MeetingProfilePage() {
 
   return (
     <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
+      {/* Navigation */}
+      <div className="calendly-card-static border-b" style={{ margin: '0 24px 24px 24px', padding: '16px 24px', borderRadius: '0' }}>
+        <div className="max-w-7xl mx-auto">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => router.push('/meetings')}
+              className="p-2 rounded-lg"
+              style={{ color: '#718096' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#f1f5f9';
+                e.currentTarget.style.color = '#4285f4';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'transparent';
+                e.currentTarget.style.color = '#718096';
+              }}
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div className="flex items-center space-x-2">
+              <button 
+                onClick={() => router.push('/meetings')}
+                className="calendly-body-sm"
+                style={{ color: '#718096' }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.color = '#4285f4';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.color = '#718096';
+                }}
+              >
+                Meetings
+              </button>
+              <span style={{ color: '#a0aec0' }}>›</span>
+              <span className="calendly-body-sm font-medium" style={{ color: '#1a1a1a' }}>{meeting.title}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-4">
-              <button 
-                onClick={() => router.push('/meetings')}
-                className="p-2 rounded-lg hover:bg-white transition-colors"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
               <div>
                 <h1 className="calendly-h1">{meeting.title}</h1>
                 <p className="calendly-body text-gray-600">
-                  {meeting.customer_name} • {format(new Date(meeting.meeting_date), 'PPP')} • {meeting.duration_minutes} min
+                  {meeting.customer_name} • {formatMeetingDate(meeting.meeting_date)} • {meeting.duration_minutes} min
                 </p>
               </div>
             </div>
@@ -524,8 +722,213 @@ export default function MeetingProfilePage() {
                   <span>Share</span>
                 </button>
               )}
+              {!meeting.coda_integrated ? (
+                <button 
+                  onClick={() => setShowCodaModal(!showCodaModal)}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                >
+                  <Database className="w-4 h-4" />
+                  <span>{showCodaModal ? 'Cancel' : 'Add to Coda'}</span>
+                </button>
+              ) : (
+                <div className="flex items-center space-x-2 px-4 py-2 bg-green-50 text-green-700 rounded-md border border-green-200">
+                  <Database className="w-4 h-4" />
+                  <span>Added to Coda</span>
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Inline Coda Integration Form */}
+          {showCodaModal && !meeting.coda_integrated && (
+            <div className="calendly-card mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                    <Database className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Add to Coda Research</h2>
+                    <p className="text-sm text-gray-600">Create a research initiative with AI-powered JTBD analysis</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCodaModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {/* Connection Status */}
+                <div className="calendly-card bg-green-50 border-green-200">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                      <CheckCircle className="w-4 h-4 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-green-900">Connected to Coda</h3>
+                      <p className="text-sm text-green-800">
+                        Ready to create row in <strong>Product Roadmap</strong> → <strong>Interviewed customers</strong>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Interview Details Form */}
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Interview Details</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Initiatives | Master List</label>
+                        <select
+                          value={codaFormData.initiative}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, initiative: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select initiative</option>
+                          {initiatives.map((initiative) => (
+                            <option key={initiative.id} value={initiative.name}>
+                              {initiative.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                        <input
+                          type="text"
+                          value={codaFormData.name}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, name: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Customer name"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <input
+                          type="email"
+                          value={codaFormData.email}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, email: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="customer@company.com"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Account *</label>
+                        <input
+                          type="text"
+                          value={codaFormData.account}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, account: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Company name"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Interviewer</label>
+                        <input
+                          type="text"
+                          value={codaFormData.interviewer}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, interviewer: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Your name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">CSAT Rating</label>
+                        <select
+                          value={codaFormData.csat}
+                          onChange={(e) => setCodaFormData(prev => ({ ...prev, csat: e.target.value }))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select rating</option>
+                          <option value="5">5 - Very Satisfied</option>
+                          <option value="4">4 - Satisfied</option>
+                          <option value="3">3 - Neutral</option>
+                          <option value="2">2 - Dissatisfied</option>
+                          <option value="1">1 - Very Dissatisfied</option>
+                        </select>
+                      </div>
+                  </div>
+
+                  {/* AI Analysis Configuration */}
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <Bot className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium text-blue-900">AI Analysis Configuration</h3>
+                        <p className="text-sm text-blue-800">Configure JTBD questions for AI analysis</p>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {aiAnalysisConfig.jtbdQuestions.map((jtbd, index) => (
+                        <div key={index} className="space-y-2">
+                          <label className="block text-sm font-medium text-blue-800">JTBD {index + 1}:</label>
+                          <textarea
+                            value={jtbd.description}
+                            onChange={(e) => {
+                              const updated = [...aiAnalysisConfig.jtbdQuestions];
+                              updated[index].description = e.target.value;
+                              setAiAnalysisConfig(prev => ({ ...prev, jtbdQuestions: updated }));
+                            }}
+                            placeholder={`e.g., "I need to ${index === 0 ? 'access content effectively' : index === 1 ? 'manage images efficiently' : index === 2 ? 'incorporate data accurately' : 'optimize my workflow'} so I can..."`}
+                            className="w-full px-3 py-2 text-sm border border-blue-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            rows={2}
+                          />
+                          <input
+                            type="text"
+                            value={jtbd.keywords}
+                            onChange={(e) => {
+                              const updated = [...aiAnalysisConfig.jtbdQuestions];
+                              updated[index].keywords = e.target.value;
+                              setAiAnalysisConfig(prev => ({ ...prev, jtbdQuestions: updated }));
+                            }}
+                            placeholder="Keywords to look for (comma-separated)"
+                            className="w-full px-3 py-1 text-xs border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Form Actions */}
+                <div className="flex items-center justify-end space-x-3 pt-6 border-t">
+                  <button
+                    onClick={() => setShowCodaModal(false)}
+                    disabled={isCreatingCodaRow}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCodaSubmit}
+                    disabled={isCreatingCodaRow || !codaFormData.name || !codaFormData.account}
+                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {isCreatingCodaRow ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Creating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Database className="w-4 h-4" />
+                        <span>Create Research Initiative</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Meeting Overview Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -648,7 +1051,7 @@ export default function MeetingProfilePage() {
                       <Calendar className="w-4 h-4 text-gray-500" />
                       <div>
                         <p className="text-sm text-gray-600">Date</p>
-                        <p className="font-medium">{format(new Date(meeting.meeting_date), 'PPP')}</p>
+                        <p className="font-medium">{formatMeetingDate(meeting.meeting_date)}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
@@ -1011,7 +1414,7 @@ export default function MeetingProfilePage() {
                           <span>Category: {item.category}</span>
                           <span>Status: {item.status}</span>
                           {item.due_date && (
-                            <span>Due: {format(new Date(item.due_date), 'MMM d, yyyy')}</span>
+                            <span>Due: {formatDueDate(item.due_date)}</span>
                           )}
                         </div>
                       </div>
@@ -1210,6 +1613,7 @@ export default function MeetingProfilePage() {
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>
