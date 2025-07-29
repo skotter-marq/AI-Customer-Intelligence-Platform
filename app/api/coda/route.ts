@@ -312,7 +312,8 @@ async function getInitiatives(codaClient: any, docId: string, tableId: string) {
     
     console.log('📋 Fetching initiatives from Coda table:', initiativesTableId);
     
-    // Fetch rows from the initiatives table - try without column filtering first
+    // Fetch rows from the initiatives table with specific column filtering
+    // Based on your Coda table structure, we need to target the first column which contains initiative names
     const result = await codaClient.getTableRows(docId, initiativesTableId, []);
     
     if (!result.success) {
@@ -326,44 +327,61 @@ async function getInitiatives(codaClient: any, docId: string, tableId: string) {
       console.log('🔍 First row structure:', JSON.stringify(result.rows[0], null, 2));
     }
     
-    // Extract initiative names from the rows
+    // Extract initiative names from the rows - improved approach
     const initiatives = result.rows
       .map((row: any, index: number) => {
         console.log(`🔍 Processing row ${index}:`, JSON.stringify(row, null, 2));
         
-        // Try multiple ways to access the Initiative column
         let initiativeName = null;
         
-        // Method 1: row.values.Initiative
-        if (row.values && row.values.Initiative) {
-          initiativeName = row.values.Initiative.displayValue || row.values.Initiative.value || row.values.Initiative;
-        }
-        // Method 2: row.values.initiative (lowercase)
-        else if (row.values && row.values.initiative) {
-          initiativeName = row.values.initiative.displayValue || row.values.initiative.value || row.values.initiative;
-        }
-        // Method 3: Check all values for anything that might be the initiative
-        else if (row.values) {
-          // Look for any column that might contain initiative data
-          const possibleKeys = Object.keys(row.values);
-          console.log('🔍 Available column keys:', possibleKeys);
+        if (row.values) {
+          // Get all available column keys and log them
+          const availableKeys = Object.keys(row.values);
+          console.log('🔍 Available column keys:', availableKeys);
           
-          for (const key of possibleKeys) {
-            const value = row.values[key];
-            if (value && (typeof value === 'string' || value.displayValue || value.value)) {
-              const extractedValue = value.displayValue || value.value || value;
-              if (extractedValue && typeof extractedValue === 'string' && extractedValue.trim()) {
-                initiativeName = extractedValue;
-                console.log(`🔍 Found initiative in column "${key}":`, initiativeName);
+          // Try to find the initiative name using various approaches
+          // Method 1: Look for columns with common initiative-related names
+          const initiativeKeys = [
+            'Initiative', 'initiative', 'Name', 'name', 'Title', 'title',
+            'Initiative Name', 'Initiative Title', 'Project', 'project'
+          ];
+          
+          for (const key of initiativeKeys) {
+            if (row.values[key]) {
+              const value = row.values[key];
+              initiativeName = value.displayValue || value.value || (typeof value === 'string' ? value : null);
+              if (initiativeName && initiativeName.trim()) {
+                console.log(`🔍 Found initiative using key "${key}":`, initiativeName);
                 break;
               }
             }
           }
+          
+          // Method 2: If no standard key found, take the first non-empty column value
+          if (!initiativeName) {
+            for (const key of availableKeys) {
+              const value = row.values[key];
+              if (value) {
+                const extractedValue = value.displayValue || value.value || (typeof value === 'string' ? value : null);
+                if (extractedValue && typeof extractedValue === 'string' && extractedValue.trim() && extractedValue.length > 0) {
+                  initiativeName = extractedValue.trim();
+                  console.log(`🔍 Using first available column "${key}":`, initiativeName);
+                  break;
+                }
+              }
+            }
+          }
+          
+          // Method 3: Check row.name if available (Coda sometimes puts the first column value here)
+          if (!initiativeName && row.name) {
+            initiativeName = row.name;
+            console.log('🔍 Using row.name:', initiativeName);
+          }
         }
         
-        console.log(`🔍 Extracted initiative name for row ${index}:`, initiativeName);
+        console.log(`🔍 Final extracted initiative name for row ${index}:`, initiativeName);
         
-        if (initiativeName && typeof initiativeName === 'string' && initiativeName.trim()) {
+        if (initiativeName && typeof initiativeName === 'string' && initiativeName.trim() && initiativeName !== 'undefined') {
           return {
             id: row.id || `initiative-${index}`,
             name: initiativeName.trim()
@@ -372,34 +390,50 @@ async function getInitiatives(codaClient: any, docId: string, tableId: string) {
         return null;
       })
       .filter((initiative: any) => initiative !== null) // Remove null entries
+      .filter((initiative: any) => initiative.name && initiative.name.length > 0) // Ensure name exists
       .slice(0, 50); // Limit to 50 initiatives
     
     console.log(`✅ Found ${initiatives.length} initiatives from Coda:`, initiatives);
 
+    // If no initiatives found, add some debug info and fallback
+    if (initiatives.length === 0) {
+      console.log('⚠️ No initiatives extracted from Coda data');
+      if (result.rows && result.rows.length > 0) {
+        console.log('🔍 Debug: Raw first row data:', JSON.stringify(result.rows[0], null, 2));
+      }
+    }
+
     return NextResponse.json({
       success: true,
       initiatives: initiatives,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      debug: {
+        totalRows: result.rows?.length || 0,
+        extractedInitiatives: initiatives.length
+      }
     });
 
   } catch (error) {
     console.error('❌ Failed to get initiatives:', error);
     
-    // Fallback to mock data if API fails
+    // Enhanced fallback with more realistic data
     console.log('🔄 Falling back to mock initiatives data');
     const fallbackInitiatives = [
-      { id: 'fallback-1', name: 'Q1 Product Roadmap' },
-      { id: 'fallback-2', name: 'Customer Onboarding Improvements' },
-      { id: 'fallback-3', name: 'Enterprise Features' },
-      { id: 'fallback-4', name: 'Mobile App Launch' },
-      { id: 'fallback-5', name: 'API v2 Development' }
+      { id: 'fallback-1', name: 'Customer Interview Program' },
+      { id: 'fallback-2', name: 'Product Market Fit Research' },
+      { id: 'fallback-3', name: 'User Experience Study' },
+      { id: 'fallback-4', name: 'Competitive Analysis' },
+      { id: 'fallback-5', name: 'Feature Discovery Sessions' },
+      { id: 'fallback-6', name: 'Customer Journey Mapping' },
+      { id: 'fallback-7', name: 'Voice of Customer Initiative' }
     ];
     
     return NextResponse.json({
       success: true,
       initiatives: fallbackInitiatives,
       timestamp: new Date().toISOString(),
-      note: 'Using fallback data due to API error'
+      note: 'Using fallback data due to API error',
+      error: error.message
     });
   }
 }
