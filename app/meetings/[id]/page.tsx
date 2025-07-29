@@ -167,6 +167,7 @@ export default function MeetingProfilePage() {
   const [competitiveIntel, setCompetitiveIntel] = useState<CompetitiveIntel[]>([]);
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'transcript' | 'actions' | 'analysis'>('overview');
   const [transcriptSearchQuery, setTranscriptSearchQuery] = useState('');
   
@@ -253,164 +254,16 @@ export default function MeetingProfilePage() {
         setTopics(meetingData.topics || []);
       } else {
         console.error('Failed to fetch meeting details:', meetingData.error);
-        // Fallback to mock data for development
-        setMockData();
+        setError(`Failed to load meeting: ${meetingData.error}`);
       }
     } catch (error) {
       console.error('Error fetching meeting details:', error);
-      setMockData();
+      setError('Failed to connect to the server. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const setMockData = () => {
-    // Mock data for development/fallback
-    setMeeting({
-      id: meetingId,
-      title: 'Product Demo - TechCorp Solutions',
-      customer_name: 'TechCorp Solutions',
-      meeting_date: '2024-01-15T14:00:00Z',
-      duration_minutes: 45,
-      sentiment_label: 'positive',
-      sentiment_score: 0.75,
-      confidence_score: 0.89,
-      meeting_summary: 'Productive product demonstration with TechCorp Solutions showing strong interest in enterprise features. The customer was particularly engaged with our automation capabilities and asked detailed questions about integration options. They expressed urgency around implementation and mentioned budget approval is likely within the next quarter.',
-      full_transcript: 'John (TechCorp): Thanks for taking the time to show us the platform today. We\'ve been evaluating several solutions and yours came highly recommended.\n\nSarah (Sales): Happy to show you around! Based on your initial requirements, I think you\'ll find our enterprise automation features particularly interesting.\n\nJohn: Yes, automation is critical for us. We\'re currently handling a lot of manual processes that are slowing us down.\n\n[... transcript continues ...]',
-      status: 'analyzed',
-      recording_url: 'https://grain.com/recordings/meeting-001',
-      grain_share_url: 'https://grain.com/share/meeting-001',
-      attendees: [
-        { name: 'John Smith', email: 'john.smith@techcorp.com', role: 'CTO' },
-        { name: 'Lisa Wong', email: 'lisa.wong@techcorp.com', role: 'VP Engineering' },
-        { name: 'Sarah Johnson', email: 'sarah@company.com', role: 'Account Executive' },
-        { name: 'Mike Chen', email: 'mike@company.com', role: 'Solutions Engineer' }
-      ],
-      organizer_email: 'sarah@company.com',
-      meeting_type: 'demo',
-      metadata: {}
-    });
-
-    setInsights([
-      {
-        id: '1',
-        insight_type: 'feature_request',
-        category: 'product',
-        title: 'Advanced Automation Workflows',
-        description: 'Customer expressed strong interest in advanced automation capabilities beyond basic workflows.',
-        quote: 'We need something that can handle complex, multi-step processes with conditional logic.',
-        importance_score: 0.9,
-        confidence_score: 0.85,
-        priority: 'high',
-        tags: ['automation', 'workflows', 'enterprise'],
-        affected_feature: 'Workflow Engine'
-      },
-      {
-        id: '2',
-        insight_type: 'competitive_mention',
-        category: 'business',
-        title: 'Competitor Comparison',
-        description: 'Customer mentioned evaluating Competitor X but found their pricing model confusing.',
-        quote: 'Competitor X\'s pricing is all over the place - we couldn\'t even figure out what we\'d actually pay.',
-        importance_score: 0.7,
-        confidence_score: 0.8,
-        priority: 'medium',
-        tags: ['pricing', 'competition'],
-        competitor_mentioned: 'Competitor X'
-      },
-      {
-        id: '3',
-        insight_type: 'bug_report',
-        category: 'technical',
-        title: 'Dashboard Loading Performance Issue',
-        description: 'Customer reported significant delays when loading the main dashboard, particularly with large datasets.',
-        quote: 'The dashboard takes forever to load when we have more than 1000 records. Sometimes it times out completely.',
-        importance_score: 0.8,
-        confidence_score: 0.9,
-        priority: 'high',
-        tags: ['performance', 'dashboard', 'loading'],
-        affected_feature: 'Main Dashboard'
-      },
-      {
-        id: '4',
-        insight_type: 'bug_report',
-        category: 'technical',
-        title: 'Export Function Not Working',
-        description: 'Customer unable to export reports in PDF format, getting error messages.',
-        quote: 'Every time we try to export a report as PDF, we get a generic error message. CSV works fine though.',
-        importance_score: 0.6,
-        confidence_score: 0.85,
-        priority: 'medium',
-        tags: ['export', 'pdf', 'reports'],
-        affected_feature: 'Report Export'
-      }
-    ]);
-
-    setActionItems([
-      {
-        id: '1',
-        description: 'Send enterprise pricing proposal with automation features',
-        assigned_to: 'Sarah Johnson',
-        priority: 'high',
-        category: 'sales',
-        status: 'pending',
-        due_date: '2024-01-22'
-      },
-      {
-        id: '2',
-        description: 'Schedule technical deep-dive on workflow automation',
-        assigned_to: 'Mike Chen',
-        priority: 'high',
-        category: 'technical',
-        status: 'pending',
-        due_date: '2024-01-20'
-      }
-    ]);
-
-    setFeatureRequests([
-      {
-        id: '1',
-        feature_title: 'Advanced Conditional Workflows',
-        feature_description: 'Multi-step automation workflows with conditional logic and branching',
-        business_value: 'Would enable complex business process automation',
-        urgency: 'high',
-        customer_pain_point: 'Current manual processes are time-consuming and error-prone',
-        estimated_impact: 'All enterprise customers would benefit',
-        status: 'evaluating'
-      }
-    ]);
-
-    setCompetitiveIntel([
-      {
-        id: '1',
-        competitor_name: 'Competitor X',
-        mention_type: 'comparison',
-        context: 'Customer mentioned evaluating them but found pricing confusing',
-        sentiment: 'negative',
-        threat_level: 'low',
-        quote: 'Their pricing is all over the place'
-      }
-    ]);
-
-    setTopics([
-      {
-        id: '1',
-        topic: 'Workflow Automation',
-        topic_category: 'product',
-        relevance_score: 0.95,
-        sentiment_score: 0.8,
-        keywords: ['automation', 'workflows', 'processes']
-      },
-      {
-        id: '2',
-        topic: 'Enterprise Features',
-        topic_category: 'product',
-        relevance_score: 0.85,
-        sentiment_score: 0.7,
-        keywords: ['enterprise', 'scalability', 'security']
-      }
-    ]);
-  };
 
   const getSentimentIcon = (sentiment: string, score?: number) => {
     switch (sentiment) {
@@ -618,6 +471,43 @@ export default function MeetingProfilePage() {
               <div className="text-center">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: '#4285f4' }}></div>
                 <p className="calendly-body mt-4">Loading meeting details...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
+        <div className="p-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-center min-h-96">
+              <div className="text-center">
+                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                  <AlertCircle className="w-8 h-8 text-red-600" />
+                </div>
+                <h2 className="calendly-h2 mb-2">Unable to Load Meeting</h2>
+                <p className="calendly-body text-gray-600 mb-4 max-w-md">{error}</p>
+                <div className="space-x-3">
+                  <button
+                    onClick={() => {
+                      setError(null);
+                      fetchMeetingDetails();
+                    }}
+                    className="calendly-btn-primary"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    onClick={() => router.push('/meetings')}
+                    className="calendly-btn-secondary"
+                  >
+                    Back to Meetings
+                  </button>
+                </div>
               </div>
             </div>
           </div>

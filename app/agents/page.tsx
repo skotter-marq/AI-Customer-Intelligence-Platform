@@ -35,7 +35,8 @@ import {
   ArrowUpDown,
   Grid3X3,
   List,
-  ExternalLink
+  ExternalLink,
+  Trash2
 } from 'lucide-react';
 
 interface AgentConfiguration {
@@ -50,29 +51,44 @@ interface IntelligenceAgent {
   id: string;
   name: string;
   description: string;
-  type: 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding' | 'products' | 'renewal' | 'health' | 'onboarding' | 'expansion';
-  status: 'active' | 'paused' | 'error' | 'stopped';
-  competitor_ids: string[];
-  schedule: 'hourly' | 'daily' | 'weekly' | 'monthly' | 'on_trigger';
+  agent_type: string;
+  status: 'active' | 'inactive' | 'training' | 'error' | 'maintenance';
+  model: string;
+  temperature: number;
+  max_tokens: number;
+  system_prompt?: string;
+  capabilities: string[];
+  tools: string[];
+  available_functions: string[];
+  webhook_url?: string;
+  api_endpoint?: string;
+  auth_method: string;
+  total_conversations: number;
+  successful_completions: number;
+  average_response_time: number;
   success_rate: number;
-  total_insights: number;
-  insights_this_week: number;
-  last_run: string;
-  next_run: string;
-  configuration: AgentConfiguration;
-  created_date: string;
-  performance_trend: 'up' | 'down' | 'stable';
-  // Customer account assignments
-  assigned_accounts?: {
-    account_id: string;
-    company_name: string;
-    assigned_date: string;
-    purpose: string;
-    status: 'active' | 'paused' | 'completed';
-    next_contact: string;
-    contact_attempts: number;
-    last_interaction: string;
-  }[];
+  version: string;
+  created_by: string;
+  tags: string[];
+  use_cases: string[];
+  target_audience: string;
+  business_value?: string;
+  created_at: string;
+  updated_at: string;
+  last_active_at?: string;
+  deployment?: {
+    environment: string;
+    deployment_status: string;
+    health_status: string;
+    last_health_check?: string;
+  };
+  recent_analytics?: {
+    conversations_this_week: number;
+    average_response_time: number;
+    average_rating: number;
+    analytics_data: any[];
+  };
+  recent_conversations?: any[];
 }
 
 export default function AgentsPage() {
@@ -80,363 +96,63 @@ export default function AgentsPage() {
   const [agents, setAgents] = useState<IntelligenceAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'pricing' | 'features' | 'news' | 'hiring' | 'social' | 'funding' | 'products' | 'renewal' | 'health' | 'onboarding' | 'expansion'>('all');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'error' | 'stopped'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'customer-support' | 'research-analysis' | 'content-creation' | 'lead-qualification' | 'meeting-analysis' | 'feedback-analysis'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive' | 'training' | 'error' | 'maintenance'>('all');
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'name' | 'type' | 'success_rate' | 'insights'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [agentActivities, setAgentActivities] = useState<{[key: string]: any}>({});
-  const [lastActivityUpdate, setLastActivityUpdate] = useState<number>(Date.now());
 
   // Export functionality
   const [showExportMenu, setShowExportMenu] = useState(false);
 
-  // Mock agents data
-  const mockAgents: IntelligenceAgent[] = [
-    {
-      id: 'pricing-monitor',
-      name: 'Pricing Monitor',
-      description: 'Tracks competitor pricing changes and promotional activities across multiple channels.',
-      type: 'pricing',
-      status: 'active',
-      competitor_ids: ['salesforce', 'hubspot', 'pipedrive'],
-      schedule: 'daily',
-      success_rate: 0.94,
-      total_insights: 247,
-      insights_this_week: 12,
-      last_run: '2024-01-15T08:00:00Z',
-      next_run: '2024-01-16T08:00:00Z',
-      configuration: {
-        keywords: ['pricing', 'discount', 'promotion', 'free trial'],
-        sources: ['website', 'pricing_pages', 'press_releases'],
-        frequency: 'daily',
-        notification_threshold: 0.15,
-        data_retention_days: 90
-      },
-      created_date: '2023-11-15',
-      performance_trend: 'up'
-    },
-    {
-      id: 'feature-tracker',
-      name: 'Feature Tracker',
-      description: 'Monitors new feature announcements and product updates from key competitors.',
-      type: 'features',
-      status: 'active',
-      competitor_ids: ['salesforce', 'hubspot'],
-      schedule: 'weekly',
-      success_rate: 0.87,
-      total_insights: 156,
-      insights_this_week: 8,
-      last_run: '2024-01-14T10:00:00Z',
-      next_run: '2024-01-21T10:00:00Z',
-      configuration: {
-        keywords: ['new feature', 'product update', 'announcement', 'release'],
-        sources: ['blog', 'changelog', 'social_media'],
-        frequency: 'weekly',
-        notification_threshold: 0.20,
-        data_retention_days: 120
-      },
-      created_date: '2023-10-20',
-      performance_trend: 'stable'
-    },
-    {
-      id: 'news-sentinel',
-      name: 'News Sentinel',
-      description: 'Aggregates news coverage and media mentions of competitors for market intelligence.',
-      type: 'news',
-      status: 'active',
-      competitor_ids: ['salesforce', 'hubspot', 'pipedrive'],
-      schedule: 'hourly',
-      success_rate: 0.76,
-      total_insights: 892,
-      insights_this_week: 34,
-      last_run: '2024-01-15T14:00:00Z',
-      next_run: '2024-01-15T15:00:00Z',
-      configuration: {
-        keywords: ['acquisition', 'funding', 'partnership', 'expansion'],
-        sources: ['news_sites', 'press_releases', 'industry_publications'],
-        frequency: 'hourly',
-        notification_threshold: 0.10,
-        data_retention_days: 60
-      },
-      created_date: '2023-09-10',
-      performance_trend: 'up'
-    },
-    {
-      id: 'hiring-insights',
-      name: 'Hiring Insights',
-      description: 'Analyzes competitor job postings to understand strategic hiring and expansion plans.',
-      type: 'hiring',
-      status: 'paused',
-      competitor_ids: ['salesforce', 'hubspot'],
-      schedule: 'weekly',
-      success_rate: 0.91,
-      total_insights: 203,
-      insights_this_week: 0,   
-      last_run: '2024-01-08T12:00:00Z',
-      next_run: '2024-01-22T12:00:00Z',
-      configuration: {
-        keywords: ['engineer', 'sales', 'product manager', 'remote'],
-        sources: ['linkedin', 'company_careers', 'job_boards'],
-        frequency: 'weekly',
-        notification_threshold: 0.25,
-        data_retention_days: 180
-      },
-      created_date: '2023-12-01',
-      performance_trend: 'down'
-    },
-    {
-      id: 'social-pulse',
-      name: 'Social Pulse',
-      description: 'Monitors social media sentiment and engagement patterns for competitive analysis.',
-      type: 'social',
-      status: 'active',
-      competitor_ids: ['salesforce', 'hubspot', 'pipedrive'],
-      schedule: 'daily',
-      success_rate: 0.83,
-      total_insights: 445,
-      insights_this_week: 18,
-      last_run: '2024-01-15T06:00:00Z',
-      next_run: '2024-01-16T06:00:00Z',
-      configuration: {
-        keywords: ['customer', 'review', 'complaint', 'praise'],
-        sources: ['twitter', 'linkedin', 'reddit', 'review_sites'],
-        frequency: 'daily',
-        notification_threshold: 0.30,
-        data_retention_days: 45
-      },
-      created_date: '2023-11-30',
-      performance_trend: 'stable'
-    },
-    {
-      id: 'funding-radar',
-      name: 'Funding Radar',
-      description: 'Tracks funding rounds and investment activities in the competitive landscape.',
-      type: 'funding',
-      status: 'error',
-      competitor_ids: ['pipedrive'],
-      schedule: 'monthly',
-      success_rate: 0.62,
-      total_insights: 28,
-      insights_this_week: 0,
-      last_run: '2024-01-01T00:00:00Z',
-      next_run: '2024-02-01T00:00:00Z',
-      configuration: {
-        keywords: ['funding', 'investment', 'series', 'venture'],
-        sources: ['crunchbase', 'techcrunch', 'venture_databases'],
-        frequency: 'monthly',
-        notification_threshold: 0.50,
-        data_retention_days: 365
-      },
-      created_date: '2023-08-15',
-      performance_trend: 'down'
-    },
-    // Customer Account Agents
-    {
-      id: 'agent-renewal-001',
-      name: 'Renewal Outreach Agent',
-      description: 'Proactively contacts accounts approaching renewal dates to schedule discussions and prevent churn.',
-      type: 'renewal',
-      status: 'active',
-      competitor_ids: [],
-      schedule: 'daily',
-      success_rate: 0.92,
-      total_insights: 45,
-      insights_this_week: 8,
-      last_run: '2024-01-15T09:00:00Z',
-      next_run: '2024-01-16T09:00:00Z',
-      configuration: {
-        keywords: ['renewal', 'contract', 'expiration'],
-        sources: ['email', 'phone', 'linkedin'],
-        frequency: 'daily',
-        notification_threshold: 0.80,
-        data_retention_days: 365
-      },
-      created_date: '2024-01-01',
-      performance_trend: 'up',
-      assigned_accounts: [
-        {
-          account_id: 'ACC-MKT-001',
-          company_name: 'MarketingCorp',
-          assigned_date: '2024-01-10',
-          purpose: 'Schedule renewal discussion',
-          status: 'active',
-          next_contact: '2024-01-18',
-          contact_attempts: 2,
-          last_interaction: '2024-01-15'
-        }
-      ]
-    },
-    {
-      id: 'agent-health-001',
-      name: 'Health Recovery Agent',
-      description: 'Engages with at-risk accounts to improve health scores and prevent churn through targeted outreach.',
-      type: 'health',
-      status: 'active',
-      competitor_ids: [],
-      schedule: 'daily',
-      success_rate: 0.78,
-      total_insights: 23,
-      insights_this_week: 5,
-      last_run: '2024-01-15T10:00:00Z',
-      next_run: '2024-01-16T10:00:00Z',
-      configuration: {
-        keywords: ['health', 'engagement', 'usage'],
-        sources: ['email', 'phone'],
-        frequency: 'daily',
-        notification_threshold: 0.70,
-        data_retention_days: 180
-      },
-      created_date: '2024-01-05',
-      performance_trend: 'stable',
-      assigned_accounts: [
-        {
-          account_id: 'ACC-FIN-005',
-          company_name: 'FinancePlus',
-          assigned_date: '2024-01-12',
-          purpose: 'Improve account health and engagement',
-          status: 'active',
-          next_contact: '2024-01-16',
-          contact_attempts: 1,
-          last_interaction: '2024-01-14'
-        }
-      ]
-    },
-    {
-      id: 'agent-onboard-001',
-      name: 'Onboarding Agent',
-      description: 'Guides new customers through product adoption and ensures successful onboarding milestones.',
-      type: 'onboarding',
-      status: 'active',
-      competitor_ids: [],
-      schedule: 'daily',
-      success_rate: 0.95,
-      total_insights: 12,
-      insights_this_week: 3,
-      last_run: '2024-01-15T11:00:00Z',
-      next_run: '2024-01-16T11:00:00Z',
-      configuration: {
-        keywords: ['onboarding', 'setup', 'training'],
-        sources: ['email', 'phone'],
-        frequency: 'daily',
-        notification_threshold: 0.90,
-        data_retention_days: 90
-      },
-      created_date: '2024-01-08',
-      performance_trend: 'up',
-      assigned_accounts: []
-    },
-    {
-      id: 'agent-expansion-001',
-      name: 'Expansion Agent',
-      description: 'Identifies and pursues expansion opportunities with existing customers for revenue growth.',
-      type: 'expansion',
-      status: 'paused',
-      competitor_ids: [],
-      schedule: 'weekly',
-      success_rate: 0.85,
-      total_insights: 8,
-      insights_this_week: 0,
-      last_run: '2024-01-08T12:00:00Z',
-      next_run: '2024-01-22T12:00:00Z',
-      configuration: {
-        keywords: ['expansion', 'upsell', 'growth'],
-        sources: ['email', 'linkedin'],
-        frequency: 'weekly',
-        notification_threshold: 0.75,
-        data_retention_days: 120
-      },
-      created_date: '2024-01-03',
-      performance_trend: 'stable',
-      assigned_accounts: []
-    }
-  ];
-
-  useEffect(() => {
-    // Simulate API call
+  const loadAgents = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setAgents(mockAgents);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      if (typeFilter !== 'all') params.append('agent_type', typeFilter);
+      params.append('include_analytics', 'true');
+      params.append('include_conversations', 'true');
+      
+      const response = await fetch(`/api/agents?${params.toString()}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setAgents(data.agents);
+      } else {
+        console.error('Failed to load agents:', data.error);
+        setAgents([]);
+      }
+    } catch (error) {
+      console.error('Error loading agents:', error);
+      setAgents([]);
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
 
-  // Simulate real-time agent activity updates
   useEffect(() => {
-    const interval = setInterval(() => {
-      setAgentActivities(prev => {
-        const updates = { ...prev };
-        
-        agents.forEach(agent => {
-          const activityKey = agent.id;
-          const lastActivity = updates[activityKey] || {
-            status: agent.status,
-            current_task: 'Monitoring data sources',
-            last_execution: Date.now() - Math.random() * 1800000, // Random time within last 30 minutes
-            progress: Math.floor(Math.random() * 100),
-            insights_processed: Math.floor(Math.random() * 10),
-            response_time: Math.floor(Math.random() * 500) + 100, // 100-600ms
-            error_count: Math.floor(Math.random() * 3)
-          };
-          
-          // Simulate status changes for active agents
-          if (agent.status === 'active' && Math.random() < 0.05) { // 5% chance
-            const tasks = [
-              'Monitoring data sources',
-              'Processing new insights',
-              'Analyzing competitive data',
-              'Generating reports',
-              'Scanning for updates',
-              'Evaluating trends'
-            ];
-            lastActivity.current_task = tasks[Math.floor(Math.random() * tasks.length)];
-          }
-          
-          // Update progress for active agents
-          if (agent.status === 'active' && Math.random() < 0.3) {
-            lastActivity.progress = Math.min(100, lastActivity.progress + Math.floor(Math.random() * 15));
-            if (lastActivity.progress >= 100) {
-              lastActivity.progress = 0;
-              lastActivity.insights_processed += Math.floor(Math.random() * 3) + 1;
-            }
-          }
-          
-          // Update response times
-          if (Math.random() < 0.2) {
-            lastActivity.response_time = Math.floor(Math.random() * 500) + 100;
-          }
-          
-          // Simulate occasional errors
-          if (Math.random() < 0.02) {
-            lastActivity.error_count += 1;
-          }
-          
-          updates[activityKey] = lastActivity;
-        });
-        
-        return updates;
-      });
-      setLastActivityUpdate(Date.now());
-    }, 3000); // Update every 3 seconds
+    loadAgents();
+  }, [statusFilter, typeFilter]);
 
-    return () => clearInterval(interval);
-  }, [agents]);
 
   // Generate Agent Performance Summary data
   const generatePerformanceSummary = (agents: IntelligenceAgent[]) => {
     return agents.map(agent => ({
       'Agent Name': agent.name,
-      'Type': agent.type.toUpperCase(),
+      'Type': agent.agent_type.toUpperCase(),
       'Status': agent.status.toUpperCase(),
+      'Model': agent.model,
       'Success Rate': `${Math.round(agent.success_rate * 100)}%`,
-      'Total Insights': agent.total_insights,
-      'Insights This Week': agent.insights_this_week,
-      'Performance Trend': agent.performance_trend.toUpperCase(),
-      'Schedule': agent.schedule,
-      'Monitoring Competitors': agent.competitor_ids.length,
-      'Created Date': new Date(agent.created_date).toLocaleDateString(),
-      'Last Run': new Date(agent.last_run).toLocaleDateString(),
-      'Next Run': new Date(agent.next_run).toLocaleDateString()
+      'Total Conversations': agent.total_conversations,
+      'Successful Completions': agent.successful_completions,
+      'Average Response Time': `${agent.average_response_time}ms`,
+      'Conversations This Week': agent.recent_analytics?.conversations_this_week || 0,
+      'Target Audience': agent.target_audience,
+      'Deployment Status': agent.deployment?.deployment_status || 'Unknown',
+      'Health Status': agent.deployment?.health_status || 'Unknown',
+      'Created Date': new Date(agent.created_at).toLocaleDateString(),
+      'Last Active': agent.last_active_at ? new Date(agent.last_active_at).toLocaleDateString() : 'Never'
     }));
   };
 
@@ -445,22 +161,24 @@ export default function AgentsPage() {
     return agents.map(agent => ({
       'Agent Name': agent.name,
       'Description': agent.description,
-      'Type': agent.type.toUpperCase(),
+      'Type': agent.agent_type.toUpperCase(),
       'Status': agent.status.toUpperCase(),
-      'Schedule': agent.schedule,
-      'Success Rate': agent.success_rate,
-      'Total Insights': agent.total_insights,
-      'Insights This Week': agent.insights_this_week,
-      'Performance Trend': agent.performance_trend.toUpperCase(),
-      'Monitored Competitors': agent.competitor_ids.join('; '),
-      'Keywords': agent.configuration.keywords.join('; '),
-      'Data Sources': agent.configuration.sources.join('; '),
-      'Frequency': agent.configuration.frequency,
-      'Notification Threshold': `${Math.round(agent.configuration.notification_threshold * 100)}%`,
-      'Data Retention Days': agent.configuration.data_retention_days,
-      'Created Date': agent.created_date,
-      'Last Run': agent.last_run,
-      'Next Run': agent.next_run
+      'Model': agent.model,
+      'Temperature': agent.temperature,
+      'Max Tokens': agent.max_tokens,
+      'Capabilities': agent.capabilities.join('; '),
+      'Tools': agent.tools.join('; '),
+      'Available Functions': agent.available_functions.join('; '),
+      'Use Cases': agent.use_cases.join('; '),
+      'Target Audience': agent.target_audience,
+      'Auth Method': agent.auth_method,
+      'Webhook URL': agent.webhook_url || 'Not configured',
+      'API Endpoint': agent.api_endpoint || 'Not configured',
+      'Version': agent.version,
+      'Created By': agent.created_by,
+      'Tags': agent.tags.join('; '),
+      'Created Date': new Date(agent.created_at).toLocaleDateString(),
+      'Updated Date': new Date(agent.updated_at).toLocaleDateString()
     }));
   };
 
@@ -468,40 +186,43 @@ export default function AgentsPage() {
   const generateActivityReport = (agents: IntelligenceAgent[]) => {
     return agents.map(agent => ({
       'Agent Name': agent.name,
-      'Type': agent.type.toUpperCase(),
+      'Type': agent.agent_type.toUpperCase(),
       'Current Status': agent.status.toUpperCase(),
-      'Schedule Frequency': agent.schedule,
-      'Last Successful Run': new Date(agent.last_run).toLocaleString(),
-      'Next Scheduled Run': new Date(agent.next_run).toLocaleString(),
-      'Insights Generated': agent.total_insights,
-      'Recent Activity (7 days)': agent.insights_this_week,
-      'Average Daily Insights': Math.round(agent.total_insights / 30), // Approximate monthly average
-      'Uptime Status': agent.status === 'active' ? '100%' : agent.status === 'paused' ? '0%' : 'ERROR',
-      'Performance Trend': agent.performance_trend.toUpperCase(),
-      'Configuration Last Updated': agent.created_date
+      'Model': agent.model,
+      'Temperature': agent.temperature,
+      'Total Conversations': agent.total_conversations,
+      'Successful Completions': agent.successful_completions,
+      'Recent Activity (7 days)': agent.recent_analytics?.conversations_this_week || 0,
+      'Average Response Time': `${agent.average_response_time}ms`,
+      'Success Rate': `${Math.round(agent.success_rate * 100)}%`,
+      'Deployment Environment': agent.deployment?.environment || 'Unknown',
+      'Health Status': agent.deployment?.health_status || 'Unknown',
+      'Last Active': agent.last_active_at ? new Date(agent.last_active_at).toLocaleString() : 'Never',
+      'Configuration Last Updated': new Date(agent.updated_at).toLocaleDateString()
     }));
   };
 
   // Generate Performance Analytics data
   const generatePerformanceAnalytics = (agents: IntelligenceAgent[]) => {
     const analytics = agents.map(agent => {
-      const insightEfficiency = agent.total_insights / Math.max(1, Math.floor((new Date().getTime() - new Date(agent.created_date).getTime()) / (1000 * 60 * 60 * 24)));
-      const weeklyGrowthRate = agent.insights_this_week > 0 ? ((agent.insights_this_week / (agent.total_insights - agent.insights_this_week)) * 100) : 0;
+      const conversationEfficiency = agent.total_conversations / Math.max(1, Math.floor((new Date().getTime() - new Date(agent.created_at).getTime()) / (1000 * 60 * 60 * 24)));
+      const weeklyGrowthRate = agent.recent_analytics?.conversations_this_week && agent.total_conversations > 0 ? 
+        ((agent.recent_analytics.conversations_this_week / (agent.total_conversations - agent.recent_analytics.conversations_this_week)) * 100) : 0;
       
       return {
         'Agent Name': agent.name,
-        'Type Category': agent.type.toUpperCase(),
+        'Type Category': agent.agent_type.toUpperCase(),
         'Success Rate': `${Math.round(agent.success_rate * 100)}%`,
-        'Insight Generation Rate': `${insightEfficiency.toFixed(2)} per day`,
+        'Conversation Rate': `${conversationEfficiency.toFixed(2)} per day`,
         'Weekly Growth': `${weeklyGrowthRate.toFixed(1)}%`,
-        'Total Insights': agent.total_insights,
-        'Recent Performance': agent.insights_this_week,
-        'Efficiency Score': Math.round(agent.success_rate * insightEfficiency * 10),
-        'Competitor Coverage': agent.competitor_ids.length,
-        'Data Source Count': agent.configuration.sources.length,
-        'Keyword Diversity': agent.configuration.keywords.length,
-        'Performance Trend': agent.performance_trend.toUpperCase(),
-        'ROI Indicator': agent.success_rate > 0.8 && agent.insights_this_week > 5 ? 'HIGH' : agent.success_rate > 0.6 ? 'MEDIUM' : 'LOW'
+        'Total Conversations': agent.total_conversations,
+        'Recent Performance': agent.recent_analytics?.conversations_this_week || 0,
+        'Efficiency Score': Math.round(agent.success_rate * conversationEfficiency * 10),
+        'Capabilities Count': agent.capabilities.length,
+        'Tools Count': agent.tools.length,
+        'Functions Count': agent.available_functions.length,
+        'Average Rating': agent.recent_analytics?.average_rating || 0,
+        'ROI Indicator': agent.success_rate > 0.8 && (agent.recent_analytics?.conversations_this_week || 0) > 5 ? 'HIGH' : agent.success_rate > 0.6 ? 'MEDIUM' : 'LOW'
       };
     });
     
@@ -511,25 +232,29 @@ export default function AgentsPage() {
   // Generate Agent Health & Monitoring data
   const generateHealthMonitoring = (agents: IntelligenceAgent[]) => {
     return agents.map(agent => {
-      const daysSinceLastRun = Math.floor((new Date().getTime() - new Date(agent.last_run).getTime()) / (1000 * 60 * 60 * 24));
+      const daysSinceActive = agent.last_active_at ? 
+        Math.floor((new Date().getTime() - new Date(agent.last_active_at).getTime()) / (1000 * 60 * 60 * 24)) : null;
       const healthScore = agent.status === 'active' && agent.success_rate > 0.7 ? 'HEALTHY' : 
-                         agent.status === 'paused' ? 'PAUSED' : 
+                         agent.status === 'inactive' ? 'INACTIVE' : 
                          agent.status === 'error' ? 'CRITICAL' : 'WARNING';
       
       return {
         'Agent Name': agent.name,
         'Current Status': agent.status.toUpperCase(),
         'Health Score': healthScore,
+        'Deployment Status': agent.deployment?.deployment_status || 'Unknown',
+        'Deployment Health': agent.deployment?.health_status || 'Unknown',
         'Success Rate': `${Math.round(agent.success_rate * 100)}%`,
-        'Days Since Last Run': daysSinceLastRun,
+        'Days Since Last Active': daysSinceActive || 'Never active',
         'Error Rate': `${Math.round((1 - agent.success_rate) * 100)}%`,
-        'Performance Trend': agent.performance_trend.toUpperCase(),
-        'Configuration Issues': agent.configuration.keywords.length === 0 ? 'No Keywords' : 'OK',
-        'Data Source Status': agent.configuration.sources.length > 0 ? 'CONFIGURED' : 'MISSING',
-        'Notification Threshold': `${Math.round(agent.configuration.notification_threshold * 100)}%`,
-        'Data Retention': `${agent.configuration.data_retention_days} days`,
-        'Monitoring Scope': `${agent.competitor_ids.length} competitors`,
-        'Last Successful Run': new Date(agent.last_run).toLocaleDateString(),
+        'Model Configuration': agent.model,
+        'Temperature Setting': agent.temperature,
+        'Max Tokens': agent.max_tokens,
+        'Auth Method': agent.auth_method,
+        'Capabilities Count': agent.capabilities.length,
+        'Tools Count': agent.tools.length,
+        'Version': agent.version,
+        'Last Health Check': agent.deployment?.last_health_check ? new Date(agent.deployment.last_health_check).toLocaleDateString() : 'Never',
         'System Recommendation': healthScore === 'CRITICAL' ? 'IMMEDIATE ATTENTION' : 
                                healthScore === 'WARNING' ? 'REVIEW REQUIRED' : 'OPERATING NORMALLY'
       };
@@ -637,36 +362,24 @@ export default function AgentsPage() {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'pricing': return DollarSign;
-      case 'features': return Package;
-      case 'news': return Globe;
-      case 'hiring': return Users;
-      case 'social': return MessageSquare;
-      case 'funding': return TrendingUp;
-      case 'products': return Zap;
-      // Customer Account Agent Types
-      case 'renewal': return Target;
-      case 'health': return Activity;
-      case 'onboarding': return CheckCircle;
-      case 'expansion': return TrendingUp;
+      case 'customer-support': return Users;
+      case 'research-analysis': return BarChart3;
+      case 'content-creation': return Edit;
+      case 'lead-qualification': return Target;
+      case 'meeting-analysis': return MessageSquare;
+      case 'feedback-analysis': return Star;
       default: return Bot;
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'pricing': return { bg: '#f0fdf4', color: '#10b981' };
-      case 'features': return { bg: '#f0f4ff', color: '#4285f4' };
-      case 'news': return { bg: '#fef3c7', color: '#f59e0b' };
-      case 'hiring': return { bg: '#e9d5ff', color: '#8b5cf6' };
-      case 'social': return { bg: '#fce7f3', color: '#ec4899' };
-      case 'funding': return { bg: '#ecfccb', color: '#65a30d' };
-      case 'products': return { bg: '#fef2e2', color: '#ea580c' };
-      // Customer Account Agent Colors
-      case 'renewal': return { bg: '#dbeafe', color: '#3b82f6' };
-      case 'health': return { bg: '#fee2e2', color: '#ef4444' };
-      case 'onboarding': return { bg: '#d1fae5', color: '#10b981' };
-      case 'expansion': return { bg: '#fef3c7', color: '#f59e0b' };
+      case 'customer-support': return { bg: '#f0fdf4', color: '#10b981' };
+      case 'research-analysis': return { bg: '#f0f4ff', color: '#4285f4' };
+      case 'content-creation': return { bg: '#fef3c7', color: '#f59e0b' };
+      case 'lead-qualification': return { bg: '#e9d5ff', color: '#8b5cf6' };
+      case 'meeting-analysis': return { bg: '#fce7f3', color: '#ec4899' };
+      case 'feedback-analysis': return { bg: '#ecfccb', color: '#65a30d' };
       default: return { bg: '#f1f5f9', color: '#6b7280' };
     }
   };
@@ -674,9 +387,10 @@ export default function AgentsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'active': return 'calendly-badge-success';
-      case 'paused': return 'calendly-badge-warning';
+      case 'inactive': return 'calendly-badge-info';
+      case 'training': return 'calendly-badge-warning';
       case 'error': return 'calendly-badge-danger';
-      case 'stopped': return 'calendly-badge-info';
+      case 'maintenance': return 'calendly-badge-warning';
       default: return 'calendly-badge-info';
     }
   };
@@ -684,21 +398,14 @@ export default function AgentsPage() {
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'active': return Play;
-      case 'paused': return Pause;
+      case 'inactive': return Pause;
+      case 'training': return RefreshCw;
       case 'error': return AlertTriangle;
-      case 'stopped': return StopCircle;
+      case 'maintenance': return Settings;
       default: return Clock;
     }
   };
 
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case 'up': return TrendingUp;
-      case 'down': return () => <TrendingUp className="rotate-180" />;
-      case 'stable': return () => <div className="w-4 h-4 border-t-2 border-gray-400"></div>;
-      default: return BarChart3;
-    }
-  };
 
   const filteredAgents = agents.filter(agent => {
     const matchesSearch = !searchQuery || 
@@ -712,12 +419,51 @@ export default function AgentsPage() {
     return matchesSearch && matchesType && matchesStatus;
   });
 
-  const handleAgentAction = (agentId: string, action: 'start' | 'pause' | 'stop' | 'edit') => {
+  const handleAgentAction = async (agentId: string, action: 'start' | 'pause' | 'stop' | 'edit') => {
     if (action === 'edit') {
       router.push(`/agents/${agentId}/edit`);
     } else {
-      // Simulate other agent actions
-      console.log(`${action} agent ${agentId}`);
+      try {
+        const newStatus = action === 'start' ? 'active' : action === 'pause' ? 'inactive' : 'maintenance';
+        const response = await fetch(`/api/agents?id=${agentId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus })
+        });
+        
+        if (response.ok) {
+          // Reload agents to get updated status
+          loadAgents();
+        } else {
+          console.error('Failed to update agent status');
+        }
+      } catch (error) {
+        console.error('Error updating agent:', error);
+      }
+    }
+  };
+
+  const handleDeleteAgent = async (agentId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (confirm('Are you sure you want to delete this agent? This action cannot be undone.')) {
+      try {
+        const response = await fetch(`/api/agents?id=${agentId}`, { 
+          method: 'DELETE' 
+        });
+        
+        if (response.ok) {
+          // Remove from local state
+          setAgents(prev => prev.filter(agent => agent.id !== agentId));
+        } else {
+          const data = await response.json();
+          console.error('Failed to delete agent:', data.error);
+          alert('Failed to delete agent. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting agent:', error);
+        alert('Failed to delete agent. Please try again.');
+      }
     }
   };
 
@@ -957,17 +703,12 @@ export default function AgentsPage() {
                     style={{ border: '1px solid #e2e8f0', background: 'white' }}
                   >
                     <option value="all">All Types</option>
-                    <option value="pricing">Pricing</option>
-                    <option value="features">Features</option>
-                    <option value="news">News</option>
-                    <option value="hiring">Hiring</option>
-                    <option value="social">Social</option>
-                    <option value="funding">Funding</option>
-                    <option value="products">Products</option>
-                    <option value="renewal">Renewal</option>
-                    <option value="health">Health</option>
-                    <option value="onboarding">Onboarding</option>
-                    <option value="expansion">Expansion</option>
+                    <option value="customer-support">Customer Support</option>
+                    <option value="research-analysis">Research & Analysis</option>
+                    <option value="content-creation">Content Creation</option>
+                    <option value="lead-qualification">Lead Qualification</option>
+                    <option value="meeting-analysis">Meeting Analysis</option>
+                    <option value="feedback-analysis">Feedback Analysis</option>
                   </select>
                 </div>
 
@@ -981,9 +722,10 @@ export default function AgentsPage() {
                   >
                     <option value="all">All Status</option>
                     <option value="active">Active</option>
-                    <option value="paused">Paused</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="training">Training</option>
                     <option value="error">Error</option>
-                    <option value="stopped">Stopped</option>
+                    <option value="maintenance">Maintenance</option>
                   </select>
                 </div>
 
@@ -1015,7 +757,6 @@ export default function AgentsPage() {
                 const TypeIcon = getTypeIcon(agent.type);
                 const StatusIcon = getStatusIcon(agent.status);
                 const typeColors = getTypeColor(agent.type);
-                const TrendIcon = getTrendIcon(agent.performance_trend);
                 
                 return (
                   <div
@@ -1039,7 +780,7 @@ export default function AgentsPage() {
                         </div>
                         <div>
                           <h3 className="calendly-h3" style={{ marginBottom: '2px' }}>{agent.name}</h3>
-                          <p className="calendly-label-sm">{agent.type.replace('_', ' ')}</p>
+                          <p className="calendly-label-sm">{agent.agent_type.replace('-', ' ').replace('_', ' ')}</p>
                         </div>
                       </div>
                       <div className="flex flex-col space-y-1">
@@ -1055,31 +796,20 @@ export default function AgentsPage() {
                       {agent.description}
                     </p>
 
-                    {/* Real-time Activity Status */}
-                    {agent.status === 'active' && (
+                    {/* Agent Status */}
+                    {agent.status === 'active' && agent.recent_analytics && (
                       <div className="bg-gray-50 rounded-lg p-3" style={{ marginBottom: '12px' }}>
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            <span className="text-xs font-medium text-gray-700">Live Activity</span>
+                            <span className="text-xs font-medium text-gray-700">{agent.deployment?.deployment_status || 'Unknown'}</span>
                           </div>
                           <span className="text-xs text-gray-500">
-                            {agentActivities[agent.id]?.response_time || 250}ms
+                            {agent.recent_analytics.average_response_time}ms
                           </span>
                         </div>
                         <div className="text-xs text-gray-600 mb-2">
-                          {agentActivities[agent.id]?.current_task || 'Monitoring data sources'}
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-1.5">
-                            <div 
-                              className="bg-blue-500 h-1.5 rounded-full transition-all duration-500"
-                              style={{ width: `${agentActivities[agent.id]?.progress || 0}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {agentActivities[agent.id]?.progress || 0}%
-                          </span>
+                          Model: {agent.model} • Temperature: {agent.temperature}
                         </div>
                       </div>
                     )}
@@ -1088,11 +818,9 @@ export default function AgentsPage() {
                     <div className="grid grid-cols-3 gap-3" style={{ marginBottom: '16px' }}>
                       <div className="text-center">
                         <p className="calendly-h3" style={{ marginBottom: '2px' }}>
-                          {agent.assigned_accounts?.length || agent.total_insights}
+                          {agent.total_conversations}
                         </p>
-                        <p className="calendly-label-sm">
-                          {agent.assigned_accounts ? 'Accounts' : 'Insights'}
-                        </p>
+                        <p className="calendly-label-sm">Conversations</p>
                       </div>
                       <div className="text-center">
                         <p className="calendly-h3" style={{ marginBottom: '2px' }}>{Math.round(agent.success_rate * 100)}%</p>
@@ -1100,42 +828,29 @@ export default function AgentsPage() {
                       </div>
                       <div className="text-center">
                         <p className="calendly-h3" style={{ marginBottom: '2px' }}>
-                          {agent.assigned_accounts ? 
-                            agent.assigned_accounts.filter(a => a.status === 'active').length :
-                            (agent.insights_this_week + (agentActivities[agent.id]?.insights_processed || 0))
-                          }
+                          {agent.recent_analytics?.conversations_this_week || 0}
                         </p>
-                        <p className="calendly-label-sm">
-                          {agent.assigned_accounts ? 'Active' : 'This Week'}
-                        </p>
+                        <p className="calendly-label-sm">This Week</p>
                       </div>
                     </div>
 
-                    {/* Customer Assignments for Account Agents */}
-                    {agent.assigned_accounts && agent.assigned_accounts.length > 0 && (
+                    {/* Recent Conversations */}
+                    {agent.recent_conversations && agent.recent_conversations.length > 0 && (
                       <div style={{ marginBottom: '16px' }}>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Assigned Accounts</h4>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Activity</h4>
                         <div className="space-y-2">
-                          {agent.assigned_accounts.slice(0, 2).map((account) => (
-                            <div key={account.account_id} className="flex items-center justify-between text-xs p-2 bg-gray-50 rounded">
-                              <div>
-                                <div className="font-medium">{account.company_name}</div>
-                                <div className="text-gray-500">{account.purpose}</div>
-                              </div>
-                              <div className="flex items-center space-x-1">
-                                <div className={`w-2 h-2 rounded-full ${
-                                  account.status === 'active' ? 'bg-green-500 animate-pulse' :
-                                  account.status === 'paused' ? 'bg-yellow-500' : 'bg-gray-500'
-                                }`}></div>
-                                <span className="text-gray-600">
-                                  Next: {new Date(account.next_contact).toLocaleDateString()}
-                                </span>
+                          {agent.recent_conversations.slice(0, 2).map((conversation: any) => (
+                            <div key={conversation.id} className="text-xs p-2 bg-gray-50 rounded">
+                              <div className="font-medium truncate">{conversation.user_message.substring(0, 50)}...</div>
+                              <div className="text-gray-500 flex items-center justify-between mt-1">
+                                <span>{conversation.status}</span>
+                                <span>{new Date(conversation.created_at).toLocaleDateString()}</span>
                               </div>
                             </div>
                           ))}
-                          {agent.assigned_accounts.length > 2 && (
+                          {agent.recent_conversations.length > 2 && (
                             <div className="text-xs text-gray-500 text-center py-1">
-                              +{agent.assigned_accounts.length - 2} more accounts
+                              +{agent.recent_conversations.length - 2} more conversations
                             </div>
                           )}
                         </div>
@@ -1143,33 +858,46 @@ export default function AgentsPage() {
                     )}
 
                     {/* Performance Metrics for Active Agents */}
-                    {agent.status === 'active' && (
+                    {agent.status === 'active' && agent.recent_analytics && (
                       <div className="grid grid-cols-2 gap-2 text-xs" style={{ marginBottom: '12px' }}>
                         <div className="bg-blue-50 p-2 rounded text-center">
                           <div className="font-medium text-blue-700">
-                            {agentActivities[agent.id]?.insights_processed || 0}
+                            {agent.recent_analytics.average_rating || 0}
                           </div>
-                          <div className="text-blue-600">Processed Today</div>
+                          <div className="text-blue-600">Avg Rating</div>
                         </div>
-                        <div className="bg-red-50 p-2 rounded text-center">
-                          <div className="font-medium text-red-700">
-                            {agentActivities[agent.id]?.error_count || 0}
+                        <div className="bg-green-50 p-2 rounded text-center">
+                          <div className="font-medium text-green-700">
+                            {agent.deployment?.health_status || 'Unknown'}
                           </div>
-                          <div className="text-red-600">Errors</div>
+                          <div className="text-green-600">Health</div>
                         </div>
                       </div>
                     )}
 
-                    {/* Footer with trend and actions */}
+                    {/* Footer with model and actions */}
                     <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #f1f5f9' }}>
                       <div className="flex items-center space-x-2">
-                        <TrendIcon className="w-4 h-4" style={{ 
-                          color: agent.performance_trend === 'up' ? '#10b981' : 
-                                 agent.performance_trend === 'down' ? '#ef4444' : '#718096' 
-                        }} />
-                        <span className="calendly-label-sm">{agent.schedule}</span>
+                        <Bot className="w-4 h-4" style={{ color: '#718096' }} />
+                        <span className="calendly-label-sm">{agent.model}</span>
                       </div>
                       <div className="flex items-center space-x-1">
+                        <button
+                          onClick={(e) => handleDeleteAgent(agent.id, e)}
+                          className="p-1 rounded transition-colors"
+                          style={{ color: '#718096' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#fef2f2';
+                            e.currentTarget.style.color = '#ef4444';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#718096';
+                          }}
+                          title="Delete agent"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1245,50 +973,56 @@ export default function AgentsPage() {
                               <span className="font-medium">{agent.name}</span>
                             </div>
                           </td>
-                          <td>{agent.type.replace('_', ' ')}</td>
+                          <td>{agent.agent_type.replace('-', ' ').replace('_', ' ')}</td>
                           <td>
                             <span className={`calendly-badge ${getStatusColor(agent.status)} flex items-center space-x-1`}>
                               <StatusIcon className="w-3 h-3" />
                               <span>{agent.status}</span>
                             </span>
                           </td>
-                          <td>{agent.schedule}</td>
+                          <td>{agent.model}</td>
                           <td>
                             <div className="flex items-center space-x-2">
                               <span>{Math.round(agent.success_rate * 100)}%</span>
-                              {agent.status === 'active' && (
+                              {agent.recent_analytics && (
                                 <span className="text-xs text-gray-500">
-                                  {agentActivities[agent.id]?.response_time || 250}ms
+                                  {agent.recent_analytics.average_response_time}ms
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td>
-                            {agent.assigned_accounts ? 
-                              `${agent.assigned_accounts.length} accounts` :
-                              agent.total_insights
-                            }
-                          </td>
+                          <td>{agent.total_conversations}</td>
                           <td>
                             <div className="flex items-center space-x-2">
                               <span>
-                                {agent.assigned_accounts ? 
-                                  `${agent.assigned_accounts.filter(a => a.status === 'active').length} active` :
-                                  (agent.insights_this_week + (agentActivities[agent.id]?.insights_processed || 0))
-                                }
+                                {agent.recent_analytics?.conversations_this_week || 0}
                               </span>
-                              {agent.status === 'active' && (
-                                <div className="w-12 bg-gray-200 rounded-full h-1">
-                                  <div 
-                                    className="bg-blue-500 h-1 rounded-full transition-all duration-300"
-                                    style={{ width: `${agentActivities[agent.id]?.progress || 0}%` }}
-                                  ></div>
-                                </div>
+                              {agent.deployment?.health_status && (
+                                <div className={`w-2 h-2 rounded-full ${
+                                  agent.deployment.health_status === 'healthy' ? 'bg-green-500' :
+                                  agent.deployment.health_status === 'unhealthy' ? 'bg-red-500' : 'bg-yellow-500'
+                                }`}></div>
                               )}
                             </div>
                           </td>
                           <td>
                             <div className="flex items-center space-x-1">
+                              <button
+                                onClick={(e) => handleDeleteAgent(agent.id, e)}
+                                className="p-1 rounded transition-colors"
+                                style={{ color: '#718096' }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = '#fef2f2';
+                                  e.currentTarget.style.color = '#ef4444';
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = 'transparent';
+                                  e.currentTarget.style.color = '#718096';
+                                }}
+                                title="Delete agent"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();

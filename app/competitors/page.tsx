@@ -108,195 +108,54 @@ export default function CompetitorsPage() {
   const [sortBy, setSortBy] = useState<'name' | 'threat' | 'last_analyzed' | 'confidence'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  // Mock competitors data
-  const mockCompetitors: CompetitorProfile[] = [
-    {
-      id: 'salesforce',
-      name: 'Salesforce',
-      logo: 'https://logo.clearbit.com/salesforce.com',
-      industry: 'CRM & Sales',
-      description: 'Leading cloud-based CRM platform with comprehensive sales, service, and marketing solutions.',
-      website: 'https://salesforce.com',
-      marketCap: '$220B',
-      employees: '73,000+',
-      founded: '1999',
-      headquarters: 'San Francisco, CA',
-      status: 'active',
-      threat_level: 'high',
-      confidence_score: 0.95,
-      last_analyzed: '2024-01-15T14:30:00Z',
-      financial_metrics: {
-        revenue: '$31.4B',
-        growth_rate: '+26%',
-        profit_margin: '2.1%',
-        market_share: '19.8%'
-      },
-      social_metrics: {
-        linkedin_followers: 2800000,
-        twitter_followers: 500000,
-        engagement_rate: 0.048,
-        sentiment_score: 0.72
-      },
-      recent_news: [
-        {
-          title: 'Salesforce Announces AI Cloud Expansion',
-          date: '2024-01-14',
-          sentiment: 'positive',
-          source: 'TechCrunch'
-        },
-        {
-          title: 'Q4 Earnings Beat Expectations',
-          date: '2024-01-12',
-          sentiment: 'positive',
-          source: 'Forbes'
-        }
-      ],
-      competitive_advantages: [
-        'Market leader with extensive ecosystem',
-        'Strong AI/ML capabilities with Einstein',
-        'Comprehensive platform integration',
-        'Large developer community'
-      ],
-      weaknesses: [
-        'High pricing for small businesses',
-        'Complex implementation process',
-        'Steep learning curve for new users'
-      ],
-      recent_activities: [
-        {
-          type: 'product_launch',
-          title: 'Einstein GPT Integration',
-          date: '2024-01-10',
-          impact: 'high'
-        },
-        {
-          type: 'acquisition',
-          title: 'Data.com Enhancement',
-          date: '2024-01-08',
-          impact: 'medium'
-        }
-      ]
-    },
-    {
-      id: 'hubspot',
-      name: 'HubSpot',
-      logo: 'https://logo.clearbit.com/hubspot.com',
-      industry: 'Inbound Marketing',
-      description: 'Inbound marketing, sales, and service platform helping businesses attract and convert leads.',
-      website: 'https://hubspot.com',
-      marketCap: '$28B',
-      employees: '5,000+',
-      founded: '2006',
-      headquarters: 'Cambridge, MA',
-      status: 'active',
-      threat_level: 'high',
-      confidence_score: 0.89,
-      last_analyzed: '2024-01-15T16:00:00Z',
-      financial_metrics: {
-        revenue: '$1.7B',
-        growth_rate: '+32%',
-        profit_margin: '8.4%',
-        market_share: '12.1%'
-      },
-      social_metrics: {
-        linkedin_followers: 1200000,
-        twitter_followers: 280000,
-        engagement_rate: 0.065,
-        sentiment_score: 0.81
-      },
-      recent_news: [
-        {
-          title: 'HubSpot Launches Advanced AI Features',
-          date: '2024-01-13',
-          sentiment: 'positive',
-          source: 'MarketingLand'
-        }
-      ],
-      competitive_advantages: [
-        'Strong inbound marketing methodology',
-        'User-friendly interface and onboarding',
-        'Freemium model attracts SMBs',
-        'Comprehensive educational resources'
-      ],
-      weaknesses: [
-        'Limited customization compared to enterprise solutions',
-        'Reporting capabilities could be stronger',
-        'Advanced features require higher tiers'
-      ],
-      recent_activities: [
-        {
-          type: 'feature_update',
-          title: 'AI-Powered Content Assistant',
-          date: '2024-01-12',
-          impact: 'high'
-        }
-      ]
-    },
-    {
-      id: 'pipedrive',
-      name: 'Pipedrive',
-      logo: 'https://logo.clearbit.com/pipedrive.com',
-      industry: 'Sales CRM',
-      description: 'Sales-focused CRM designed to help small and medium businesses manage their sales processes.',
-      website: 'https://pipedrive.com',
-      marketCap: '$1.5B',
-      employees: '1,000+',
-      founded: '2010',
-      headquarters: 'Tallinn, Estonia',
-      status: 'monitoring',
-      threat_level: 'medium',
-      confidence_score: 0.76,
-      last_analyzed: '2024-01-14T10:15:00Z',
-      financial_metrics: {
-        revenue: '$127M',
-        growth_rate: '+41%',
-        profit_margin: '15.2%',
-        market_share: '3.2%'
-      },
-      social_metrics: {
-        linkedin_followers: 180000,
-        twitter_followers: 45000,
-        engagement_rate: 0.042,
-        sentiment_score: 0.74
-      },
-      recent_news: [
-        {
-          title: 'Pipedrive Expands European Operations',
-          date: '2024-01-11',
-          sentiment: 'positive',
-          source: 'SaaS News'
-        }
-      ],
-      competitive_advantages: [
-        'Simple, intuitive pipeline management',
-        'Strong focus on sales teams',
-        'Competitive pricing for SMBs',
-        'European data compliance'
-      ],
-      weaknesses: [
-        'Limited marketing automation features',
-        'Basic reporting compared to enterprise tools',
-        'Fewer integrations than larger competitors'
-      ],
-      recent_activities: [
-        {
-          type: 'market_expansion',
-          title: 'New APAC Offices',
-          date: '2024-01-09',
-          impact: 'medium'
-        }
-      ]
-    }
-  ];
 
   useEffect(() => {
-    // Simulate API call
+    loadCompetitors();
+  }, [threatFilter, statusFilter]);
+
+  const loadCompetitors = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setCompetitors(mockCompetitors);
+    try {
+      const params = new URLSearchParams();
+      if (threatFilter !== 'all') params.append('threat_level', threatFilter);
+      if (statusFilter !== 'all') params.append('status', statusFilter);
+      
+      const response = await fetch(`/api/competitors?${params.toString()}`);
+      const data = await response.json();
+      
+      if (data.competitors) {
+        // Transform API data to match UI interface
+        const transformedCompetitors: CompetitorProfile[] = data.competitors.map((comp: any) => ({
+          id: comp.id,
+          name: comp.name,
+          logo: comp.logo_url,
+          industry: comp.industry,
+          description: comp.description,
+          website: comp.website_url,
+          marketCap: comp.market_cap || 'N/A',
+          employees: comp.employees || 'N/A',
+          founded: comp.founded_year?.toString() || 'N/A',
+          headquarters: comp.headquarters || 'Unknown',
+          threat_level: comp.threat_level,
+          status: comp.status,
+          confidence_score: comp.confidence_score || 0.5,
+          last_analyzed: comp.last_analyzed_at || comp.updated_at,
+          insights_count: comp.insights_count || 0,
+          recent_insights: comp.recent_insights || []
+        }));
+        
+        setCompetitors(transformedCompetitors);
+      } else {
+        console.error('Failed to load competitors:', data.error);
+        setCompetitors([]);
+      }
+    } catch (error) {
+      console.error('Error loading competitors:', error);
+      setCompetitors([]);
+    } finally {
       setLoading(false);
-    }, 1000);
-  }, []);
+    }
+  };
 
   // Export functionality
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -538,13 +397,27 @@ export default function CompetitorsPage() {
     router.push(`/competitor-intelligence/competitors/${competitorId}`);
   };
 
-  const handleDeleteCompetitor = (competitorId: string, e: React.MouseEvent) => {
+  const handleDeleteCompetitor = async (competitorId: string, e: React.MouseEvent) => {
     e.stopPropagation(); // Prevent card click
     
     if (confirm('Are you sure you want to delete this competitor? This action cannot be undone.')) {
-      setCompetitors(prev => prev.filter(competitor => competitor.id !== competitorId));
-      // In a real app, you would also make an API call to delete from the backend
-      // await fetch(`/api/competitors/${competitorId}`, { method: 'DELETE' });
+      try {
+        const response = await fetch(`/api/competitors?id=${competitorId}`, { 
+          method: 'DELETE' 
+        });
+        
+        if (response.ok) {
+          // Remove from local state
+          setCompetitors(prev => prev.filter(competitor => competitor.id !== competitorId));
+        } else {
+          const data = await response.json();
+          console.error('Failed to delete competitor:', data.error);
+          alert('Failed to delete competitor. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error deleting competitor:', error);
+        alert('Failed to delete competitor. Please try again.');
+      }
     }
   };
 

@@ -24,6 +24,7 @@ export default function WorkflowsPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'customer-health' | 'competitive-intel' | 'content-generation' | 'automation'>('all');
+  const [isN8nConnected, setIsN8nConnected] = useState(false);
 
   useEffect(() => {
     loadWorkflows();
@@ -31,69 +32,46 @@ export default function WorkflowsPage() {
 
   const loadWorkflows = async () => {
     try {
-      // Mock data representing n8n workflows
-      const mockWorkflows: Workflow[] = [
-        {
-          id: 'wf-001',
-          name: 'Customer Health Analysis Pipeline',
-          description: 'Comprehensive customer health scoring with AI-powered insights and action recommendations',
-          status: 'active',
-          category: 'customer-health',
-          execution_count: 342,
-          last_executed: '2024-01-15T10:30:00Z',
-          created_by: 'Admin',
-          n8n_id: 'n8n-wf-customer-health-001',
-          has_interface_node: true,
-          connected_agents: 2,
-          connected_apps: 1
-        },
-        {
-          id: 'wf-002',
-          name: 'Competitive Intelligence Monitor',
-          description: 'Automated competitor tracking with real-time alerts and comprehensive reporting',
-          status: 'active',
-          category: 'competitive-intel',
-          execution_count: 156,
-          last_executed: '2024-01-14T15:45:00Z',
-          created_by: 'Admin',
-          n8n_id: 'n8n-wf-competitive-intel-001',
-          has_interface_node: true,
-          connected_agents: 1,
-          connected_apps: 1
-        },
-        {
-          id: 'wf-003',
-          name: 'Content Generation Engine',
-          description: 'AI-powered content creation for marketing campaigns and customer communications',
-          status: 'draft',
-          category: 'content-generation',
-          execution_count: 23,
-          last_executed: '2024-01-13T09:15:00Z',
-          created_by: 'Content Team',
-          n8n_id: 'n8n-wf-content-gen-001',
-          has_interface_node: false,
-          connected_agents: 0,
-          connected_apps: 0
-        },
-        {
-          id: 'wf-004',
-          name: 'Weekly Customer Outreach',
-          description: 'Automated weekly check-ins with high-value customers based on health scores',
-          status: 'active',
-          category: 'automation',
-          execution_count: 89,
-          last_executed: '2024-01-15T08:00:00Z',
-          created_by: 'Admin',
-          n8n_id: 'n8n-wf-automation-001',
-          has_interface_node: false,
-          connected_agents: 3,
-          connected_apps: 0
+      // Load workflows from API with n8n integration
+      const response = await fetch('/api/workflows');
+      const data = await response.json();
+      
+      if (data.success) {
+        // Transform API data to match UI interface
+        const transformedWorkflows: Workflow[] = data.workflows.map((wf: any) => ({
+          id: wf.id,
+          name: wf.name,
+          description: wf.description,
+          status: wf.actual_status || wf.status,
+          category: wf.category,
+          execution_count: wf.executions_this_week || 0,
+          last_executed: wf.last_execution || wf.updated_at,
+          created_by: wf.created_by || 'System',
+          n8n_id: wf.n8n_workflow_id,
+          has_interface_node: wf.node_count > 5, // Simple heuristic
+          connected_agents: 0, // Will be populated from agents API later
+          connected_apps: wf.webhook_url ? 1 : 0,
+          // Additional n8n specific data
+          n8n_active: wf.n8n_active,
+          node_count: wf.node_count || 0,
+          complexity_score: wf.complexity_score || 0,
+          success_rate: wf.success_rate || 0,
+          environment: wf.environment
+        }));
+        
+        setWorkflows(transformedWorkflows);
+        
+        // Set n8n connection status if available
+        if (data.n8n_connected !== undefined) {
+          setIsN8nConnected(data.n8n_connected);
         }
-      ];
-
-      setWorkflows(mockWorkflows);
+      } else {
+        console.error('Failed to load workflows:', data.error);
+        setWorkflows([]);
+      }
     } catch (error) {
       console.error('Error loading workflows:', error);
+      setWorkflows([]);
     } finally {
       setLoading(false);
     }
@@ -146,30 +124,22 @@ export default function WorkflowsPage() {
       <div className="p-6">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center space-x-4">
-              <button 
-                onClick={() => window.location.href = '/'}
-                className="p-2 rounded-lg transition-colors text-gray-400 hover:text-gray-600 hover:bg-white"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="text-3xl font-bold text-gray-900">Workflows</h1>
-                <p className="text-gray-600">n8n business logic and automation pipelines</p>
-              </div>
+          <div className="flex items-center justify-between" style={{ marginBottom: '32px' }}>
+            <div>
+              <h1 className="calendly-h1">Workflows</h1>
+              <p className="calendly-body">n8n business logic and automation pipelines</p>
             </div>
-            <div className="flex space-x-3">
+            <div className="flex items-center space-x-3">
               <button 
                 onClick={() => window.open('https://n8n.io', '_blank')}
-                className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors flex items-center space-x-2"
+                className="calendly-btn-secondary flex items-center space-x-2"
               >
                 <ExternalLink className="w-4 h-4" />
                 <span>Open n8n</span>
               </button>
               <button 
                 onClick={() => window.location.href = '/workflows/create'}
-                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"
+                className="calendly-btn-primary flex items-center space-x-2"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Workflow</span>
