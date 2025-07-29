@@ -30,7 +30,10 @@ import {
   X,
   FileText,
   Plus,
-  Database
+  Database,
+  Building,
+  Upload,
+  User
 } from 'lucide-react';
 
 interface GrainMeeting {
@@ -68,7 +71,7 @@ export default function MeetingsPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'recorded' | 'processing' | 'transcribed' | 'analyzed'>('all');
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month'>('all');
   const [codaFilter, setCodaFilter] = useState<'all' | 'integrated' | 'not_integrated'>('all');
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [sortBy, setSortBy] = useState<'date' | 'customer' | 'duration' | 'sentiment'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showAIConfig, setShowAIConfig] = useState(false);
@@ -78,6 +81,7 @@ export default function MeetingsPage() {
   const [showCodaModal, setShowCodaModal] = useState(false);
   const [meetingForCoda, setMeetingForCoda] = useState<GrainMeeting | null>(null);
   const [isCreatingCodaRow, setIsCreatingCodaRow] = useState(false);
+  const [selectedMeetings, setSelectedMeetings] = useState<string[]>([]);
   const [codaConfig, setCodaConfig] = useState({
     docId: 'qMDWed38ry', // Default to Product Roadmap
     tableId: 'grid-ii5pzK6H7w', // Default to Interviewed customers table
@@ -376,6 +380,51 @@ export default function MeetingsPage() {
     event.stopPropagation(); // Prevent navigation to meeting detail
     setMeetingToDelete(meeting);
     setShowDeleteModal(true);
+  };
+
+  const handleSelectMeeting = (meetingId: string) => {
+    setSelectedMeetings(prev => 
+      prev.includes(meetingId) 
+        ? prev.filter(id => id !== meetingId)
+        : [...prev, meetingId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedMeetings.length === filteredMeetings.length) {
+      setSelectedMeetings([]);
+    } else {
+      setSelectedMeetings(filteredMeetings.map(m => m.id));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedMeetings.length === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${selectedMeetings.length} meeting${selectedMeetings.length !== 1 ? 's' : ''}? This action cannot be undone.`)) {
+      try {
+        const promises = selectedMeetings.map(id => 
+          fetch(`/api/meetings?id=${id}`, { method: 'DELETE' })
+        );
+        
+        await Promise.all(promises);
+        
+        // Remove from local state
+        setMeetings(prev => prev.filter(m => !selectedMeetings.includes(m.id)));
+        setSelectedMeetings([]);
+      } catch (error) {
+        console.error('Error bulk deleting meetings:', error);
+        alert('Failed to delete meetings. Please try again.');
+      }
+    }
+  };
+
+  const handleBulkAddToCoda = () => {
+    if (selectedMeetings.length === 0) return;
+    
+    // For now, we'll just show an alert. In a real implementation, 
+    // you'd open a bulk Coda modal or process them all
+    alert(`Add ${selectedMeetings.length} meeting${selectedMeetings.length !== 1 ? 's' : ''} to Coda - Feature coming soon!`);
   };
 
   const handleDeleteConfirm = async () => {
@@ -719,7 +768,7 @@ export default function MeetingsPage() {
           <div className="max-w-7xl mx-auto">
             <div className="flex items-center justify-center min-h-96">
               <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: '#4285f4' }}></div>
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: '#0f71e5' }}></div>
                 <p className="calendly-body mt-4">Loading meetings...</p>
               </div>
             </div>
@@ -923,7 +972,13 @@ export default function MeetingsPage() {
                       </button>
                       <button
                         onClick={handleUploadTranscript}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-4 py-2 text-white rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ 
+                          backgroundColor: '#0f71e5',
+                          fontFamily: 'Poppins, sans-serif'
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d5fb8'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f71e5'}
                         disabled={isUploadingTranscript || !uploadFormData.meetingTitle || !uploadFormData.customer || !transcriptContent}
                       >
                         {isUploadingTranscript && (
@@ -947,7 +1002,7 @@ export default function MeetingsPage() {
                   <p className="calendly-label" style={{ marginBottom: '4px' }}>Total Meetings</p>
                   <p className="calendly-h2" style={{ marginBottom: 0 }}>{meetings.length}</p>
                 </div>
-                <MessageSquare className="w-8 h-8" style={{ color: '#4285f4' }} />
+                <MessageSquare className="w-8 h-8" style={{ color: '#0f71e5' }} />
               </div>
             </div>
             
@@ -995,7 +1050,7 @@ export default function MeetingsPage() {
               {/* Search */}
               <div className="flex-1">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: isSearching ? '#4285f4' : '#718096' }} />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5" style={{ color: isSearching ? '#0f71e5' : '#718096' }} />
                   <input
                     type="text"
                     value={searchQuery}
@@ -1003,20 +1058,20 @@ export default function MeetingsPage() {
                     placeholder={searchMode === 'search' ? 'Search transcripts, topics, insights...' : 'Search meetings, customers, or topics...'}
                     className="w-full pl-12 pr-4 py-3 calendly-body-sm transition-all duration-200"
                     style={{ 
-                      border: `1px solid ${searchMode === 'search' ? '#4285f4' : '#e2e8f0'}`,
+                      border: `1px solid ${searchMode === 'search' ? '#0f71e5' : '#e2e8f0'}`,
                       borderRadius: '8px',
                       background: 'white'
                     }}
                     onFocus={(e) => {
-                      e.target.style.borderColor = '#4285f4';
-                      e.target.style.boxShadow = '0 0 0 3px rgba(66, 133, 244, 0.1)';
+                      e.target.style.borderColor = '#0f71e5';
+                      e.target.style.boxShadow = '0 0 0 3px rgba(15, 113, 229, 0.1)';
                       if (searchQuery.trim().length >= 2) {
                         setShowSuggestions(true);
                       }
                     }}
                     onBlur={(e) => {
                       setTimeout(() => {
-                        e.target.style.borderColor = searchMode === 'search' ? '#4285f4' : '#e2e8f0';
+                        e.target.style.borderColor = searchMode === 'search' ? '#0f71e5' : '#e2e8f0';
                         e.target.style.boxShadow = 'none';
                         setShowSuggestions(false);
                       }, 200);
@@ -1024,7 +1079,7 @@ export default function MeetingsPage() {
                   />
                   {isSearching && (
                     <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: '#4285f4' }}></div>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2" style={{ borderColor: '#0f71e5' }}></div>
                     </div>
                   )}
                   
@@ -1123,14 +1178,14 @@ export default function MeetingsPage() {
                   <button
                     onClick={() => setViewMode('cards')}
                     className={`p-2 transition-all duration-200 ${viewMode === 'cards' ? 'text-white' : 'calendly-body-sm'}`}
-                    style={viewMode === 'cards' ? { background: '#4285f4' } : { color: '#718096' }}
+                    style={viewMode === 'cards' ? { background: '#0f71e5' } : { color: '#718096' }}
                   >
                     <Grid3X3 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => setViewMode('table')}
                     className={`p-2 transition-all duration-200 ${viewMode === 'table' ? 'text-white' : 'calendly-body-sm'}`}
-                    style={viewMode === 'table' ? { background: '#4285f4' } : { color: '#718096' }}
+                    style={viewMode === 'table' ? { background: '#0f71e5' } : { color: '#718096' }}
                   >
                     <List className="w-4 h-4" />
                   </button>
@@ -1270,12 +1325,12 @@ export default function MeetingsPage() {
 
           {/* Meetings Display */}
           {searchMode === 'browse' && viewMode === 'cards' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {filteredMeetings.map((meeting) => (
                 <div
                   key={meeting.id}
                   onClick={() => handleMeetingClick(meeting.id)}
-                  className="calendly-card cursor-pointer transition-all duration-200"
+                  className="calendly-card cursor-pointer transition-all duration-200 h-[420px] flex flex-col"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
                     e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
@@ -1286,45 +1341,54 @@ export default function MeetingsPage() {
                   }}
                 >
                   {/* Card Header */}
-                  <div className="flex items-start justify-between" style={{ marginBottom: '12px' }}>
-                    <div className="flex-1">
-                      <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>{meeting.title}</h3>
-                      <p className="calendly-label-sm">{meeting.customer} • {formatDistanceToNow(new Date(meeting.date), { addSuffix: true })}</p>
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-1 line-clamp-1">{meeting.title}</h3>
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Building className="w-4 h-4 mr-1" />
+                        <span className="truncate">{meeting.customer}</span>
+                      </div>
                     </div>
-                    <div className="flex flex-col space-y-1 ml-4">
-                      <span className={`calendly-badge ${getSentimentColor(meeting.sentiment)}`}>
+                    <div className="flex flex-col space-y-1 ml-3">
+                      <span className={`calendly-badge text-xs ${getSentimentColor(meeting.sentiment)}`}>
                         {meeting.sentiment}
                       </span>
-                      <span className={`calendly-badge ${getPriorityColor(meeting.priority)}`}>
-                        {meeting.priority}
+                      <span className={`calendly-badge text-xs ${getStatusColor(meeting.status)}`}>
+                        {meeting.status}
                       </span>
                     </div>
                   </div>
 
-                  {/* Meeting Details */}
-                  <div className="flex items-center space-x-4 text-sm text-gray-600" style={{ marginBottom: '12px' }}>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="w-4 h-4" />
-                      <span>{meeting.duration}</span>
+                  {/* Meeting Info Grid */}
+                  <div className="grid grid-cols-2 gap-3 mb-3">
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center text-gray-600 mb-1">
+                        <Clock className="w-4 h-4 mr-1" />
+                        <span className="text-sm font-medium">Duration</span>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{meeting.duration}</p>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Users className="w-4 h-4" />
-                      <span>{meeting.attendees.length} attendees</span>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <div className="flex items-center text-gray-600 mb-1">
+                        <Users className="w-4 h-4 mr-1" />
+                        <span className="text-sm font-medium">Attendees</span>
+                      </div>
+                      <p className="text-lg font-semibold text-gray-900">{meeting.attendees.length}</p>
                     </div>
-                    <span className={`calendly-badge ${getStatusColor(meeting.status)}`}>
-                      {meeting.status}
-                    </span>
                   </div>
 
                   {/* Summary */}
-                  <p className="calendly-body-sm line-clamp-2" style={{ marginBottom: '16px' }}>
-                    {meeting.summary}
-                  </p>
+                  <div className="bg-blue-50 p-3 rounded-lg mb-3 flex-1">
+                    <h4 className="text-sm font-medium text-blue-900 mb-2">Summary</h4>
+                    <p className="text-sm text-blue-800 line-clamp-3">
+                      {meeting.summary}
+                    </p>
+                  </div>
 
                   {/* Key Topics */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <h5 className="text-sm font-medium text-gray-900 mb-2">Key Topics</h5>
-                    <div className="flex flex-wrap gap-2">
+                  <div className="mb-3">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Key Topics</h4>
+                    <div className="flex flex-wrap gap-1">
                       {meeting.keyTopics.slice(0, 3).map((topic, index) => (
                         <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                           {topic}
@@ -1332,211 +1396,214 @@ export default function MeetingsPage() {
                       ))}
                       {meeting.keyTopics.length > 3 && (
                         <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                          +{meeting.keyTopics.length - 3} more
+                          +{meeting.keyTopics.length - 3}
                         </span>
                       )}
                     </div>
                   </div>
 
                   {/* Footer with Actions */}
-                  <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #f1f5f9' }}>
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="w-4 h-4 text-green-500" />
-                        <span className="calendly-label-sm">{meeting.actionItems.length} action items</span>
+                  <div className="flex items-center justify-between pt-3 mt-auto border-t border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="flex items-center text-gray-500">
+                        <Calendar className="w-4 h-4 mr-1" />
+                        <span className="text-sm">{new Date(meeting.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                       </div>
-                      {/* JIRA Workflow Indicator */}
-                      {meeting.status === 'analyzed' && (
-                        <div className="flex items-center space-x-2">
-                          <div className="flex items-center space-x-1">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            <span className="calendly-label-sm text-blue-600">JIRA Ready</span>
-                          </div>
-                        </div>
-                      )}
-                      {/* Coda Integration Indicator */}
+                      <div className="flex items-center text-green-600">
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        <span className="text-sm font-medium">{meeting.actionItems.length} actions</span>
+                      </div>
                       {meeting.coda_integrated && (
-                        <div className="flex items-center space-x-1">
-                          <Database className="w-3 h-3 text-green-600" />
-                          <span className="calendly-label-sm text-green-600">In Coda</span>
+                        <div className="flex items-center text-green-600">
+                          <Database className="w-4 h-4 mr-1" />
+                          <span className="text-sm">Coda</span>
                         </div>
                       )}
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-3">
                       {meeting.recording_url && (
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             window.open(meeting.recording_url, '_blank');
                           }}
-                          className="p-1 rounded transition-colors"
-                          style={{ color: '#718096' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#f1f5f9';
-                            e.currentTarget.style.color = '#4285f4';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#718096';
-                          }}
+                          className="flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm"
                           title="Play recording"
                         >
-                          <Play className="w-4 h-4" />
+                          <Play className="w-4 h-4 mr-1" />
+                          Recording
                         </button>
                       )}
                       <button
                         onClick={(e) => handleDeleteClick(meeting, e)}
-                        className="p-1 rounded transition-colors"
-                        style={{ color: '#718096' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#fef2f2';
-                          e.currentTarget.style.color = '#ef4444';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = '#718096';
-                        }}
+                        className="flex items-center text-red-600 hover:text-red-800 font-medium text-sm"
                         title="Delete meeting"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
                       </button>
-                      <ExternalLink className="w-4 h-4" style={{ color: '#718096' }} />
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : searchMode === 'browse' ? (
-            /* Table View */
-            <div className="calendly-card" style={{ padding: 0 }}>
-              <div className="overflow-x-auto">
-                <table className="calendly-table">
-                  <thead>
-                    <tr>
-                      <th>Meeting</th>
-                      <th>Customer</th>
-                      <th>Date</th>
-                      <th>Duration</th>
-                      <th>Sentiment</th>
-                      <th>Status</th>
-                      <th>Priority</th>
-                      <th>Coda</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredMeetings.map((meeting) => (
-                      <tr key={meeting.id} className="cursor-pointer" onClick={() => handleMeetingClick(meeting.id)}>
-                        <td>
-                          <div>
-                            <div className="font-medium">{meeting.title}</div>
-                            <div className="text-sm text-gray-600 line-clamp-1">{meeting.summary}</div>
+            <>
+            {/* Bulk Actions Toolbar */}
+            {selectedMeetings.length > 0 && (
+              <div className="p-4 mb-4 flex items-center justify-between" style={{
+                background: '#dbeafe',
+                border: '1px solid #93c5fd', 
+                borderRadius: '12px'
+              }}>
+                <div className="flex items-center space-x-4">
+                  <span className="font-medium text-blue-900">
+                    {selectedMeetings.length} meeting{selectedMeetings.length !== 1 ? 's' : ''} selected
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={handleBulkAddToCoda}
+                      className="calendly-btn-primary flex items-center space-x-1"
+                    >
+                      <Database className="w-4 h-4" />
+                      <span className="text-sm font-medium">Add to Coda</span>
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="calendly-btn-secondary flex items-center space-x-1 !text-red-600 !border-red-200 hover:!bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="text-sm font-medium">Delete All</span>
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedMeetings([])}
+                  className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                  title="Clear selection"
+                >
+                  <X className="w-4 h-4 text-blue-700" />
+                </button>
+              </div>
+            )}
+            
+            {/* Enhanced List View */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="divide-y divide-gray-200">
+                {filteredMeetings.map((meeting) => (
+                  <div
+                    key={meeting.id}
+                    onClick={() => handleMeetingClick(meeting.id)}
+                    className="p-6 hover:bg-gray-50 transition-colors cursor-pointer relative"
+                  >
+                    {/* Selection Circle */}
+                    <div className="absolute top-6 left-6">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectMeeting(meeting.id);
+                        }}
+                        className={`w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                          selectedMeetings.includes(meeting.id)
+                            ? 'bg-blue-600 border-blue-600 shadow-lg'
+                            : 'bg-white border-gray-300 hover:border-blue-400'
+                        }`}
+                      >
+                        {selectedMeetings.includes(meeting.id) && (
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="ml-8">{/* Add margin for the selection circle */}
+                    <div className="flex items-center justify-between">
+                      {/* Left Content */}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4 mb-2">
+                          <h3 className="text-lg font-semibold text-gray-900 line-clamp-1">{meeting.title}</h3>
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getSentimentColor(meeting.sentiment)}`}>
+                              {meeting.sentiment}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(meeting.status)}`}>
+                              {meeting.status}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getPriorityColor(meeting.priority)}`}>
+                              {meeting.priority}
+                            </span>
                           </div>
-                        </td>
-                        <td>{meeting.customer}</td>
-                        <td>{formatDistanceToNow(new Date(meeting.date), { addSuffix: true })}</td>
-                        <td>{meeting.duration}</td>
-                        <td>
-                          <span className={`calendly-badge ${getSentimentColor(meeting.sentiment)}`}>
-                            {meeting.sentiment}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`calendly-badge ${getStatusColor(meeting.status)}`}>
-                            {meeting.status}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`calendly-badge ${getPriorityColor(meeting.priority)}`}>
-                            {meeting.priority}
-                          </span>
-                        </td>
-                        <td>
-                          {meeting.coda_integrated ? (
-                            <div className="flex items-center space-x-1">
-                              <Database className="w-3 h-3 text-green-600" />
-                              <span className="text-xs text-green-600">Added</span>
-                            </div>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setMeetingForCoda(meeting);
-                                setShowCodaModal(true);
-                              }}
-                              className="text-xs text-blue-600 hover:text-blue-700 transition-colors flex items-center space-x-1"
-                            >
-                              <Database className="w-3 h-3" />
-                              <span>Add</span>
-                            </button>
-                          )}
-                        </td>
-                        <td>
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 line-clamp-1 mb-3">{meeting.summary}</p>
+                        
+                        <div className="flex items-center space-x-6 text-sm text-gray-500">
                           <div className="flex items-center space-x-1">
-                            {meeting.recording_url && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  window.open(meeting.recording_url, '_blank');
-                                }}
-                                className="p-1 rounded transition-colors"
-                                style={{ color: '#718096' }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = '#f1f5f9';
-                                  e.currentTarget.style.color = '#4285f4';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = 'transparent';
-                                  e.currentTarget.style.color = '#718096';
-                                }}
-                                title="Play recording"
-                              >
-                                <Play className="w-4 h-4" />
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleMeetingClick(meeting.id);
-                              }}
-                              className="p-1 rounded transition-colors"
-                              style={{ color: '#718096' }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#f1f5f9';
-                                e.currentTarget.style.color = '#4285f4';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = '#718096';
-                              }}
-                              title="View details"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={(e) => handleDeleteClick(meeting, e)}
-                              className="p-1 rounded transition-colors"
-                              style={{ color: '#718096' }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = '#fef2f2';
-                                e.currentTarget.style.color = '#ef4444';
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = 'transparent';
-                                e.currentTarget.style.color = '#718096';
-                              }}
-                              title="Delete meeting"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                            <Building className="w-4 h-4" />
+                            <span>{meeting.customer}</span>
                           </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>{new Date(meeting.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Clock className="w-4 h-4" />
+                            <span>{meeting.duration}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Users className="w-4 h-4" />
+                            <span>{meeting.attendees.length} attendees</span>
+                          </div>
+                          {meeting.coda_integrated && (
+                            <div className="flex items-center space-x-1 text-green-600">
+                              <Database className="w-4 h-4" />
+                              <span>Coda</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Right Actions */}
+                      <div className="flex items-center space-x-3 ml-6">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMeetingClick(meeting.id);
+                          }}
+                          className="flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View details"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </button>
+                        {meeting.recording_url && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(meeting.recording_url, '_blank');
+                            }}
+                            className="flex items-center px-3 py-2 text-sm font-medium text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Play recording"
+                          >
+                            <Play className="w-4 h-4 mr-2" />
+                            Recording
+                          </button>
+                        )}
+                        <button
+                          onClick={(e) => handleDeleteClick(meeting, e)}
+                          className="flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete meeting"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+            </>
           ) : null}
 
           {/* Empty State */}
@@ -1818,7 +1885,13 @@ export default function MeetingsPage() {
                     </button>
                     <button
                       onClick={handleEnhancedCodaCreate}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-4 py-2 text-white rounded-lg transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      style={{ 
+                        backgroundColor: '#0f71e5',
+                        fontFamily: 'Poppins, sans-serif'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0d5fb8'}
+                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0f71e5'}
                       disabled={isCreatingCodaRow || !codaConfig.docId || !codaConfig.tableId}
                     >
                       {isCreatingCodaRow && (
@@ -1840,7 +1913,7 @@ export default function MeetingsPage() {
                 {/* Modal Header */}
                 <div className="flex items-center justify-between p-6 border-b">
                   <div className="flex items-center space-x-3">
-                    <Bot className="w-6 h-6" style={{ color: '#4285f4' }} />
+                    <Bot className="w-6 h-6" style={{ color: '#0f71e5' }} />
                     <div>
                       <h2 className="calendly-h2">AI Analysis Configuration</h2>
                       <p className="calendly-body-sm text-gray-600">Current settings and status for meeting analysis</p>
@@ -1884,7 +1957,7 @@ export default function MeetingsPage() {
                             <h4 className="font-medium text-blue-800">Auto-Processing</h4>
                             <label className="relative inline-flex items-center cursor-pointer">
                               <input type="checkbox" className="sr-only peer" defaultChecked />
-                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600" style={{ backgroundColor: 'var(--marq-primary)' }}></div>
                             </label>
                           </div>
                           <p className="text-sm text-blue-700">New meetings analyzed automatically</p>

@@ -101,6 +101,7 @@ export default function AgentsPage() {
   const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [sortBy, setSortBy] = useState<'name' | 'type' | 'success_rate' | 'insights'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
 
   // Export functionality
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -471,6 +472,56 @@ export default function AgentsPage() {
     router.push(`/agents/${agentId}`);
   };
 
+  const handleSelectAgent = (agentId: string) => {
+    setSelectedAgents(prev => 
+      prev.includes(agentId) 
+        ? prev.filter(id => id !== agentId)
+        : [...prev, agentId]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedAgents.length === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${selectedAgents.length} agent${selectedAgents.length !== 1 ? 's' : ''}? This action cannot be undone.`)) {
+      try {
+        const promises = selectedAgents.map(id => 
+          fetch(`/api/agents?id=${id}`, { method: 'DELETE' })
+        );
+        
+        await Promise.all(promises);
+        
+        // Remove from local state
+        setAgents(prev => prev.filter(a => !selectedAgents.includes(a.id)));
+        setSelectedAgents([]);
+      } catch (error) {
+        console.error('Error bulk deleting agents:', error);
+        alert('Failed to delete agents. Please try again.');
+      }
+    }
+  };
+
+  const handleBulkStatusChange = async (newStatus: 'active' | 'inactive' | 'maintenance') => {
+    if (selectedAgents.length === 0) return;
+    
+    try {
+      // Update local state optimistically
+      setAgents(prev => prev.map(agent => 
+        selectedAgents.includes(agent.id) 
+          ? { ...agent, status: newStatus }
+          : agent
+      ));
+      
+      setSelectedAgents([]);
+      
+      // Here you would make API calls to update the status
+      console.log(`Updated ${selectedAgents.length} agents to ${newStatus}`);
+    } catch (error) {
+      console.error('Error bulk updating agents:', error);
+      alert('Failed to update agents. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
@@ -752,17 +803,17 @@ export default function AgentsPage() {
 
           {/* Agents Display */}
           {viewMode === 'cards' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {filteredAgents.map((agent) => {
-                const TypeIcon = getTypeIcon(agent.type);
+                const TypeIcon = getTypeIcon(agent.agent_type);
                 const StatusIcon = getStatusIcon(agent.status);
-                const typeColors = getTypeColor(agent.type);
+                const typeColors = getTypeColor(agent.agent_type);
                 
                 return (
                   <div
                     key={agent.id}
                     onClick={() => handleAgentClick(agent.id)}
-                    className="calendly-card cursor-pointer transition-all duration-200"
+                    className="calendly-card cursor-pointer transition-all duration-200 h-[520px] flex flex-col"
                     onMouseEnter={(e) => {
                       e.currentTarget.style.transform = 'translateY(-2px)';
                       e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
@@ -773,18 +824,18 @@ export default function AgentsPage() {
                     }}
                   >
                     {/* Card Header */}
-                    <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
-                      <div className="flex items-center space-x-3">
-                        <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ background: typeColors.bg }}>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex items-center space-x-3 flex-1 min-w-0">
+                        <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: typeColors.bg }}>
                           <TypeIcon className="w-6 h-6" style={{ color: typeColors.color }} />
                         </div>
-                        <div>
-                          <h3 className="calendly-h3" style={{ marginBottom: '2px' }}>{agent.name}</h3>
-                          <p className="calendly-label-sm">{agent.agent_type.replace('-', ' ').replace('_', ' ')}</p>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">{agent.name}</h3>
+                          <p className="text-sm text-gray-600 truncate">{agent.agent_type.replace('-', ' ').replace('_', ' ')}</p>
                         </div>
                       </div>
-                      <div className="flex flex-col space-y-1">
-                        <span className={`calendly-badge ${getStatusColor(agent.status)} flex items-center space-x-1`}>
+                      <div className="flex flex-col space-y-1 ml-3">
+                        <span className={`calendly-badge text-xs ${getStatusColor(agent.status)} flex items-center space-x-1`}>
                           <StatusIcon className="w-3 h-3" />
                           <span>{agent.status}</span>
                         </span>
@@ -792,149 +843,105 @@ export default function AgentsPage() {
                     </div>
 
                     {/* Description */}
-                    <p className="calendly-body-sm line-clamp-2" style={{ marginBottom: '16px' }}>
-                      {agent.description}
-                    </p>
+                    <div className="bg-gray-50 p-3 rounded-lg mb-4 flex-1">
+                      <h4 className="text-sm font-medium text-gray-700 mb-2">Agent Description</h4>
+                      <p className="text-sm text-gray-600 line-clamp-3">
+                        {agent.description}
+                      </p>
+                    </div>
 
-                    {/* Agent Status */}
-                    {agent.status === 'active' && agent.recent_analytics && (
-                      <div className="bg-gray-50 rounded-lg p-3" style={{ marginBottom: '12px' }}>
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                            <span className="text-xs font-medium text-gray-700">{agent.deployment?.deployment_status || 'Unknown'}</span>
-                          </div>
-                          <span className="text-xs text-gray-500">
-                            {agent.recent_analytics.average_response_time}ms
-                          </span>
+                    {/* Performance Metrics */}
+                    <div className="grid grid-cols-3 gap-3 mb-4">
+                      <div className="bg-blue-50 p-3 rounded-lg text-center">
+                        <div className="flex items-center justify-center text-blue-700 mb-1">
+                          <MessageSquare className="w-4 h-4 mr-1" />
                         </div>
-                        <div className="text-xs text-gray-600 mb-2">
-                          Model: {agent.model} • Temperature: {agent.temperature}
+                        <p className="text-lg font-semibold text-blue-900">{agent.total_conversations}</p>
+                        <p className="text-xs text-blue-600">Conversations</p>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded-lg text-center">
+                        <div className="flex items-center justify-center text-green-700 mb-1">
+                          <CheckCircle className="w-4 h-4 mr-1" />
                         </div>
+                        <p className="text-lg font-semibold text-green-900">{Math.round(agent.success_rate * 100)}%</p>
+                        <p className="text-xs text-green-600">Success Rate</p>
                       </div>
-                    )}
-
-                    {/* Metrics */}
-                    <div className="grid grid-cols-3 gap-3" style={{ marginBottom: '16px' }}>
-                      <div className="text-center">
-                        <p className="calendly-h3" style={{ marginBottom: '2px' }}>
-                          {agent.total_conversations}
-                        </p>
-                        <p className="calendly-label-sm">Conversations</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="calendly-h3" style={{ marginBottom: '2px' }}>{Math.round(agent.success_rate * 100)}%</p>
-                        <p className="calendly-label-sm">Success</p>
-                      </div>
-                      <div className="text-center">
-                        <p className="calendly-h3" style={{ marginBottom: '2px' }}>
-                          {agent.recent_analytics?.conversations_this_week || 0}
-                        </p>
-                        <p className="calendly-label-sm">This Week</p>
+                      <div className="bg-purple-50 p-3 rounded-lg text-center">
+                        <div className="flex items-center justify-center text-purple-700 mb-1">
+                          <Calendar className="w-4 h-4 mr-1" />
+                        </div>
+                        <p className="text-lg font-semibold text-purple-900">{agent.recent_analytics?.conversations_this_week || 0}</p>
+                        <p className="text-xs text-purple-600">This Week</p>
                       </div>
                     </div>
 
-                    {/* Recent Conversations */}
-                    {agent.recent_conversations && agent.recent_conversations.length > 0 && (
-                      <div style={{ marginBottom: '16px' }}>
-                        <h4 className="text-sm font-medium text-gray-700 mb-2">Recent Activity</h4>
-                        <div className="space-y-2">
-                          {agent.recent_conversations.slice(0, 2).map((conversation: any) => (
-                            <div key={conversation.id} className="text-xs p-2 bg-gray-50 rounded">
-                              <div className="font-medium truncate">{conversation.user_message.substring(0, 50)}...</div>
-                              <div className="text-gray-500 flex items-center justify-between mt-1">
-                                <span>{conversation.status}</span>
-                                <span>{new Date(conversation.created_at).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-                          ))}
-                          {agent.recent_conversations.length > 2 && (
-                            <div className="text-xs text-gray-500 text-center py-1">
-                              +{agent.recent_conversations.length - 2} more conversations
-                            </div>
-                          )}
-                        </div>
+                    {/* Model & Configuration */}
+                    <div className="bg-gray-100 p-3 rounded-lg mb-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium text-gray-700">Model Configuration</span>
+                        <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">{agent.version}</span>
                       </div>
-                    )}
-
-                    {/* Performance Metrics for Active Agents */}
-                    {agent.status === 'active' && agent.recent_analytics && (
-                      <div className="grid grid-cols-2 gap-2 text-xs" style={{ marginBottom: '12px' }}>
-                        <div className="bg-blue-50 p-2 rounded text-center">
-                          <div className="font-medium text-blue-700">
-                            {agent.recent_analytics.average_rating || 0}
+                      <div className="flex items-center justify-between text-sm text-gray-600">
+                        <span>{agent.model}</span>
+                        <span>Temperature: {agent.temperature}</span>
+                      </div>
+                      {agent.status === 'active' && agent.recent_analytics && (
+                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-gray-200">
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                            <span className="text-xs text-gray-600">Health: {agent.deployment?.health_status || 'Unknown'}</span>
                           </div>
-                          <div className="text-blue-600">Avg Rating</div>
+                          <span className="text-xs text-gray-600">Rating: {agent.recent_analytics.average_rating || 0}</span>
                         </div>
-                        <div className="bg-green-50 p-2 rounded text-center">
-                          <div className="font-medium text-green-700">
-                            {agent.deployment?.health_status || 'Unknown'}
-                          </div>
-                          <div className="text-green-600">Health</div>
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
 
-                    {/* Footer with model and actions */}
-                    <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #f1f5f9' }}>
-                      <div className="flex items-center space-x-2">
-                        <Bot className="w-4 h-4" style={{ color: '#718096' }} />
-                        <span className="calendly-label-sm">{agent.model}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <button
-                          onClick={(e) => handleDeleteAgent(agent.id, e)}
-                          className="p-1 rounded transition-colors"
-                          style={{ color: '#718096' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#fef2f2';
-                            e.currentTarget.style.color = '#ef4444';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#718096';
-                          }}
-                          title="Delete agent"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                    {/* Footer Actions */}
+                    <div className="flex items-center justify-between pt-3 mt-auto border-t border-gray-100">
+                      <div className="flex items-center space-x-3">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAgentAction(agent.id, 'edit');
                           }}
-                          className="p-1 rounded transition-colors"
-                          style={{ color: '#718096' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#f1f5f9';
-                            e.currentTarget.style.color = '#4285f4';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#718096';
-                          }}
+                          className="flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm"
+                          title="Configure agent"
                         >
-                          <Settings className="w-4 h-4" />
+                          <Settings className="w-4 h-4 mr-1" />
+                          Configure
                         </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAgentAction(agent.id, agent.status === 'active' ? 'pause' : 'start');
-                          }}
-                          className="p-1 rounded transition-colors"
-                          style={{ color: '#718096' }}
-                          onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#f1f5f9';
-                            e.currentTarget.style.color = '#4285f4';
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.color = '#718096';
-                          }}
+                          onClick={(e) => handleDeleteAgent(agent.id, e)}
+                          className="flex items-center text-red-600 hover:text-red-800 font-medium text-sm"
+                          title="Delete agent"
                         >
-                          {agent.status === 'active' ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                          <Trash2 className="w-4 h-4 mr-1" />
+                          Delete
                         </button>
                       </div>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAgentAction(agent.id, agent.status === 'active' ? 'pause' : 'start');
+                        }}
+                        className={`flex items-center px-3 py-1 rounded-full text-sm font-medium ${
+                          agent.status === 'active' 
+                            ? 'bg-red-100 text-red-700 hover:bg-red-200' 
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                      >
+                        {agent.status === 'active' ? (
+                          <>
+                            <Pause className="w-4 h-4 mr-1" />
+                            Pause
+                          </>
+                        ) : (
+                          <>
+                            <Play className="w-4 h-4 mr-1" />
+                            Start
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 );

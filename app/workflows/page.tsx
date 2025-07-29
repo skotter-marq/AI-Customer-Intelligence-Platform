@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Bot, Settings, GitBranch, Play, Pause, Edit3, Plus, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Bot, Settings, GitBranch, Play, Pause, Edit3, Plus, ExternalLink, Eye, List, Grid3X3, Check } from 'lucide-react';
 
 interface Workflow {
   id: string;
@@ -25,6 +25,8 @@ export default function WorkflowsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'customer-health' | 'competitive-intel' | 'content-generation' | 'automation'>('all');
   const [isN8nConnected, setIsN8nConnected] = useState(false);
+  const [selectedWorkflows, setSelectedWorkflows] = useState<string[]>([]);
+  const [viewType, setViewType] = useState<'cards' | 'list'>('cards');
 
   useEffect(() => {
     loadWorkflows();
@@ -119,6 +121,30 @@ export default function WorkflowsPage() {
     });
   };
 
+  const handleSelectWorkflow = (workflowId: string) => {
+    setSelectedWorkflows(prev => 
+      prev.includes(workflowId) 
+        ? prev.filter(id => id !== workflowId)
+        : [...prev, workflowId]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (confirm(`Are you sure you want to delete ${selectedWorkflows.length} workflow${selectedWorkflows.length !== 1 ? 's' : ''}?`)) {
+      setWorkflows(prev => prev.filter(workflow => !selectedWorkflows.includes(workflow.id)));
+      setSelectedWorkflows([]);
+    }
+  };
+
+  const handleBulkStatusChange = (newStatus: 'active' | 'inactive') => {
+    setWorkflows(prev => prev.map(workflow => 
+      selectedWorkflows.includes(workflow.id) 
+        ? { ...workflow, status: newStatus }
+        : workflow
+    ));
+    setSelectedWorkflows([]);
+  };
+
   return (
     <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
       <div className="p-6">
@@ -130,6 +156,28 @@ export default function WorkflowsPage() {
               <p className="calendly-body">n8n business logic and automation pipelines</p>
             </div>
             <div className="flex items-center space-x-3">
+              <div className="flex items-center bg-white border border-gray-300 rounded-lg p-1">
+                <button
+                  onClick={() => setViewType('cards')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewType === 'cards'
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <Grid3X3 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewType('list')}
+                  className={`p-2 rounded-md transition-colors ${
+                    viewType === 'list'
+                      ? 'bg-blue-100 text-blue-600'
+                      : 'text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  <List className="w-4 h-4" />
+                </button>
+              </div>
               <button 
                 onClick={() => window.open('https://n8n.io', '_blank')}
                 className="calendly-btn-secondary flex items-center space-x-2"
@@ -229,88 +277,244 @@ export default function WorkflowsPage() {
             </div>
           </div>
 
-          {/* Workflows Grid */}
+          {/* Bulk Actions */}
+          {selectedWorkflows.length > 0 && (
+            <div className="p-4 mb-4 flex items-center justify-between" style={{
+              background: '#dbeafe',
+              border: '1px solid #93c5fd', 
+              borderRadius: '12px'
+            }}>
+              <span className="font-medium text-blue-900">
+                {selectedWorkflows.length} workflow{selectedWorkflows.length !== 1 ? 's' : ''} selected
+              </span>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => handleBulkStatusChange('active')}
+                  className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors text-sm font-medium"
+                >
+                  Set Active
+                </button>
+                <button
+                  onClick={() => handleBulkStatusChange('inactive')}
+                  className="px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors text-sm font-medium"
+                >
+                  Set Inactive
+                </button>
+                <button
+                  onClick={handleBulkDelete}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm font-medium"
+                >
+                  Delete All
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Workflows Content */}
           {loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
               <p className="text-gray-600">Loading workflows...</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-              {filteredWorkflows.map((workflow) => (
+            <>
+              {viewType === 'cards' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {filteredWorkflows.map((workflow) => (
                 <div 
-                  key={workflow.id} 
-                  onClick={() => router.push(`/workflows/${workflow.id}`)}
-                  className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-6 hover:shadow-md hover:border-indigo-300 transition-all duration-200 cursor-pointer focus:outline-none"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-lg">
-                        {getCategoryIcon(workflow.category)}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{workflow.name}</h3>
-                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(workflow.status)}`}>
-                          {workflow.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                    {workflow.description}
-                  </p>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Category:</span>
-                      <span className="font-medium">{getCategoryLabel(workflow.category)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Executions:</span>
-                      <span className="font-medium">{workflow.execution_count}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Last Run:</span>
-                      <span className="font-medium">{formatDate(workflow.last_executed)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">Connected:</span>
-                      <span className="font-medium">
-                        {workflow.connected_agents} agents, {workflow.connected_apps} apps
-                      </span>
-                    </div>
-                    {workflow.has_interface_node && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Interface Node:</span>
-                        <span className="font-medium text-green-600">✓ Enabled</span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex space-x-2">
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        router.push(`/workflows/${workflow.id}`);
-                      }}
-                      className="flex-1 px-3 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                      key={workflow.id}
+                      className="bg-white rounded-xl shadow-sm border-2 border-gray-200 p-6 hover:shadow-md hover:border-indigo-300 transition-all duration-200 h-[480px] flex flex-col relative"
                     >
-                      View Details
-                    </button>
-                    <button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        window.open(`https://n8n.io/workflow/${workflow.n8n_id}`, '_blank');
-                      }}
-                      className="flex-1 px-3 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
-                    >
-                      Edit in n8n
-                    </button>
+                      <div 
+                        className="absolute top-4 left-4 w-5 h-5 rounded-full border-2 border-gray-300 bg-white flex items-center justify-center cursor-pointer hover:border-blue-500 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectWorkflow(workflow.id);
+                        }}
+                      >
+                        {selectedWorkflows.includes(workflow.id) && (
+                          <Check className="w-3 h-3 text-blue-600" />
+                        )}
+                      </div>
+                      
+                      <div 
+                        onClick={() => router.push(`/workflows/${workflow.id}`)}
+                        className="cursor-pointer flex-1 pt-4"
+                      >
+                        <div className="flex items-start justify-between mb-4">
+                          <div className="flex items-center space-x-3 flex-1 min-w-0 ml-8">
+                            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-lg flex-shrink-0">
+                              {getCategoryIcon(workflow.category)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">{workflow.name}</h3>
+                              <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(workflow.status)}`}>
+                                {workflow.status}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                  <div className="bg-gray-50 p-3 rounded-lg mb-4 flex-1">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Workflow Description</h4>
+                    <p className="text-sm text-gray-600 line-clamp-3">
+                      {workflow.description}
+                    </p>
                   </div>
+
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <div className="flex items-center text-blue-700 mb-1">
+                        <Play className="w-4 h-4 mr-1" />
+                        <span className="text-sm font-medium">Executions</span>
+                      </div>
+                      <p className="text-lg font-semibold text-blue-900">{workflow.execution_count}</p>
+                    </div>
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <div className="flex items-center text-green-700 mb-1">
+                        <GitBranch className="w-4 h-4 mr-1" />
+                        <span className="text-sm font-medium">Category</span>
+                      </div>
+                      <p className="text-sm font-semibold text-green-900 truncate">{getCategoryLabel(workflow.category)}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-100 p-3 rounded-lg mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">Last Executed</span>
+                      <span className="text-sm text-gray-600">{formatDate(workflow.last_executed)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">Connections</span>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600">{workflow.connected_agents} agents</span>
+                        <span className="text-sm text-gray-600">{workflow.connected_apps} apps</span>
+                        {workflow.has_interface_node && (
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Interface</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                        <div className="flex space-x-3 mt-auto">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              router.push(`/workflows/${workflow.id}`);
+                            }}
+                            className="flex-1 flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View Details
+                          </button>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              window.open(`https://n8n.io/workflow/${workflow.n8n_id}`, '_blank');
+                            }}
+                            className="flex-1 flex items-center justify-center px-4 py-2 bg-gray-50 text-gray-600 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                          >
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            Edit in n8n
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="bg-white rounded-lg border border-gray-200">
+                  {filteredWorkflows.map((workflow) => (
+                    <div 
+                      key={workflow.id}
+                      className="p-6 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors relative"
+                    >
+                      <div 
+                        className="absolute top-6 left-6 w-5 h-5 rounded-full border-2 border-gray-300 bg-white flex items-center justify-center cursor-pointer hover:border-blue-500 z-10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectWorkflow(workflow.id);
+                        }}
+                      >
+                        {selectedWorkflows.includes(workflow.id) && (
+                          <Check className="w-3 h-3 text-blue-600" />
+                        )}
+                      </div>
+
+                      <div 
+                        onClick={() => router.push(`/workflows/${workflow.id}`)}
+                        className="cursor-pointer ml-10"
+                      >
+                        <div className="flex justify-between items-start mb-3">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center text-sm flex-shrink-0">
+                              {getCategoryIcon(workflow.category)}
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold text-gray-900 mb-1">{workflow.name}</h3>
+                              <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(workflow.status)}`}>
+                                {workflow.status}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/workflows/${workflow.id}`);
+                              }}
+                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                window.open(`https://n8n.io/workflow/${workflow.n8n_id}`, '_blank');
+                              }}
+                              className="p-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <p className="text-gray-600 mb-3 line-clamp-2">
+                          {workflow.description}
+                        </p>
+
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className="flex items-center space-x-4">
+                            <span className="flex items-center">
+                              <Play className="w-4 h-4 mr-1" />
+                              {workflow.execution_count} executions
+                            </span>
+                            <span className="flex items-center">
+                              <GitBranch className="w-4 h-4 mr-1" />
+                              {getCategoryLabel(workflow.category)}
+                            </span>
+                            <span className="text-gray-400">
+                              Last executed {formatDate(workflow.last_executed)}
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                              {workflow.connected_agents} agents
+                            </span>
+                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                              {workflow.connected_apps} apps
+                            </span>
+                            {workflow.has_interface_node && (
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Interface</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
 
           {filteredWorkflows.length === 0 && !loading && (

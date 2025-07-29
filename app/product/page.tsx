@@ -94,7 +94,9 @@ export default function ProductPage() {
   const [versionFilter, setVersionFilter] = useState<'all' | string>('all');
   const [changelogTypeFilter, setChangelogTypeFilter] = useState<'all' | string>('all');
   
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
+  const [selectedUpdates, setSelectedUpdates] = useState<string[]>([]);
+  const [selectedChangelogEntries, setSelectedChangelogEntries] = useState<string[]>([]);
 
   // Mock product updates data
   const mockProductUpdates: ProductUpdate[] = [

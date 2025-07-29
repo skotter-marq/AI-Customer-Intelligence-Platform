@@ -1,23 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  /* Calendly Color Palette */
-  --calendly-primary: #4285f4;
-  --calendly-success: #10b981;
-  --calendly-warning: #f59e0b;
-  --calendly-danger: #ef4444;
-  --calendly-gray-50: #f8fafc;
-  --calendly-gray-100: #f1f5f9;
-  --calendly-gray-200: #e2e8f0;
-  --calendly-gray-300: #cbd5e0;
-  --calendly-gray-400: #a0aec0;
-  --calendly-gray-500: #718096;
-  --calendly-gray-600: #4a5568;
-  --calendly-gray-700: #2d3748;
-  --calendly-gray-800: #1a202c;
-  --calendly-gray-900: #1a1a1a;
+  /* Marq Brand Colors */
+  --marq-primary: #0f71e5;
+  --marq-primary-hover: #0d5fb8;
+  --marq-success: #10b981;
+  --marq-warning: #f59e0b;
+  --marq-danger: #ef4444;
+  --marq-gray-50: #f8fafc;
+  --marq-gray-100: #f1f5f9;
+  --marq-gray-200: #e2e8f0;
+  --marq-gray-300: #cbd5e0;
+  --marq-gray-400: #a0aec0;
+  --marq-gray-500: #718096;
+  --marq-gray-600: #4a5568;
+  --marq-gray-700: #2d3748;
+  --marq-gray-800: #1a202c;
+  --marq-gray-900: #1a1a1a;
   
   /* Background & Foreground */
   --background: #ffffff;
@@ -27,13 +30,13 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   font-size: 14px;
   font-weight: 400;
   line-height: 1.5;
@@ -68,11 +71,12 @@ html {
 
 
 .calendly-btn-primary {
-  background: #4285f4;
+  background: #0f71e5;
   color: white;
   border: none;
   border-radius: 8px;
   padding: 12px 20px;
+  font-family: 'Poppins', sans-serif;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -80,15 +84,16 @@ html {
 }
 
 .calendly-btn-primary:hover {
-  background: #3367d6;
+  background: #0d5fb8;
 }
 
 .calendly-btn-secondary {
   background: white;
-  color: #4285f4;
-  border: 1px solid #4285f4;
+  color: #0f71e5;
+  border: 1px solid #0f71e5;
   border-radius: 8px;
   padding: 12px 20px;
+  font-family: 'Poppins', sans-serif;
   font-weight: 600;
   font-size: 14px;
   cursor: pointer;
@@ -101,6 +106,7 @@ html {
 
 /* Typography Scale */
 .calendly-h1 {
+  font-family: 'Poppins', sans-serif;
   font-size: 28px;
   font-weight: 600;
   color: #1a1a1a;
@@ -109,6 +115,7 @@ html {
 }
 
 .calendly-h2 {
+  font-family: 'Poppins', sans-serif;
   font-size: 20px;  
   font-weight: 600;
   color: #1a1a1a;
@@ -117,6 +124,7 @@ html {
 }
 
 .calendly-h3 {
+  font-family: 'Poppins', sans-serif;
   font-size: 18px;
   font-weight: 600; 
   color: #1a1a1a;
@@ -125,6 +133,7 @@ html {
 }
 
 .calendly-body {
+  font-family: 'Poppins', sans-serif;
   font-size: 16px;
   font-weight: 400;
   color: #4a5568;
@@ -132,6 +141,7 @@ html {
 }
 
 .calendly-body-sm {
+  font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 400;
   color: #4a5568;
@@ -139,6 +149,7 @@ html {
 }
 
 .calendly-label {
+  font-family: 'Poppins', sans-serif;
   font-size: 14px;
   font-weight: 400;
   color: #718096;
@@ -146,6 +157,7 @@ html {
 }
 
 .calendly-label-sm {
+  font-family: 'Poppins', sans-serif;
   font-size: 12px;
   font-weight: 400;
   color: #718096;
@@ -154,6 +166,7 @@ html {
 
 /* Status Badges */
 .calendly-badge {
+  font-family: 'Poppins', sans-serif;
   padding: 4px 12px;
   border-radius: 16px;
   font-size: 12px;
@@ -194,6 +207,7 @@ html {
 }
 
 .calendly-table th {
+  font-family: 'Poppins', sans-serif;
   font-size: 12px;
   font-weight: 600;
   color: #718096;
@@ -203,6 +217,7 @@ html {
 }
 
 .calendly-table td {
+  font-family: 'Poppins', sans-serif;
   font-size: 14px;
   color: #4a5568;
   padding: 16px;

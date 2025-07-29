@@ -95,7 +95,7 @@ export default function ContentPipelinePage() {
     newStatus: 'draft'
   });
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [viewMode, setViewMode] = useState<'cards' | 'compact'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'compact'>('compact');
   const [sortBy, setSortBy] = useState<'date' | 'title' | 'type' | 'status' | 'engagement'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -1211,7 +1211,7 @@ export default function ContentPipelinePage() {
             return viewMode === 'cards';
           })() ? (
             /* Card Grid View */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {filteredItems.map((item) => {
               const StatusIcon = getStatusIcon(item.status);
               const TypeIcon = getTypeIcon(item.type);
@@ -1220,7 +1220,7 @@ export default function ContentPipelinePage() {
                 <div
                   key={item.id}
                   onClick={() => handleEditContent(item)}
-                  className="calendly-card overflow-hidden group h-[580px] flex flex-col cursor-pointer relative"
+                  className="calendly-card overflow-hidden group h-[480px] flex flex-col cursor-pointer relative"
                   style={{ 
                     padding: 0,
                     border: '1px solid #e2e8f0',
@@ -1241,7 +1241,7 @@ export default function ContentPipelinePage() {
                 >
                   
                   {/* Featured Image */}
-                  <div className="relative h-48 overflow-hidden flex-shrink-0" style={{ background: '#f1f5f9' }}>
+                  <div className="relative h-24 overflow-hidden flex-shrink-0" style={{ background: '#f1f5f9' }}>
                     {item.featured_image && item.featured_image !== '/api/placeholder/400/240' ? (
                       <img
                         src={item.featured_image}
@@ -1251,10 +1251,10 @@ export default function ContentPipelinePage() {
                     ) : (
                       <div className="w-full h-full flex items-center justify-center" style={{ background: '#f1f5f9' }}>
                         <div className="text-center">
-                          <div className="w-16 h-16 mx-auto mb-2 rounded-full flex items-center justify-center" style={{ background: 'white' }}>
-                            <FileText className="w-8 h-8" style={{ color: '#4285f4' }} />
+                          <div className="w-12 h-12 mx-auto mb-1 rounded-full flex items-center justify-center" style={{ background: 'white' }}>
+                            <FileText className="w-6 h-6" style={{ color: '#4285f4' }} />
                           </div>
-                          <p className="calendly-label-sm" style={{ color: '#4a5568' }}>{item.type.replace('_', ' ')}</p>
+                          <p className="calendly-label-sm text-xs" style={{ color: '#4a5568' }}>{item.type.replace('_', ' ')}</p>
                         </div>
                       </div>
                     )}
@@ -1294,69 +1294,69 @@ export default function ContentPipelinePage() {
                   </div>
                   
                   {/* Content */}
-                  <div className="p-5 flex-1 flex flex-col">
-                    <div className="flex items-center justify-between" style={{ marginBottom: '12px' }}>
-                      <div className="flex items-center space-x-2 calendly-body-sm" style={{ color: '#718096' }}>
-                        <User className="w-4 h-4" />
+                  <div className="p-4 flex-1 flex flex-col">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center text-sm text-gray-600">
+                        <User className="w-4 h-4 mr-1" />
                         <span>{item.author}</span>
                       </div>
-                      <div className="flex items-center space-x-2 calendly-body-sm" style={{ color: '#718096' }}>
-                        <Clock className="w-4 h-4" />
+                      <div className="flex items-center text-sm text-gray-600">
+                        <Clock className="w-4 h-4 mr-1" />
                         <span>{item.reading_time} min read</span>
                       </div>
                     </div>
                     
-                    <h3 className="calendly-h3 line-clamp-2 h-14 overflow-hidden" style={{ marginBottom: '8px' }}>{item.title}</h3>
-                    <p className="calendly-body-sm line-clamp-2 h-10 overflow-hidden" style={{ marginBottom: '16px' }}>{item.excerpt}</p>
+                    <h3 className="text-base font-semibold line-clamp-2 text-gray-900 mb-2">{item.title}</h3>
+                    <p className="text-sm line-clamp-2 text-gray-600 mb-3">{item.excerpt}</p>
                     
-                    {/* Feature Info */}
-                    <div className="p-3 rounded-lg" style={{ marginBottom: '16px', background: '#dbeafe', border: '1px solid #93c5fd' }}>
+                    {/* Feature Info - Simplified */}
+                    <div className="p-2 rounded-lg mb-3 bg-blue-50">
                       <div className="flex items-center justify-between">
-                        <div>
-                          <p className="calendly-body-sm font-medium" style={{ color: '#1e40af', marginBottom: '2px' }}>Based on: {item.feature_title}</p>
-                          <p className="calendly-label-sm" style={{ color: '#3b82f6' }}>{item.feature_category}</p>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-blue-800 truncate">
+                            {item.feature_title}
+                          </p>
                         </div>
-                        <Tag className="w-4 h-4" style={{ color: '#4285f4' }} />
+                        <Tag className="w-4 h-4 flex-shrink-0 ml-2 text-blue-600" />
                       </div>
                     </div>
                     
-                    {/* Tags */}
-                    <div className="flex gap-1 h-6 overflow-hidden" style={{ marginBottom: '16px' }}>
-                      {item.tags.slice(0, 2).map((tag, index) => (
-                        <span key={index} className="calendly-badge calendly-badge-info whitespace-nowrap flex-shrink-0">
-                          {tag.length > 12 ? `${tag.substring(0, 12)}...` : tag}
-                        </span>
-                      ))}
-                      {item.tags.length > 2 && (
-                        <span className="calendly-badge calendly-badge-info whitespace-nowrap flex-shrink-0">
-                          +{item.tags.length - 2} more
-                        </span>
-                      )}
+                    {/* Tags - Simplified */}
+                    <div className="mb-3">
+                      <div className="flex flex-wrap gap-1">
+                        {item.tags.slice(0, 2).map((tag, index) => (
+                          <span key={index} className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                            {tag}
+                          </span>
+                        ))}
+                        {item.tags.length > 2 && (
+                          <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded">
+                            +{item.tags.length - 2}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
-                    {/* Metrics and Date Section - Fixed height for consistency */}
-                    <div className="h-8" style={{ marginBottom: '16px' }}>
+                    {/* Metrics - Compact */}
+                    <div className="bg-gray-50 p-2 rounded-lg mb-3">
                       {item.status === 'published' ? (
-                        <div className="flex items-center justify-between calendly-body-sm h-full" style={{ color: '#718096' }}>
-                          <div className="flex items-center space-x-4">
-                            <div className="flex items-center space-x-1">
-                              <Eye className="w-4 h-4" />
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3 text-sm">
+                            <div className="flex items-center text-green-600">
+                              <Eye className="w-3 h-3 mr-1" />
                               <span>{item.views?.toLocaleString()}</span>
                             </div>
-                            <div className="flex items-center space-x-1">
-                              <TrendingUp className="w-4 h-4" />
+                            <div className="flex items-center text-blue-600">
+                              <TrendingUp className="w-3 h-3 mr-1" />
                               <span>{item.engagement}%</span>
                             </div>
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
-                            <span>{formatDate(item.published_date!)}</span>
-                          </div>
+                          <span className="text-xs text-gray-500">{formatDate(item.published_date!)}</span>
                         </div>
                       ) : (
-                        <div className="flex items-center space-x-1 calendly-body-sm h-full" style={{ color: '#718096' }}>
-                          <Calendar className="w-4 h-4" />
-                          <span>Created {formatDate(item.created_date)}</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-600">Draft</span>
+                          <span className="text-xs text-gray-500">{formatDate(item.created_date)}</span>
                         </div>
                       )}
                     </div>

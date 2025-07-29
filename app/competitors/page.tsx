@@ -104,9 +104,10 @@ export default function CompetitorsPage() {
   const [threatFilter, setThreatFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'monitoring' | 'inactive'>('all');
   const [grouping, setGrouping] = useState<'none' | 'threat' | 'industry' | 'size'>('none');
-  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
   const [sortBy, setSortBy] = useState<'name' | 'threat' | 'last_analyzed' | 'confidence'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [selectedCompetitors, setSelectedCompetitors] = useState<string[]>([]);
 
 
   useEffect(() => {
@@ -421,6 +422,57 @@ export default function CompetitorsPage() {
     }
   };
 
+  const handleSelectCompetitor = (competitorId: string) => {
+    setSelectedCompetitors(prev => 
+      prev.includes(competitorId) 
+        ? prev.filter(id => id !== competitorId)
+        : [...prev, competitorId]
+    );
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedCompetitors.length === 0) return;
+    
+    if (confirm(`Are you sure you want to delete ${selectedCompetitors.length} competitor${selectedCompetitors.length !== 1 ? 's' : ''}? This action cannot be undone.`)) {
+      try {
+        const promises = selectedCompetitors.map(id => 
+          fetch(`/api/competitors?id=${id}`, { method: 'DELETE' })
+        );
+        
+        await Promise.all(promises);
+        
+        // Remove from local state
+        setCompetitors(prev => prev.filter(c => !selectedCompetitors.includes(c.id)));
+        setSelectedCompetitors([]);
+      } catch (error) {
+        console.error('Error bulk deleting competitors:', error);
+        alert('Failed to delete competitors. Please try again.');
+      }
+    }
+  };
+
+  const handleBulkStatusChange = async (newStatus: 'active' | 'monitoring' | 'inactive') => {
+    if (selectedCompetitors.length === 0) return;
+    
+    try {
+      // Update local state optimistically
+      setCompetitors(prev => prev.map(competitor => 
+        selectedCompetitors.includes(competitor.id) 
+          ? { ...competitor, status: newStatus }
+          : competitor
+      ));
+      
+      setSelectedCompetitors([]);
+      
+      // Here you would make API calls to update the status
+      // For now, just show success
+      console.log(`Updated ${selectedCompetitors.length} competitors to ${newStatus}`);
+    } catch (error) {
+      console.error('Error bulk updating competitors:', error);
+      alert('Failed to update competitors. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
@@ -644,12 +696,12 @@ export default function CompetitorsPage() {
 
           {/* Competitors Display */}
           {viewMode === 'cards' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {filteredCompetitors.map((competitor) => (
                 <div
                   key={competitor.id}
                   onClick={() => handleCompetitorClick(competitor.id)}
-                  className="calendly-card cursor-pointer transition-all duration-200 group"
+                  className="calendly-card cursor-pointer transition-all duration-200 group h-[450px] flex flex-col"
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)';
                     e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
@@ -660,153 +712,275 @@ export default function CompetitorsPage() {
                   }}
                 >
                   {/* Card Header */}
-                  <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
-                    <div className="flex items-center space-x-3">
-                      <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ background: '#f1f5f9' }}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-3 flex-1 min-w-0">
+                      <div className="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: '#f1f5f9' }}>
                         {competitor.logo ? (
                           <img src={competitor.logo} alt={competitor.name} className="w-8 h-8 rounded" />
                         ) : (
                           <Building className="w-6 h-6" style={{ color: '#4285f4' }} />
                         )}
                       </div>
-                      <div>
-                        <h3 className="calendly-h3" style={{ marginBottom: '2px' }}>{competitor.name}</h3>
-                        <p className="calendly-label-sm">{competitor.industry}</p>
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1 truncate">{competitor.name}</h3>
+                        <p className="text-sm text-gray-600 truncate">{competitor.industry}</p>
                       </div>
                     </div>
-                    <div className="flex flex-col space-y-1">
-                      <span className={`calendly-badge ${getThreatLevelColor(competitor.threat_level)}`}>
-                        {competitor.threat_level} threat
+                    <div className="flex flex-col space-y-1 ml-3">
+                      <span className={`calendly-badge text-xs ${getThreatLevelColor(competitor.threat_level)}`}>
+                        {competitor.threat_level}
                       </span>
-                      <span className={`calendly-badge ${getStatusColor(competitor.status)}`}>
+                      <span className={`calendly-badge text-xs ${getStatusColor(competitor.status)}`}>
                         {competitor.status}
                       </span>
                     </div>
                   </div>
 
                   {/* Description */}
-                  <p className="calendly-body-sm line-clamp-2" style={{ marginBottom: '16px' }}>
-                    {competitor.description}
-                  </p>
+                  <div className="bg-gray-50 p-3 rounded-lg mb-4 flex-1">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Company Overview</h4>
+                    <p className="text-sm text-gray-600 line-clamp-3">
+                      {competitor.description}
+                    </p>
+                  </div>
 
-                  {/* Metrics */}
-                  <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '16px' }}>
-                    <div>
-                      <p className="calendly-label-sm">Market Cap</p>
-                      <p className="calendly-body font-medium">{competitor.marketCap}</p>
+                  {/* Key Metrics Grid */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <div className="flex items-center text-blue-700 mb-1">
+                        <TrendingUp className="w-4 h-4 mr-1" />
+                        <span className="text-sm font-medium">Market Cap</span>
+                      </div>
+                      <p className="text-lg font-semibold text-blue-900">{competitor.marketCap}</p>
                     </div>
-                    <div>
-                      <p className="calendly-label-sm">Employees</p>
-                      <p className="calendly-body font-medium">{competitor.employees}</p>
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <div className="flex items-center text-green-700 mb-1">
+                        <Users className="w-4 h-4 mr-1" />
+                        <span className="text-sm font-medium">Employees</span>
+                      </div>
+                      <p className="text-lg font-semibold text-green-900">{competitor.employees}</p>
                     </div>
                   </div>
 
-                  {/* Footer */}
-                  <div className="flex items-center justify-between pt-3" style={{ borderTop: '1px solid #f1f5f9' }}>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-2 h-2 rounded-full" style={{ 
-                        background: competitor.confidence_score > 0.8 ? '#10b981' : 
-                                   competitor.confidence_score > 0.6 ? '#f59e0b' : '#ef4444' 
-                      }}></div>
-                      <span className="calendly-label-sm">
-                        {Math.round(competitor.confidence_score * 100)}% confidence
+                  {/* Confidence Score */}
+                  <div className="bg-gray-100 p-3 rounded-lg mb-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <div className="w-3 h-3 rounded-full mr-2" style={{ 
+                          background: competitor.confidence_score > 0.8 ? '#10b981' : 
+                                     competitor.confidence_score > 0.6 ? '#f59e0b' : '#ef4444' 
+                        }}></div>
+                        <span className="text-sm font-medium text-gray-700">Data Confidence</span>
+                      </div>
+                      <span className="text-lg font-semibold text-gray-900">
+                        {Math.round(competitor.confidence_score * 100)}%
                       </span>
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                      <div 
+                        className="h-2 rounded-full" 
+                        style={{ 
+                          width: `${competitor.confidence_score * 100}%`,
+                          background: competitor.confidence_score > 0.8 ? '#10b981' : 
+                                     competitor.confidence_score > 0.6 ? '#f59e0b' : '#ef4444' 
+                        }}
+                      ></div>
+                    </div>
+                  </div>
+
+                  {/* Footer Actions */}
+                  <div className="flex justify-end pt-3 mt-auto border-t border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.open(competitor.website, '_blank');
+                        }}
+                        className="flex items-center text-blue-600 hover:text-blue-800 font-medium text-sm"
+                        title="Visit website"
+                      >
+                        <Globe className="w-4 h-4 mr-1" />
+                        Website
+                      </button>
                       <button
                         onClick={(e) => handleDeleteCompetitor(competitor.id, e)}
-                        className="p-1 rounded transition-colors"
-                        style={{ color: '#718096' }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = '#fef2f2';
-                          e.currentTarget.style.color = '#ef4444';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'transparent';
-                          e.currentTarget.style.color = '#718096';
-                        }}
+                        className="flex items-center text-red-600 hover:text-red-800 font-medium text-sm"
                         title="Delete competitor"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Delete
                       </button>
-                      <ExternalLink className="w-4 h-4" style={{ color: '#718096' }} />
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            /* Table View */
-            <div className="calendly-card" style={{ padding: 0 }}>
-              <div className="overflow-x-auto">
-                <table className="calendly-table">
-                  <thead>
-                    <tr>
-                      <th>Company</th>
-                      <th>Industry</th>
-                      <th>Threat Level</th>
-                      <th>Status</th>
-                      <th>Market Cap</th>
-                      <th>Confidence</th>
-                      <th>Last Analyzed</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredCompetitors.map((competitor) => (
-                      <tr key={competitor.id} className="cursor-pointer" onClick={() => handleCompetitorClick(competitor.id)}>
-                        <td>
+            <>
+            {/* Bulk Actions Toolbar */}
+            {selectedCompetitors.length > 0 && (
+              <div className="p-4 mb-4 flex items-center justify-between" style={{
+                background: '#dbeafe',
+                border: '1px solid #93c5fd', 
+                borderRadius: '12px'
+              }}>
+                <div className="flex items-center space-x-4">
+                  <span className="font-medium text-blue-900">
+                    {selectedCompetitors.length} competitor{selectedCompetitors.length !== 1 ? 's' : ''} selected
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleBulkStatusChange('active')}
+                      className="calendly-btn-primary flex items-center space-x-1"
+                    >
+                      <Activity className="w-4 h-4" />
+                      <span className="text-sm font-medium">Set Active</span>
+                    </button>
+                    <button
+                      onClick={() => handleBulkStatusChange('monitoring')}
+                      className="calendly-btn-secondary flex items-center space-x-1"
+                    >
+                      <Eye className="w-4 h-4" />
+                      <span className="text-sm font-medium">Set Monitor</span>
+                    </button>
+                    <button
+                      onClick={handleBulkDelete}
+                      className="calendly-btn-secondary flex items-center space-x-1 !text-red-600 !border-red-200 hover:!bg-red-50"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="text-sm font-medium">Delete All</span>
+                    </button>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedCompetitors([])}
+                  className="p-2 hover:bg-blue-100 rounded-lg transition-colors"
+                  title="Clear selection"
+                >
+                  <X className="w-4 h-4 text-blue-700" />
+                </button>
+              </div>
+            )}
+            
+            {/* Enhanced List View */}
+            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+              <div className="divide-y divide-gray-200">
+                {filteredCompetitors.map((competitor) => (
+                  <div
+                    key={competitor.id}
+                    onClick={() => handleCompetitorClick(competitor.id)}
+                    className="p-6 hover:bg-gray-50 transition-colors cursor-pointer relative"
+                  >
+                    {/* Selection Circle */}
+                    <div className="absolute top-6 left-6">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelectCompetitor(competitor.id);
+                        }}
+                        className={`w-5 h-5 rounded-full border-2 transition-all duration-200 flex items-center justify-center ${
+                          selectedCompetitors.includes(competitor.id)
+                            ? 'bg-blue-600 border-blue-600 shadow-lg'
+                            : 'bg-white border-gray-300 hover:border-blue-400'
+                        }`}
+                      >
+                        {selectedCompetitors.includes(competitor.id) && (
+                          <CheckCircle className="w-3 h-3 text-white" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="ml-8">
+                    <div className="flex items-center justify-between">
+                      {/* Left Content */}
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4 mb-2">
                           <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 rounded flex items-center justify-center" style={{ background: '#f1f5f9' }}>
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ background: '#f1f5f9' }}>
                               {competitor.logo ? (
-                                <img src={competitor.logo} alt={competitor.name} className="w-6 h-6 rounded" />
+                                <img src={competitor.logo} alt={competitor.name} className="w-8 h-8 rounded" />
                               ) : (
-                                <Building className="w-4 h-4" style={{ color: '#4285f4' }} />
+                                <Building className="w-5 h-5" style={{ color: '#4285f4' }} />
                               )}
                             </div>
-                            <span className="font-medium">{competitor.name}</span>
+                            <h3 className="text-lg font-semibold text-gray-900">{competitor.name}</h3>
                           </div>
-                        </td>
-                        <td>{competitor.industry}</td>
-                        <td>
-                          <span className={`calendly-badge ${getThreatLevelColor(competitor.threat_level)}`}>
-                            {competitor.threat_level}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`calendly-badge ${getStatusColor(competitor.status)}`}>
-                            {competitor.status}
-                          </span>
-                        </td>
-                        <td>{competitor.marketCap}</td>
-                        <td>{Math.round(competitor.confidence_score * 100)}%</td>
-                        <td>{new Date(competitor.last_analyzed).toLocaleDateString()}</td>
-                        <td>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              window.open(competitor.website, '_blank');
-                            }}
-                            className="p-1 rounded transition-colors"
-                            style={{ color: '#718096' }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#f1f5f9';
-                              e.currentTarget.style.color = '#4285f4';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = 'transparent';
-                              e.currentTarget.style.color = '#718096';
-                            }}
-                          >
-                            <ExternalLink className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getThreatLevelColor(competitor.threat_level)}`}>
+                              {competitor.threat_level}
+                            </span>
+                            <span className={`inline-flex items-center px-2 py-1 rounded-lg text-xs font-medium ${getStatusColor(competitor.status)}`}>
+                              {competitor.status}
+                            </span>
+                          </div>
+                        </div>
+                        
+                        <p className="text-sm text-gray-600 line-clamp-1 mb-3">{competitor.description}</p>
+                        
+                        <div className="flex items-center space-x-6 text-sm text-gray-500">
+                          <div className="flex items-center space-x-1">
+                            <Building className="w-4 h-4" />
+                            <span>{competitor.industry}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <DollarSign className="w-4 h-4" />
+                            <span>{competitor.marketCap}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Users className="w-4 h-4" />
+                            <span>{competitor.employees}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <BarChart3 className="w-4 h-4" />
+                            <span>{Math.round(competitor.confidence_score * 100)}% confidence</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="w-4 h-4" />
+                            <span>{new Date(competitor.last_analyzed).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Actions */}
+                      <div className="flex items-center space-x-3 ml-6">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleCompetitorClick(competitor.id);
+                          }}
+                          className="flex items-center px-3 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="View details"
+                        >
+                          <Eye className="w-4 h-4 mr-2" />
+                          View Details
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(competitor.website, '_blank');
+                          }}
+                          className="flex items-center px-3 py-2 text-sm font-medium text-green-600 hover:text-green-800 hover:bg-green-50 rounded-lg transition-colors"
+                          title="Visit website"
+                        >
+                          <Globe className="w-4 h-4 mr-2" />
+                          Website
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteCompetitor(competitor.id, e)}
+                          className="flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete competitor"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
+            </>
           )}
 
           {/* Empty State */}
