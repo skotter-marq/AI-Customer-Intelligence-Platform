@@ -113,6 +113,20 @@ export default function MeetingsPage() {
     extractionRules: {}
   });
 
+  // Upload transcript state
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isUploadingTranscript, setIsUploadingTranscript] = useState(false);
+  const [transcriptFile, setTranscriptFile] = useState<File | null>(null);
+  const [transcriptContent, setTranscriptContent] = useState('');
+  const [uploadFormData, setUploadFormData] = useState({
+    meetingTitle: '',
+    customer: '',
+    attendees: '',
+    duration: '',
+    recordingUrl: '',
+    meetingDate: new Date().toISOString().split('T')[0]
+  });
+
   // Form data for Coda columns (AI will generate JTBD and Key Takeaways)
   const [codaFormData, setCodaFormData] = useState({
     name: '',
@@ -567,6 +581,137 @@ export default function MeetingsPage() {
     }
   };
 
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Check file type
+    if (!file.name.toLowerCase().endsWith('.txt') && file.type !== 'text/plain') {
+      alert('Please upload a .txt file');
+      return;
+    }
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('File size must be less than 10MB');
+      return;
+    }
+
+    setTranscriptFile(file);
+
+    // Read file content
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      setTranscriptContent(content);
+    };
+    reader.readAsText(file);
+  };
+
+  const handleUploadTranscript = async () => {
+    if (!uploadFormData.meetingTitle || !uploadFormData.customer || !transcriptContent) {
+      alert('Please fill in the required fields: Meeting Title, Customer, and upload a transcript file');
+      return;
+    }
+    
+    setIsUploadingTranscript(true);
+    
+    try {
+      const response = await fetch('/api/meetings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'upload_transcript',
+          meetingData: {
+            title: uploadFormData.meetingTitle,
+            customer: uploadFormData.customer,
+            date: uploadFormData.meetingDate,
+            duration: uploadFormData.duration || '30 minutes',
+            attendees: uploadFormData.attendees.split(',').map(a => a.trim()).filter(Boolean),
+            recording_url: uploadFormData.recordingUrl || null,
+            transcript: transcriptContent,
+            status: 'transcribed' // Start with transcribed status, will move to analyzed after AI processing
+          },
+          aiAnalysisConfig: aiAnalysisConfig.enabled ? aiAnalysisConfig : null
+        })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('✅ Transcript uploaded and AI analysis initiated:', result.meetingId);
+        
+        // Add the new meeting to the list
+        const newMeeting: GrainMeeting = {
+          id: result.meetingId,
+          title: uploadFormData.meetingTitle,
+          customer: uploadFormData.customer,
+          date: uploadFormData.meetingDate,
+          duration: uploadFormData.duration || '30 minutes',
+          attendees: uploadFormData.attendees.split(',').map(a => a.trim()).filter(Boolean),
+          recording_url: uploadFormData.recordingUrl || undefined,
+          transcript_url: undefined,
+          sentiment: 'neutral' as const, // Will be updated by AI analysis
+          summary: 'Processing transcript...', // Will be updated by AI analysis
+          keyTopics: [], // Will be updated by AI analysis
+          actionItems: [], // Will be updated by AI analysis
+          status: 'processing' as const, // Changed to processing since AI analysis is running
+          priority: 'medium' as const,
+          tags: [],
+          coda_integrated: false
+        };
+        
+        setMeetings(prev => [newMeeting, ...prev]);
+        
+        // Close modal and reset form
+        setShowUploadModal(false);
+        setUploadFormData({
+          meetingTitle: '',
+          customer: '',
+          attendees: '',
+          duration: '',
+          recordingUrl: '',
+          meetingDate: new Date().toISOString().split('T')[0]
+        });
+        setTranscriptFile(null);
+        setTranscriptContent('');
+        
+        // Show success message
+        alert(
+          `Transcript uploaded successfully!\n\n` +
+          `Meeting: "${uploadFormData.meetingTitle}"\n` +
+          `Meeting ID: ${result.meetingId}\n\n` +
+          `🧠 AI analysis is now processing the transcript. The meeting status will update to "analyzed" once complete.\n\n` +
+          `The meeting has been added to your meetings list and you can view it there.`
+        );
+        
+      } else {
+        console.error('Failed to upload transcript:', result.error);
+        alert('Failed to upload transcript: ' + result.error);
+      }
+      
+    } catch (error) {
+      console.error('Error uploading transcript:', error);
+      alert('Error uploading transcript. Please try again.');
+    } finally {
+      setIsUploadingTranscript(false);
+    }
+  };
+
+  const handleUploadCancel = () => {
+    setShowUploadModal(false);
+    setUploadFormData({
+      meetingTitle: '',
+      customer: '',
+      attendees: '',
+      duration: '',
+      recordingUrl: '',
+      meetingDate: new Date().toISOString().split('T')[0]
+    });
+    setTranscriptFile(null);
+    setTranscriptContent('');
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
@@ -596,6 +741,13 @@ export default function MeetingsPage() {
             </div>
             <div className="flex items-center space-x-3">
               <button 
+                onClick={() => setShowUploadModal(!showUploadModal)}
+                className={`${showUploadModal ? 'calendly-btn-secondary' : 'calendly-btn-primary'} flex items-center space-x-2`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>{showUploadModal ? 'Cancel Upload' : 'Upload Transcript'}</span>
+              </button>
+              <button 
                 onClick={() => setShowAIConfig(true)}
                 className="calendly-btn-secondary flex items-center space-x-2"
               >
@@ -608,6 +760,184 @@ export default function MeetingsPage() {
               </button>
             </div>
           </div>
+
+          {/* Inline Upload Transcript Form */}
+          {showUploadModal && (
+            <div className="calendly-card" style={{ marginBottom: '24px' }}>
+              <div className="border-l-4 border-blue-500 pl-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <Plus className="w-4 h-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="calendly-h3">Upload Meeting Transcript</h3>
+                      <p className="calendly-body-sm text-gray-600">Upload a transcript file and initiate AI analysis</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleUploadCancel}
+                    className="p-2 rounded-lg transition-colors hover:bg-gray-100"
+                    disabled={isUploadingTranscript}
+                    title="Close"
+                  >
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
+
+                <div className="space-y-4">
+                  {/* AI Analysis Info */}
+                  <div className="p-3 bg-blue-50 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      🧠 Upload a .txt file with your meeting transcript. AI will automatically extract insights, 
+                      sentiment, action items, and generate a comprehensive summary.
+                    </p>
+                  </div>
+
+                  {/* Form Fields */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Title *</label>
+                      <input
+                        type="text"
+                        value={uploadFormData.meetingTitle}
+                        onChange={(e) => setUploadFormData(prev => ({ ...prev, meetingTitle: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Customer Discovery Call - Acme Corp"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Customer *</label>
+                      <input
+                        type="text"
+                        value={uploadFormData.customer}
+                        onChange={(e) => setUploadFormData(prev => ({ ...prev, customer: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Acme Corp"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Meeting Date</label>
+                      <input
+                        type="date"
+                        value={uploadFormData.meetingDate}
+                        onChange={(e) => setUploadFormData(prev => ({ ...prev, meetingDate: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                      <input
+                        type="text"
+                        value={uploadFormData.duration}
+                        onChange={(e) => setUploadFormData(prev => ({ ...prev, duration: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="30 minutes"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Attendees</label>
+                      <input
+                        type="text"
+                        value={uploadFormData.attendees}
+                        onChange={(e) => setUploadFormData(prev => ({ ...prev, attendees: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="John Smith, Jane Doe (comma-separated)"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Recording URL</label>
+                      <input
+                        type="url"
+                        value={uploadFormData.recordingUrl}
+                        onChange={(e) => setUploadFormData(prev => ({ ...prev, recordingUrl: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="https://..."
+                      />
+                    </div>
+                  </div>
+
+                  {/* File Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Transcript File *</label>
+                    <div className="flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-blue-400 transition-colors">
+                      <div className="space-y-1 text-center">
+                        {transcriptFile ? (
+                          <div className="flex flex-col items-center">
+                            <FileText className="w-8 h-8 text-blue-500 mb-2" />
+                            <div className="text-sm font-medium text-gray-900">{transcriptFile.name}</div>
+                            <div className="text-xs text-gray-500">{(transcriptFile.size / 1024).toFixed(1)} KB</div>
+                            <div className="text-xs text-green-600 mt-1">✓ File loaded successfully</div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTranscriptFile(null);
+                                setTranscriptContent('');
+                              }}
+                              className="text-xs text-red-600 hover:text-red-700 mt-2"
+                            >
+                              Remove file
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <FileText className="mx-auto h-10 w-10 text-gray-400" />
+                            <div className="flex text-sm text-gray-600">
+                              <label
+                                htmlFor="transcript-file"
+                                className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                              >
+                                <span>Upload a transcript file</span>
+                                <input
+                                  id="transcript-file"
+                                  name="transcript-file"
+                                  type="file"
+                                  className="sr-only"
+                                  accept=".txt,text/plain"
+                                  onChange={handleFileUpload}
+                                />
+                              </label>
+                              <p className="pl-1">or drag and drop</p>
+                            </div>
+                            <p className="text-xs text-gray-500">TXT files up to 10MB</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+                    <div className="text-sm text-gray-600">
+                      🤖 Analysis starts immediately after upload
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <button
+                        onClick={handleUploadCancel}
+                        className="calendly-btn-secondary"
+                        disabled={isUploadingTranscript}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleUploadTranscript}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={isUploadingTranscript || !uploadFormData.meetingTitle || !uploadFormData.customer || !transcriptContent}
+                      >
+                        {isUploadingTranscript && (
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        )}
+                        <Plus className="w-4 h-4" />
+                        <span>{isUploadingTranscript ? 'Processing...' : 'Upload & Analyze'}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4" style={{ marginBottom: '24px' }}>
@@ -1689,6 +2019,7 @@ export default function MeetingsPage() {
               </div>
             </div>
           )}
+
         </div>
       </div>
     </div>

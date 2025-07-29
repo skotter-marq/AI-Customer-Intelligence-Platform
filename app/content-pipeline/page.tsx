@@ -923,6 +923,53 @@ export default function ContentPipelinePage() {
     }
   };
 
+  const handleDeleteContent = async (item: ContentItem) => {
+    if (!confirm(`Are you sure you want to delete "${item.title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      console.log(`Deleting content: ${item.title}`);
+      
+      // Remove from content items
+      const updatedItems = contentItems.filter(contentItem => contentItem.id !== item.id);
+      setContentItems(updatedItems);
+      
+      // Remove from display order items
+      setDisplayOrderItems(prevDisplayItems => 
+        prevDisplayItems.filter(prevItem => prevItem.id !== item.id)
+      );
+      
+      // Remove from selected items if it was selected
+      setSelectedItems(prev => prev.filter(id => id !== item.id));
+      
+      // Remove from localStorage
+      const statusKey = `content_status_${item.id}`;
+      const unifiedKey = `content_${item.id}_latest`;
+      localStorage.removeItem(statusKey);
+      localStorage.removeItem(unifiedKey);
+      
+      // Update stats
+      const published = updatedItems.filter(item => item.status === 'published');
+      const totalViews = published.reduce((sum, item) => sum + (item.views || 0), 0);
+      const avgEngagement = published.reduce((sum, item) => sum + (item.engagement || 0), 0) / published.length;
+      
+      setStats({
+        total_posts: updatedItems.length,
+        published: published.length,
+        drafts: updatedItems.filter(item => item.status === 'draft').length,
+        views_this_month: totalViews,
+        engagement_rate: Math.round(avgEngagement) || 0
+      });
+      
+      console.log(`✅ Content deleted: ${item.title}`);
+      
+    } catch (error) {
+      console.error('Error deleting content:', error);
+      alert('Failed to delete content. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center">
@@ -1173,7 +1220,7 @@ export default function ContentPipelinePage() {
                 <div
                   key={item.id}
                   onClick={() => handleEditContent(item)}
-                  className="calendly-card overflow-hidden group h-[540px] flex flex-col cursor-pointer relative"
+                  className="calendly-card overflow-hidden group h-[580px] flex flex-col cursor-pointer relative"
                   style={{ 
                     padding: 0,
                     border: '1px solid #e2e8f0',
@@ -1377,6 +1424,25 @@ export default function ContentPipelinePage() {
                         >
                           <ExternalLink className="w-4 h-4" />
                         </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteContent(item);
+                          }}
+                          className="p-2 rounded-lg transition-colors"
+                          style={{ color: '#ef4444' }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#fee2e2';
+                            e.currentTarget.style.color = '#dc2626';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'transparent';
+                            e.currentTarget.style.color = '#ef4444';
+                          }}
+                          title="Delete content"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -1535,6 +1601,25 @@ export default function ContentPipelinePage() {
                             title="View on site"
                           >
                             <ExternalLink className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteContent(item);
+                            }}
+                            className="p-2 rounded-lg transition-colors"
+                            style={{ color: '#ef4444' }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = '#fee2e2';
+                              e.currentTarget.style.color = '#dc2626';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                              e.currentTarget.style.color = '#ef4444';
+                            }}
+                            title="Delete content"
+                          >
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
                       </div>
