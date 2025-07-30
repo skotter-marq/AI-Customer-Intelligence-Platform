@@ -115,6 +115,13 @@ async function sendSlackNotification(params: any) {
       if (template) {
         const processedText = processTemplate(template.message_template, templateData);
         console.log('Processed template text preview:', processedText.substring(0, 100) + '...');
+        
+        // Validate the processed text
+        if (!processedText || processedText.trim().length === 0) {
+          console.error('Processed template is empty, using fallback');
+          processedText = `🚀 New Update: ${templateData.updateTitle || 'Product Update'}`;
+        }
+        
         slackMessage = {
           text: processedText
         };
@@ -726,8 +733,15 @@ function processTemplate(template: string, data: any): string {
   // Replace all template variables with actual data
   Object.entries(data).forEach(([key, value]) => {
     const regex = new RegExp(`\\{${key}\\}`, 'g');
-    processed = processed.replace(regex, String(value || ''));
+    const cleanValue = value ? String(value).trim() : `[${key} not provided]`;
+    processed = processed.replace(regex, cleanValue);
   });
+  
+  // Clean up any remaining unreplaced variables
+  processed = processed.replace(/\{[^}]+\}/g, '[missing data]');
+  
+  // Remove any excessive whitespace/newlines that might cause issues
+  processed = processed.replace(/\n\s*\n\s*\n/g, '\n\n'); // max 2 consecutive newlines
   
   return processed;
 }
