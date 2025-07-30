@@ -116,9 +116,7 @@ async function sendSlackNotification(params: any) {
         const processedText = processTemplate(template.message_template, templateData);
         console.log('Processed template text preview:', processedText.substring(0, 100) + '...');
         slackMessage = {
-          text: processedText,
-          username: 'Content Pipeline Bot',
-          icon_emoji: getEmojiForType(type)
+          text: processedText
         };
       }
     }
@@ -139,9 +137,7 @@ async function sendSlackNotification(params: any) {
         };
         
         slackMessage = {
-          text: processTemplate(template.message_template, defaultData),
-          username: 'Content Pipeline Bot',
-          icon_emoji: getEmojiForType('publish')
+          text: processTemplate(template.message_template, defaultData)
         };
       }
     }
@@ -149,9 +145,7 @@ async function sendSlackNotification(params: any) {
     // Final fallback to simple message
     if (!slackMessage) {
       slackMessage = {
-        text: message || 'New notification from Content Pipeline',
-        username: 'Content Pipeline Bot',
-        icon_emoji: getEmojiForType(type)
+        text: message || 'New notification from Content Pipeline'
       };
     }
 
@@ -615,13 +609,15 @@ async function sendToSlackWebhook(webhookUrl: string, message: any) {
     });
 
     if (!response.ok) {
+      const errorText = await response.text();
       console.error('Slack webhook error details:', {
         status: response.status,
         statusText: response.statusText,
         url: webhookUrl.substring(0, 50) + '...',
-        responseText: await response.text()
+        responseText: errorText,
+        sentMessage: JSON.stringify(message, null, 2)
       });
-      throw new Error(`Slack webhook failed: ${response.status} ${response.statusText}`);
+      throw new Error(`Slack webhook failed: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const result = await response.text();
