@@ -1,36 +1,41 @@
 {
   "webhookEvent": "jira:issue_updated",
   "issue": {
-    "id": "12345",
-    "key": "TEST-123",
+    "id": "21522",
+    "key": "PRESS-21522",
     "fields": {
-      "summary": "Add customer dashboard widget",
-      "description": "Added new analytics widget to customer dashboard for better visibility",
+      "summary": "PRESS-21522 test story for webhook validation",
+      "description": "Testing enhanced webhook with statusCategory support",
       "status": {
-        "name": "Done",
-        "id": "10001"
+        "name": "Closed",
+        "id": "10001",
+        "statusCategory": {
+          "key": "done",
+          "name": "Done"
+        }
       },
       "priority": {
-        "name": "High",
-        "id": "2"
+        "name": "Medium",
+        "id": "3"
       },
       "labels": ["customer-facing"],
       "components": [{"name": "Frontend"}],
+      "customfield_10000": "Customer Facing",
       "assignee": {
-        "displayName": "John Doe",
-        "emailAddress": "john@example.com"
+        "displayName": "Test User",
+        "emailAddress": "test@example.com"
       },
       "reporter": {
-        "displayName": "Jane Smith",
-        "emailAddress": "jane@example.com"
+        "displayName": "Test Reporter",
+        "emailAddress": "reporter@example.com"
       },
-      "created": "2025-01-30T10:00:00.000Z",
-      "updated": "2025-01-30T15:00:00.000Z"
+      "created": "2025-07-30T23:00:00.000Z",
+      "updated": "2025-07-30T23:30:00.000Z"
     }
   },
   "user": {
-    "displayName": "John Doe",
-    "emailAddress": "john@example.com"
+    "displayName": "Test User",
+    "emailAddress": "test@example.com"
   },
   "changelog": {
     "items": [{
@@ -39,7 +44,11 @@
       "from": "10000",
       "fromString": "In Progress",
       "to": "10001",
-      "toString": "Done"
+      "toString": "Closed",
+      "toStatusCategory": {
+        "key": "done",
+        "name": "Done"
+      }
     }]
   }
 }

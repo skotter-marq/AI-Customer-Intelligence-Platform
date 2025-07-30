@@ -55,6 +55,10 @@ interface JiraWebhookPayload {
         key: string;
         name: string;
       };
+      fromStatusCategory?: {
+        key: string;
+        name: string;
+      };
     }>;
   };
 }
@@ -89,6 +93,17 @@ export async function POST(request: Request) {
     }
 
     console.log('🎯 Processing customer-facing story:', payload.issue.key);
+    
+    // Check if we've already processed this story to prevent duplicates
+    const alreadyProcessed = await checkIfAlreadyProcessed(payload.issue.key);
+    
+    if (alreadyProcessed) {
+      console.log('⏭️ Story already processed, skipping duplicate');
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Story already processed, skipping duplicate' 
+      });
+    }
     
     // Generate TLDR for the story
     const changelogEntry = await generateChangelogEntry(payload);
@@ -125,39 +140,93 @@ function shouldProcessWebhook(payload: JiraWebhookPayload): boolean {
     const statusChanges = payload.changelog?.items?.filter(item => {
       if (item.field !== 'status') return false;
       
+      // CRITICAL: Only process transitions TO done status, not FROM done status
+      const fromStatusCategory = item.fromStatusCategory?.key;
+      const toStatusCategory = item.toStatusCategory?.key;
+      
+      // Skip if both from and to are already "done" (prevents duplicate triggers)
+      if (fromStatusCategory === 'done' && toStatusCategory === 'done') {
+        console.log('⏭️ Skipping: Status change within "done" category');
+        return false;
+      }
+      
+      // Skip if transitioning FROM done TO non-done (reopening)
+      if (fromStatusCategory === 'done' && toStatusCategory !== 'done') {
+        console.log('🔄 Skipping: Issue reopened from done status');
+        return false;
+      }
+      
       // Primary check: Use status category if available (more reliable)
-      if (item.toStatusCategory?.key === 'done') {
+      if (toStatusCategory === 'done' && fromStatusCategory !== 'done') {
+        console.log('✅ Status changed to done category');
         return true;
       }
       
-      // Fallback: Check specific status names (legacy support)
-      const statusName = item.toString?.toLowerCase() || '';
-      return statusName.includes('done') || 
-             statusName.includes('deployed') ||
-             statusName.includes('released') ||
-             statusName.includes('closed') ||
-             statusName.includes('resolved') ||
-             statusName.includes('completed');
-    });
-    
-    // If changelog doesn't have status category info, check current issue status
-    if (statusChanges.length === 0 && payload.issue?.fields?.status?.statusCategory?.key === 'done') {
-      // Only process if this is actually a status change event
-      const hasStatusChange = payload.changelog?.items?.some(item => item.field === 'status');
-      if (hasStatusChange) {
+      // Fallback: Check specific status names for transitions TO done states
+      const fromStatusName = item.fromString?.toLowerCase() || '';
+      const toStatusName = item.toString?.toLowerCase() || '';
+      
+      const doneStatuses = ['done', 'deployed', 'released', 'closed', 'resolved', 'completed'];
+      const isFromDone = doneStatuses.some(status => fromStatusName.includes(status));
+      const isToDone = doneStatuses.some(status => toStatusName.includes(status));
+      
+      // Only trigger if transitioning TO a done status FROM a non-done status
+      if (isToDone && !isFromDone) {
+        console.log(`✅ Status changed from "${item.fromString}" to "${item.toString}"`);
         return true;
       }
-    }
+      
+      // Skip if both are done states (prevents duplicate processing)
+      if (isToDone && isFromDone) {
+        console.log('⏭️ Skipping: Status change between done states');
+        return false;
+      }
+      
+      return false;
+    });
     
     return Boolean(statusChanges && statusChanges.length > 0);
   }
   
-  // Process new issues that are already marked as customer facing
+  // Don't process new issues automatically - only status changes to done
   if (payload.webhookEvent === 'jira:issue_created') {
-    return true;
+    console.log('⏭️ Skipping: New issue creation (waiting for completion)');
+    return false;
   }
   
   return false;
+}
+
+async function checkIfAlreadyProcessed(jiraKey: string): Promise<boolean> {
+  try {
+    if (!supabase) {
+      console.warn('⚠️ No database connection, skipping duplicate check');
+      return false;
+    }
+
+    const { data, error } = await supabase
+      .from('generated_content')
+      .select('id')
+      .eq('content_type', 'changelog_entry')
+      .contains('source_data', { jira_story_key: jiraKey })
+      .limit(1);
+
+    if (error) {
+      console.warn('⚠️ Duplicate check failed:', error.message);
+      return false; // If check fails, allow processing to continue
+    }
+
+    const alreadyExists = data && data.length > 0;
+    if (alreadyExists) {
+      console.log(`🔍 Found existing entry for ${jiraKey}`);
+    }
+    
+    return alreadyExists;
+    
+  } catch (error) {
+    console.warn('⚠️ Duplicate check error:', error);
+    return false; // If check fails, allow processing to continue
+  }
 }
 
 function isStoryCustomerFacing(issue: JiraWebhookPayload['issue']): boolean {
