@@ -163,12 +163,14 @@ async function sendSlackNotification(params: any) {
 
     console.log('Using webhook URL:', { type, webhookUrl: webhookUrl ? 'configured' : 'missing' });
 
-    if (!webhookUrl) {
-      console.log('No webhook URL configured, using mock mode');
+    // Enable mock mode if webhooks not configured or if SLACK_MOCK_MODE is set
+    if (!webhookUrl || process.env.SLACK_MOCK_MODE === 'true') {
+      console.log('Using mock mode for Slack notifications');
       return NextResponse.json({
         success: true,
-        message: 'Notification sent (mock mode - no webhook configured)',
-        mockData: slackMessage
+        message: 'Notification sent (mock mode)',
+        mockData: slackMessage,
+        processedTemplate: slackMessage.text
       });
     }
 
@@ -594,12 +596,13 @@ async function rejectContentViaSlack(contentId: string, username: string) {
 
 async function sendToSlackWebhook(webhookUrl: string, message: any) {
   try {
-    if (!webhookUrl || webhookUrl === 'mock-webhook-url') {
-      console.log('Mock Slack webhook call:', message);
+    if (!webhookUrl || webhookUrl === 'mock-webhook-url' || webhookUrl.includes('undefined')) {
+      console.log('Mock Slack webhook call (no valid webhook URL):', message);
       return {
         ok: true,
         ts: Date.now().toString(),
-        message: message
+        message: message,
+        mock: true
       };
     }
 
@@ -612,6 +615,12 @@ async function sendToSlackWebhook(webhookUrl: string, message: any) {
     });
 
     if (!response.ok) {
+      console.error('Slack webhook error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: webhookUrl.substring(0, 50) + '...',
+        responseText: await response.text()
+      });
       throw new Error(`Slack webhook failed: ${response.status} ${response.statusText}`);
     }
 
