@@ -120,7 +120,8 @@ function shouldProcessWebhook(payload: JiraWebhookPayload): boolean {
        item.toString?.toLowerCase().includes('deployed') ||
        item.toString?.toLowerCase().includes('released') ||
        item.toString?.toLowerCase().includes('closed') ||
-       item.toString?.toLowerCase().includes('resolved'))
+       item.toString?.toLowerCase().includes('resolved') ||
+       item.toString?.toLowerCase().includes('completed'))
     );
     
     return Boolean(statusChanges && statusChanges.length > 0);
