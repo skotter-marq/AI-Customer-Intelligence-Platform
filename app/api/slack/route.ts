@@ -113,7 +113,7 @@ async function sendSlackNotification(params: any) {
       const template = await getSlackTemplate(templateId);
       console.log('Template found:', { templateId, hasTemplate: !!template });
       if (template) {
-        const processedText = processTemplate(template.message_template, templateData);
+        let processedText = processTemplate(template.message_template, templateData);
         console.log('Processed template text preview:', processedText.substring(0, 100) + '...');
         
         // Validate the processed text

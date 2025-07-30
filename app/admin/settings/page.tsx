@@ -55,22 +55,6 @@ export default function AdminSettingsPage() {
       category: 'integrations',
       actions: [
         {
-          id: 'slack-config',
-          label: 'Configure Slack (Legacy)',
-          description: 'Legacy Slack template configuration - use AI Prompts instead',
-          href: '/slack/configuration',
-          icon: Slack,
-          status: 'inactive'
-        },
-        {
-          id: 'meeting-prompts',
-          label: 'Meeting AI Prompts (Legacy)',
-          description: 'Legacy meeting prompts - use AI Prompts instead',
-          href: '/meetings/ai-prompts',
-          icon: Bot,
-          status: 'inactive'
-        },
-        {
           id: 'webhook-config',
           label: 'Webhook Configuration',
           description: 'Manage JIRA and other webhook integrations',

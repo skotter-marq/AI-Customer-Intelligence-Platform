@@ -113,12 +113,14 @@ export async function POST(request: Request) {
 function shouldProcessWebhook(payload: JiraWebhookPayload): boolean {
   // Process issue updates and status changes
   if (payload.webhookEvent === 'jira:issue_updated') {
-    // Check if status changed to "Done" or "Deployed"
+    // Check if status changed to completion states
     const statusChanges = payload.changelog?.items?.filter(item => 
       item.field === 'status' && 
       (item.toString?.toLowerCase().includes('done') || 
        item.toString?.toLowerCase().includes('deployed') ||
-       item.toString?.toLowerCase().includes('released'))
+       item.toString?.toLowerCase().includes('released') ||
+       item.toString?.toLowerCase().includes('closed') ||
+       item.toString?.toLowerCase().includes('resolved'))
     );
     
     return Boolean(statusChanges && statusChanges.length > 0);
@@ -396,39 +398,38 @@ async function saveForApproval(changelogEntry: any) {
     // In production, save to your Supabase table
     console.log('💾 Saving changelog entry for approval:', changelogEntry.jira_story_key);
     
-    // Mock saving to generated_content table
+    // Save to generated_content table using existing columns only
     const { data, error } = await supabase
       .from('generated_content')
       .insert({
         content_title: changelogEntry.customer_facing_title,
         generated_content: changelogEntry.customer_facing_description,
         content_type: 'changelog_entry',
+        content_format: 'markdown', // Required field - NOT NULL constraint
         target_audience: 'customers',
-        status: 'pending_approval',
-        approval_status: 'pending',
+        status: 'draft', // Using existing 'status' column instead of 'approval_status'
         quality_score: 0.85, // Based on AI analysis
-        tldr_summary: changelogEntry.customer_facing_title,
-        tldr_bullet_points: changelogEntry.highlights,
-        update_category: changelogEntry.category.toLowerCase(),
-        importance_score: changelogEntry.priority === 'critical' ? 0.9 : 0.7,
-        breaking_changes: changelogEntry.breaking_changes,
-        tags: [
-          changelogEntry.jira_story_key,
-          changelogEntry.category.toLowerCase(),
-          'auto-generated'
-        ],
-        is_public: false,
-        public_changelog_visible: false,
-        created_at: new Date().toISOString(),
-        metadata: {
+        // Store additional data in existing JSONB fields
+        source_data: {
           jira_story_key: changelogEntry.jira_story_key,
           jira_issue_id: changelogEntry.jira_issue_id,
-          estimated_users: changelogEntry.affected_users,
+          category: changelogEntry.category,
+          priority: changelogEntry.priority,
+          breaking_changes: changelogEntry.breaking_changes,
           technical_summary: changelogEntry.technical_summary,
           assignee: changelogEntry.assignee,
           components: changelogEntry.components,
-          labels: changelogEntry.labels
-        }
+          labels: changelogEntry.labels,
+          affected_users: changelogEntry.affected_users
+        },
+        generation_metadata: {
+          auto_generated: true,
+          source: 'jira_webhook',
+          webhook_timestamp: new Date().toISOString(),
+          ai_generated: true,
+          ai_provider: 'claude'
+        },
+        created_by: 'JIRA Webhook'
       });
     
     if (error) {
@@ -446,31 +447,34 @@ async function saveForApproval(changelogEntry: any) {
 
 async function notifyTeam(changelogEntry: any) {
   try {
-    console.log('📢 Notifying team about new changelog entry:', changelogEntry.jira_story_key);
+    console.log('📢 Notifying team about completed JIRA story:', changelogEntry.jira_story_key);
     
-    // Send Slack notification using our Slack API
+    // Send JIRA-specific Slack notification
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        action: 'approval_request',
-        contentId: 'pending', // Will be set after saving to database
-        contentTitle: changelogEntry.customer_facing_title,
-        contentType: 'changelog_entry',
-        qualityScore: changelogEntry.quality_score || 0.85,
-        metadata: {
-          jira_story_key: changelogEntry.jira_story_key,
+        templateId: 'slack-jira-story-completed',
+        templateData: {
+          jiraKey: changelogEntry.jira_story_key,
+          storyTitle: changelogEntry.technical_summary,
+          assignee: changelogEntry.assignee || 'Unassigned',
+          priority: changelogEntry.priority,
+          customerTitle: changelogEntry.customer_facing_title,
+          customerDescription: changelogEntry.customer_facing_description,
           category: changelogEntry.category,
-          affected_users: changelogEntry.affected_users,
-          priority: changelogEntry.priority
+          affectedUsers: changelogEntry.affected_users || 'TBD',
+          dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/content-pipeline`,
+          jiraUrl: `https://your-jira-instance.atlassian.net/browse/${changelogEntry.jira_story_key}`,
+          editUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/content-pipeline?filter=${changelogEntry.jira_story_key}`
         }
       })
     });
 
     if (response.ok) {
-      console.log('✅ Slack notification sent successfully');
+      console.log('✅ JIRA story completion Slack notification sent successfully');
     } else {
       const errorData = await response.json();
       console.warn('⚠️ Slack notification failed:', errorData.error);

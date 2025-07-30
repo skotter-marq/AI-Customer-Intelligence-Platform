@@ -1999,7 +1999,7 @@ export default function MeetingsPage() {
                         <button 
                           onClick={() => {
                             setShowAIConfig(false);
-                            router.push('/meetings/ai-prompts');
+                            router.push('/admin/ai-prompts');
                           }}
                           className="calendly-btn-primary flex items-center space-x-2"
                         >
@@ -2081,7 +2081,7 @@ export default function MeetingsPage() {
                     <button 
                       onClick={() => {
                         setShowAIConfig(false);
-                        router.push('/meetings/ai-prompts');
+                        router.push('/admin/ai-prompts');
                       }}
                       className="calendly-btn-primary"
                     >

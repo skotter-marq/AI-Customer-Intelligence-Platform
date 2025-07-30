@@ -1,0 +1,45 @@
+{
+  "webhookEvent": "jira:issue_updated",
+  "issue": {
+    "id": "12345",
+    "key": "TEST-123",
+    "fields": {
+      "summary": "Add customer dashboard widget",
+      "description": "Added new analytics widget to customer dashboard for better visibility",
+      "status": {
+        "name": "Done",
+        "id": "10001"
+      },
+      "priority": {
+        "name": "High",
+        "id": "2"
+      },
+      "labels": ["customer-facing"],
+      "components": [{"name": "Frontend"}],
+      "assignee": {
+        "displayName": "John Doe",
+        "emailAddress": "john@example.com"
+      },
+      "reporter": {
+        "displayName": "Jane Smith",
+        "emailAddress": "jane@example.com"
+      },
+      "created": "2025-01-30T10:00:00.000Z",
+      "updated": "2025-01-30T15:00:00.000Z"
+    }
+  },
+  "user": {
+    "displayName": "John Doe",
+    "emailAddress": "john@example.com"
+  },
+  "changelog": {
+    "items": [{
+      "field": "status",
+      "fieldtype": "jira",
+      "from": "10000",
+      "fromString": "In Progress",
+      "to": "10001",
+      "toString": "Done"
+    }]
+  }
+}

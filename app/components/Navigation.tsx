@@ -120,7 +120,7 @@ export default function Navigation() {
       return true;
     }
     // Exclude admin settings pages from highlighting main nav items
-    if (pathname?.startsWith('/meetings/ai-prompts') || pathname?.startsWith('/slack/configuration')) {
+    if (pathname?.startsWith('/admin/ai-prompts') || pathname?.startsWith('/slack/configuration')) {
       return false;
     }
     return pathname?.startsWith(href) || false;
