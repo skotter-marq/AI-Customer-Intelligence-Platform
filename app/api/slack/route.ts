@@ -102,19 +102,75 @@ export async function GET(request: Request) {
 
 async function sendSlackNotification(params: any) {
   try {
-    const { message, channel, type = 'info' } = params;
+    const { message, channel, type = 'info', templateId, templateData } = params;
     
-    const slackMessage = {
-      text: message,
-      username: 'Content Pipeline Bot',
-      icon_emoji: getEmojiForType(type)
-    };
+    console.log('Slack notification request:', { templateId, type, hasTemplateData: !!templateData });
+    
+    let slackMessage;
+    
+    // If templateId is provided, use the configured template
+    if (templateId && templateData) {
+      const template = await getSlackTemplate(templateId);
+      console.log('Template found:', { templateId, hasTemplate: !!template });
+      if (template) {
+        const processedText = processTemplate(template.message_template, templateData);
+        console.log('Processed template text preview:', processedText.substring(0, 100) + '...');
+        slackMessage = {
+          text: processedText,
+          username: 'Content Pipeline Bot',
+          icon_emoji: getEmojiForType(type)
+        };
+      }
+    }
+    
+    // Auto-detect template based on message content and type
+    if (!slackMessage && (message === '/content' || !message || message.trim() === '')) {
+      // Default to product update notification if no specific template
+      const template = await getSlackTemplate('product-update-notification');
+      if (template) {
+        const defaultData = {
+          updateTitle: 'Product Update',
+          jiraKey: 'N/A',
+          assignee: 'System',
+          updateDescription: 'A new product update has been published',
+          customerImpact: 'Check the dashboard for details',
+          changelogUrl: `${process.env.NEXT_PUBLIC_BASE_URL}/product`,
+          jiraUrl: '#'
+        };
+        
+        slackMessage = {
+          text: processTemplate(template.message_template, defaultData),
+          username: 'Content Pipeline Bot',
+          icon_emoji: getEmojiForType('publish')
+        };
+      }
+    }
+    
+    // Final fallback to simple message
+    if (!slackMessage) {
+      slackMessage = {
+        text: message || 'New notification from Content Pipeline',
+        username: 'Content Pipeline Bot',
+        icon_emoji: getEmojiForType(type)
+      };
+    }
 
     // Determine which webhook to use based on type or channel
     let webhookUrl = SLACK_WEBHOOKS.updates; // default
     if (type === 'approval') webhookUrl = SLACK_WEBHOOKS.approvals;
     if (type === 'insight') webhookUrl = SLACK_WEBHOOKS.insights;
     if (channel && channel.includes('content')) webhookUrl = SLACK_WEBHOOKS.content;
+
+    console.log('Using webhook URL:', { type, webhookUrl: webhookUrl ? 'configured' : 'missing' });
+
+    if (!webhookUrl) {
+      console.log('No webhook URL configured, using mock mode');
+      return NextResponse.json({
+        success: true,
+        message: 'Notification sent (mock mode - no webhook configured)',
+        mockData: slackMessage
+      });
+    }
 
     const response = await sendToSlackWebhook(webhookUrl, slackMessage);
     
@@ -572,6 +628,103 @@ async function sendToSlackWebhook(webhookUrl: string, message: any) {
     console.error('Error sending to Slack webhook:', error);
     throw error;
   }
+}
+
+async function getSlackTemplate(templateId: string) {
+  try {
+    // First, try to fetch custom template from database
+    const { data: customTemplate } = await supabase
+      .from('slack_templates')
+      .select('*')
+      .eq('id', templateId)
+      .eq('enabled', true)
+      .single();
+
+    if (customTemplate) {
+      return customTemplate;
+    }
+  } catch (error) {
+    console.log('No custom template found, using default:', templateId);
+  }
+
+  // Fallback to default templates
+  const defaultTemplates = {
+    'approval-request': {
+      message_template: `🔍 **New Content Ready for Review**
+
+**Title:** {contentTitle}
+**Type:** {contentType}
+**Quality Score:** {qualityScore}%
+
+**Summary:** {contentSummary}
+
+**Next Steps:**
+• Review content in dashboard
+• Approve or request changes
+• Content will auto-publish upon approval
+
+[View Content]({contentUrl}) | [Dashboard]({dashboardUrl})`
+    },
+    'product-update-notification': {
+      message_template: `🚀 **New Product Update Published**
+
+**Feature:** {updateTitle}
+**JIRA Ticket:** {jiraKey}
+**Completed by:** {assignee}
+
+**What Changed:**
+{updateDescription}
+
+**Customer Impact:**
+{customerImpact}
+
+[View Full Update]({changelogUrl}) | [JIRA Ticket]({jiraUrl})`
+    },
+    'daily-summary': {
+      message_template: `📊 **Daily Content Pipeline Summary**
+
+**Today's Activity:**
+• Content Generated: {totalGenerated}
+• Pending Approval: {pendingApproval}
+• Published: {published}
+• Average Quality: {avgQuality}%
+
+**JIRA Updates:**
+• New Customer Stories: {newStories}
+• Completed Features: {completedFeatures}
+
+[View Dashboard]({dashboardUrl})`
+    },
+    'customer-insight-alert': {
+      message_template: `🚨 **High-Priority Customer Insight Detected**
+
+**Customer:** {customerName}
+**Meeting:** {meetingTitle}
+**Priority Score:** {priorityScore}/10
+
+**Key Insight:**
+> {insightSummary}
+
+**Recommended Actions:**
+{actionItems}
+
+[View Full Analysis]({meetingUrl}) | [Create JIRA Ticket]({jiraCreateUrl})`
+    }
+  };
+  
+  return defaultTemplates[templateId as keyof typeof defaultTemplates] || null;
+}
+
+function processTemplate(template: string, data: any): string {
+  let processed = template;
+  
+  // Replace all template variables with actual data
+  Object.entries(data).forEach(([key, value]) => {
+    const regex = new RegExp(`\\{${key}\\}`, 'g');
+    processed = processed.replace(regex, String(value || ''));
+  });
+  
+  return processed;
 }
 
 function getEmojiForType(type: string) {
