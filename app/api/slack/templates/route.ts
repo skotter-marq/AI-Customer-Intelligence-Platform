@@ -1,10 +1,9 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY 
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 // Template storage table structure
 interface SlackTemplate {
@@ -22,6 +21,14 @@ interface SlackTemplate {
 
 export async function GET(request: Request) {
   try {
+    if (!supabase) {
+      return NextResponse.json({
+        success: true,
+        templates: getDefaultTemplates(),
+        message: 'Using default templates (database not available)'
+      });
+    }
+
     const { data: templates, error } = await supabase
       .from('slack_templates')
       .select('*')
