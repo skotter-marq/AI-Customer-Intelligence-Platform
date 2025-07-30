@@ -1,12 +1,17 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY 
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 export async function GET() {
   try {
+    if (!supabase) {
+      return Response.json(
+        { error: 'Database connection not available' },
+        { status: 503 }
+      );
+    }
     console.log('🔄 Starting JIRA sync...');
 
     // Since we're using MCP in development, for production we'll create a webhook-based approach

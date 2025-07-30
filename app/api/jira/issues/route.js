@@ -3,13 +3,19 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const supabase = process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY 
+  ? createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+  : null;
 
 export async function GET(request) {
   try {
+    if (!supabase) {
+      return Response.json(
+        { error: 'Database connection not available' },
+        { status: 503 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const project = searchParams.get('project') || 'PRESS';
     const status = searchParams.get('status');

@@ -44,7 +44,6 @@
     "db:migrate": "node scripts/migrate-database.js",
     "db:seed": "node scripts/seed-database.js",
     "db:reset": "node scripts/reset-database.js",
-    "postinstall": "prisma generate || true",
     "analyze": "cross-env ANALYZE=true next build",
     "clean": "rm -rf .next out dist coverage",
     "docker:build": "docker build -t ai-customer-intelligence-platform .",
