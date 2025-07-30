@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '../../../lib/supabase-client';
 
-// Mock Slack configuration - in production, these would be environment variables
-const SLACK_CONFIG = {
-  bot_token: process.env.SLACK_BOT_TOKEN || 'mock-bot-token',
-  signing_secret: process.env.SLACK_SIGNING_SECRET || 'mock-signing-secret',
-  channel_approvals: process.env.SLACK_CHANNEL_APPROVALS || '#content-approvals',
-  channel_notifications: process.env.SLACK_CHANNEL_NOTIFICATIONS || '#content-updates',
-  webhook_url: process.env.SLACK_WEBHOOK_URL || 'mock-webhook-url'
+// Slack webhook configuration
+const SLACK_WEBHOOKS = {
+  approvals: process.env.SLACK_WEBHOOK_APPROVALS,
+  updates: process.env.SLACK_WEBHOOK_UPDATES,
+  insights: process.env.SLACK_WEBHOOK_INSIGHTS,
+  content: process.env.SLACK_WEBHOOK_CONTENT
 };
 
 interface SlackMessage {
@@ -49,6 +48,8 @@ export async function POST(request: Request) {
         return await sendApprovalRequest(params);
       case 'daily_summary':
         return await sendDailySummary(params);
+      case 'test_template':
+        return await sendSlackNotification(params);
       case 'handle_command':
         return await handleSlashCommand(params);
       case 'handle_interaction':
@@ -103,15 +104,19 @@ async function sendSlackNotification(params: any) {
   try {
     const { message, channel, type = 'info' } = params;
     
-    const slackMessage: SlackMessage = {
+    const slackMessage = {
       text: message,
-      channel: channel || SLACK_CONFIG.channel_notifications,
       username: 'Content Pipeline Bot',
       icon_emoji: getEmojiForType(type)
     };
 
-    // Mock Slack API call
-    const response = await mockSlackAPICall('chat.postMessage', slackMessage);
+    // Determine which webhook to use based on type or channel
+    let webhookUrl = SLACK_WEBHOOKS.updates; // default
+    if (type === 'approval') webhookUrl = SLACK_WEBHOOKS.approvals;
+    if (type === 'insight') webhookUrl = SLACK_WEBHOOKS.insights;
+    if (channel && channel.includes('content')) webhookUrl = SLACK_WEBHOOKS.content;
+
+    const response = await sendToSlackWebhook(webhookUrl, slackMessage);
     
     console.log('Slack notification sent:', slackMessage);
     
@@ -136,7 +141,6 @@ async function sendApprovalRequest(params: any) {
     
     const approvalMessage = {
       text: `New content ready for approval: ${contentTitle}`,
-      channel: SLACK_CONFIG.channel_approvals,
       username: 'Content Pipeline Bot',
       icon_emoji: ':memo:',
       blocks: [
@@ -198,7 +202,7 @@ async function sendApprovalRequest(params: any) {
       ]
     };
 
-    const response = await mockSlackAPICall('chat.postMessage', approvalMessage);
+    const response = await sendToSlackWebhook(SLACK_WEBHOOKS.approvals, approvalMessage);
     
     console.log('Approval request sent to Slack:', approvalMessage);
     
@@ -238,7 +242,6 @@ async function sendDailySummary(params: any) {
 
     const summaryMessage = {
       text: 'Daily Content Pipeline Summary',
-      channel: SLACK_CONFIG.channel_notifications,
       username: 'Content Pipeline Bot',
       icon_emoji: ':chart_with_upwards_trend:',
       blocks: [
@@ -286,7 +289,7 @@ async function sendDailySummary(params: any) {
       ]
     };
 
-    const response = await mockSlackAPICall('chat.postMessage', summaryMessage);
+    const response = await sendToSlackWebhook(SLACK_WEBHOOKS.content, summaryMessage);
     
     console.log('Daily summary sent to Slack:', summaryMessage);
     
@@ -533,21 +536,42 @@ async function rejectContentViaSlack(contentId: string, username: string) {
   }
 }
 
-async function mockSlackAPICall(method: string, data: any) {
-  // Mock Slack API response
-  const mockResponse = {
-    ok: true,
-    channel: data.channel,
-    ts: Date.now().toString(),
-    message: {
-      text: data.text,
-      username: data.username,
-      ts: Date.now().toString()
+async function sendToSlackWebhook(webhookUrl: string, message: any) {
+  try {
+    if (!webhookUrl || webhookUrl === 'mock-webhook-url') {
+      console.log('Mock Slack webhook call:', message);
+      return {
+        ok: true,
+        ts: Date.now().toString(),
+        message: message
+      };
     }
-  };
 
-  console.log(`Mock Slack API call: ${method}`, data);
-  return mockResponse;
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Slack webhook failed: ${response.status} ${response.statusText}`);
+    }
+
+    const result = await response.text();
+    console.log('Slack webhook sent successfully:', { message: message.text, channel: message.channel });
+    
+    return {
+      ok: true,
+      ts: Date.now().toString(),
+      response: result
+    };
+
+  } catch (error) {
+    console.error('Error sending to Slack webhook:', error);
+    throw error;
+  }
 }
 
 function getEmojiForType(type: string) {

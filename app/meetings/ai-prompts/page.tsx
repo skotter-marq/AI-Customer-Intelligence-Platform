@@ -15,9 +15,9 @@ import {
   Copy,
   History,
   Play,
-  ArrowLeft,
   MessageSquare
 } from 'lucide-react';
+import Breadcrumb from '../../components/Breadcrumb';
 
 interface PromptTemplate {
   id: string;
@@ -386,28 +386,22 @@ Extract all product-related requests:
 
   return (
     <div className="min-h-screen pt-4" style={{ background: '#f8fafc' }}>
+      {/* Breadcrumb */}
+      <Breadcrumb 
+        items={[
+          { label: 'Admin Settings', href: '/admin/settings' },
+          { label: 'AI Prompts', current: true }
+        ]} 
+      />
+
       <div className="p-4">
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="flex items-center justify-between" style={{ marginBottom: '24px' }}>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => router.push('/meetings')}
-                className="p-2 rounded-lg transition-colors hover:bg-gray-100 flex items-center"
-              >
-                <ArrowLeft className="w-5 h-5" />
-              </button>
-              <div>
-                <h1 className="calendly-h1 flex items-center space-x-3">
-                  <MessageSquare className="w-8 h-8" style={{ color: '#4285f4' }} />
-                  <span>Meeting AI Prompts</span>
-                </h1>
-                <p className="calendly-body">Customize how AI analyzes your meeting transcripts and extracts insights</p>
-              </div>
-            </div>
+          <div style={{ marginBottom: '16px' }}>
+            <h1 className="calendly-h2">Meeting AI Prompts</h1>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Template Selector */}
             <div className="lg:col-span-1">
               <div className="calendly-card">
@@ -447,7 +441,7 @@ Extract all product-related requests:
             </div>
 
             {/* Prompt Editor */}
-            <div className="lg:col-span-3">
+            <div className="lg:col-span-2">
               <div className="calendly-card">
                 <div className="flex items-center justify-between" style={{ marginBottom: '16px' }}>
                   <div>

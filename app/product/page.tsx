@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { 
   Search,
   Filter,
@@ -31,7 +32,8 @@ import {
   FileText,
   MessageSquare,
   Users,
-  Activity
+  Activity,
+  Slack
 } from 'lucide-react';
 
 interface ProductUpdate {
@@ -77,6 +79,7 @@ interface EnhancedChangelogEntry {
 }
 
 export default function ProductPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<'changelog' | 'approval'>('changelog');
   const [productUpdates, setProductUpdates] = useState<ProductUpdate[]>([]);
   const [changelogEntries, setChangelogEntries] = useState<EnhancedChangelogEntry[]>([]);
@@ -647,23 +650,6 @@ export default function ProductPage() {
             <div>
               <h1 className="calendly-h1">Product Changelog</h1>
               <p className="calendly-body">Manage published changelog entries, review pending updates, and track customer engagement</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Link 
-                href="/public-changelog"
-                className="calendly-btn-secondary flex items-center space-x-2"
-              >
-                <ExternalLink className="w-4 h-4" />
-                <span>View Public</span>
-              </Link>
-              <button className="calendly-btn-secondary flex items-center space-x-2">
-                <Download className="w-4 h-4" />
-                <span>Export</span>
-              </button>
-              <button className="calendly-btn-primary flex items-center space-x-2">
-                <Plus className="w-4 h-4" />
-                <span>New Entry</span>
-              </button>
             </div>
           </div>
 
