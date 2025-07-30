@@ -360,20 +360,35 @@ async function createJiraTicketsForFeatures(featureRequests, meeting) {
 
 async function notifyNewMeeting(meeting) {
   try {
+    // Use customer insight template and send to insights channel
     await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'send_notification',
-        message: `🎥 New meeting recorded: ${meeting.title} with ${meeting.customer_name}`,
-        type: 'info',
+        templateId: 'customer-insight-alert',
+        type: 'insight',
+        templateData: {
+          customerName: meeting.customer_name || 'Unknown Customer',
+          meetingTitle: meeting.title || 'Untitled Meeting',
+          insightType: 'Meeting Recording',
+          priorityScore: meeting.priority_score || 5,
+          insightSummary: meeting.summary || 'New meeting recorded and ready for analysis',
+          actionItems: meeting.action_items || '• Review meeting transcript\n• Extract key insights\n• Follow up on customer requests',
+          customerQuote: meeting.key_quote || 'Meeting analysis pending...',
+          meetingUrl: meeting.grain_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=Follow%20up:%20${encodeURIComponent(meeting.title || 'Meeting')}`
+        },
         metadata: {
           meeting_id: meeting.id,
           customer: meeting.customer_name,
-          duration: meeting.duration_minutes
+          duration: meeting.duration_minutes,
+          source: 'grain_webhook'
         }
       })
     });
+    
+    console.log('✅ Sent customer insight notification for meeting:', meeting.title);
   } catch (error) {
     console.warn('Failed to send Slack notification:', error);
   }
