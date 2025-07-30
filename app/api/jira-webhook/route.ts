@@ -13,6 +13,10 @@ interface JiraWebhookPayload {
       status: {
         name: string;
         id: string;
+        statusCategory?: {
+          key: string;
+          name: string;
+        };
       };
       priority: {
         name: string;
@@ -47,6 +51,10 @@ interface JiraWebhookPayload {
       fromString?: string;
       to?: string;
       toString?: string;
+      toStatusCategory?: {
+        key: string;
+        name: string;
+      };
     }>;
   };
 }
@@ -114,15 +122,32 @@ function shouldProcessWebhook(payload: JiraWebhookPayload): boolean {
   // Process issue updates and status changes
   if (payload.webhookEvent === 'jira:issue_updated') {
     // Check if status changed to completion states
-    const statusChanges = payload.changelog?.items?.filter(item => 
-      item.field === 'status' && 
-      (item.toString?.toLowerCase().includes('done') || 
-       item.toString?.toLowerCase().includes('deployed') ||
-       item.toString?.toLowerCase().includes('released') ||
-       item.toString?.toLowerCase().includes('closed') ||
-       item.toString?.toLowerCase().includes('resolved') ||
-       item.toString?.toLowerCase().includes('completed'))
-    );
+    const statusChanges = payload.changelog?.items?.filter(item => {
+      if (item.field !== 'status') return false;
+      
+      // Primary check: Use status category if available (more reliable)
+      if (item.toStatusCategory?.key === 'done') {
+        return true;
+      }
+      
+      // Fallback: Check specific status names (legacy support)
+      const statusName = item.toString?.toLowerCase() || '';
+      return statusName.includes('done') || 
+             statusName.includes('deployed') ||
+             statusName.includes('released') ||
+             statusName.includes('closed') ||
+             statusName.includes('resolved') ||
+             statusName.includes('completed');
+    });
+    
+    // If changelog doesn't have status category info, check current issue status
+    if (statusChanges.length === 0 && payload.issue?.fields?.status?.statusCategory?.key === 'done') {
+      // Only process if this is actually a status change event
+      const hasStatusChange = payload.changelog?.items?.some(item => item.field === 'status');
+      if (hasStatusChange) {
+        return true;
+      }
+    }
     
     return Boolean(statusChanges && statusChanges.length > 0);
   }
