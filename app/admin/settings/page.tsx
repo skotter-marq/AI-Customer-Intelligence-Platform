@@ -84,6 +84,14 @@ export default function AdminSettingsPage() {
           href: '/admin/jira-filters',
           icon: FileText,
           status: 'active'
+        },
+        {
+          id: 'ai-prompts',
+          label: 'AI Prompt Management',
+          description: 'Centralized management of all AI prompts and content generation',
+          href: '/admin/ai-prompts',
+          icon: Bot,
+          status: 'active'
         }
       ]
     },
