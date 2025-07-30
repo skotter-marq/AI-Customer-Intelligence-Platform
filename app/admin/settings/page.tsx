@@ -76,6 +76,14 @@ export default function AdminSettingsPage() {
           description: 'Manage JIRA and other webhook integrations',
           icon: Webhook,
           status: 'active'
+        },
+        {
+          id: 'jira-filters',
+          label: 'JIRA Notification Filters',
+          description: 'Configure which JIRA projects and teams trigger notifications',
+          href: '/admin/jira-filters',
+          icon: FileText,
+          status: 'active'
         }
       ]
     },
