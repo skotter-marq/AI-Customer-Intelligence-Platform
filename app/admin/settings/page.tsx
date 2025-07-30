@@ -56,19 +56,19 @@ export default function AdminSettingsPage() {
       actions: [
         {
           id: 'slack-config',
-          label: 'Configure Slack',
-          description: 'Customize Slack message templates and channels',
+          label: 'Configure Slack (Legacy)',
+          description: 'Legacy Slack template configuration - use AI Prompts instead',
           href: '/slack/configuration',
           icon: Slack,
-          status: 'active'
+          status: 'inactive'
         },
         {
           id: 'meeting-prompts',
-          label: 'Meeting AI Prompts',
-          description: 'Customize how AI analyzes meeting transcripts',
+          label: 'Meeting AI Prompts (Legacy)',
+          description: 'Legacy meeting prompts - use AI Prompts instead',
           href: '/meetings/ai-prompts',
           icon: Bot,
-          status: 'active'
+          status: 'inactive'
         },
         {
           id: 'webhook-config',
