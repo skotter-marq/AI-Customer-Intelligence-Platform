@@ -311,7 +311,8 @@ export default function ProductPage() {
           jira_story_key: entry.metadata?.jira_story_key,
           approval_status: entry.approval_status,
           public_visibility: entry.is_public && entry.public_changelog_visible,
-          layout_template: entry.layout_template || 'standard'
+          layout_template: entry.layout_template || 'standard',
+          metadata: entry.metadata // Preserve metadata for approval filtering
         }));
         
         setChangelogEntries(transformedEntries);
