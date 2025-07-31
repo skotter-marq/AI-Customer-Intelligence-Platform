@@ -293,6 +293,14 @@ export default function ProductPage() {
       const data = await response.json();
       
       if (data.success) {
+        console.log('🔍 Raw API data entries:', data.entries.length);
+        console.log('🔍 First few entries metadata:', data.entries.slice(0, 3).map((e: any) => ({
+          id: e.id,
+          title: e.content_title,
+          needs_approval: e.metadata?.needs_approval,
+          metadata: e.metadata
+        })));
+        
         // Transform API data to match component interface
         const transformedEntries = data.entries.map((entry: any) => ({
           id: entry.id,
@@ -314,6 +322,15 @@ export default function ProductPage() {
           layout_template: entry.layout_template || 'standard',
           metadata: entry.metadata // Preserve metadata for approval filtering
         }));
+        
+        console.log('🔍 Transformed entries:', transformedEntries.length);
+        console.log('🔍 Entries with needs_approval:', transformedEntries.filter((e: any) => e.metadata?.needs_approval).length);
+        console.log('🔍 Sample transformed entries:', transformedEntries.slice(0, 3).map((e: any) => ({
+          id: e.id,
+          title: e.customer_facing_title,
+          needs_approval: e.metadata?.needs_approval,
+          metadata: e.metadata
+        })));
         
         setChangelogEntries(transformedEntries);
       } else {
@@ -1571,7 +1588,13 @@ export default function ProductPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
-                          Review & Approve ({changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval).length})
+                          Review & Approve ({(() => {
+                            const needsApproval = changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval);
+                            console.log('🔍 Dashboard filter - total entries:', changelogEntries.length);
+                            console.log('🔍 Dashboard filter - needs approval:', needsApproval.length);
+                            console.log('🔍 Dashboard filter - needs approval entries:', needsApproval.map(e => ({ id: e.id, title: e.customer_facing_title })));
+                            return needsApproval.length;
+                          })()})
                         </h3>
                         <p className="calendly-body-sm text-gray-600">
                           Review changelog entries before publishing to customers
