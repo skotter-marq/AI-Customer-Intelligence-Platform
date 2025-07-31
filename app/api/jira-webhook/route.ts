@@ -98,11 +98,12 @@ export async function POST(request: Request) {
     });
     
     if (!isCustomerFacing) {
-      console.log('📝 Story not marked as customer facing, skipping');
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Story not customer facing' 
-      });
+      console.log('📝 Story not marked as customer facing, but processing anyway for debugging');
+      // Temporarily skip the customer-facing check to see the full payload
+      // return NextResponse.json({ 
+      //   success: true, 
+      //   message: 'Story not customer facing' 
+      // });
     }
 
     console.log('🎯 Processing customer-facing story:', payload.issue.key);
