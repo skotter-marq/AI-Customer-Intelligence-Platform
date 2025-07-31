@@ -406,6 +406,30 @@ export default function ProductPage() {
     }
   };
 
+  const getJiraPriorityColor = (priority: string) => {
+    switch (priority?.toLowerCase()) {
+      case 'highest': 
+      case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
+      case 'lowest': return 'bg-gray-100 text-gray-800';
+      default: return 'bg-blue-100 text-blue-800';
+    }
+  };
+
+  const formatTimeAgo = (timestamp: string) => {
+    if (!timestamp) return 'Unknown time';
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffHours < 1) return 'Just now';
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffHours < 48) return 'Yesterday';
+    return date.toLocaleDateString();
+  };
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'new_feature': return Zap;
@@ -1588,12 +1612,13 @@ export default function ProductPage() {
                     </div>
                   </div>
 
-                  {/* Visible Pending Entries */}
-                  <div className="space-y-4">
-                    {changelogEntries
-                      .filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval)
-                      .map((entry) => (
-                        <div key={entry.id} className="calendly-card">
+                  {/* Enhanced List View */}
+                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div className="divide-y divide-gray-200">
+                      {changelogEntries
+                        .filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval)
+                        .map((entry) => (
+                        <div key={entry.id} className="p-6 hover:bg-gray-50 transition-colors border border-gray-200 rounded-lg mb-4">
                           {editingEntryId === entry.id ? (
                             <>
                               {/* Edit Mode - Same as changelog edit */}
