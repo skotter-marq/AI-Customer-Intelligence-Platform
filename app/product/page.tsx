@@ -68,7 +68,6 @@ interface EnhancedChangelogEntry {
   highlights: string[];
   breaking_changes: boolean;
   migration_notes?: string;
-  affected_users?: number;
   view_count: number;
   upvotes: number;
   feedback_count: number;
@@ -201,7 +200,6 @@ export default function ProductPage() {
         '40% faster data loading performance'
       ],
       breaking_changes: false,
-      affected_users: 2500,
       view_count: 1247,
       upvotes: 89,
       feedback_count: 23,
@@ -225,7 +223,6 @@ export default function ProductPage() {
       ],
       breaking_changes: true,
       migration_notes: 'All users will be prompted to set up MFA on their next login. API users need to update authentication headers.',
-      affected_users: 5000,
       view_count: 2156,
       upvotes: 156,
       feedback_count: 45,
@@ -248,7 +245,6 @@ export default function ProductPage() {
         'Automatic retry mechanism for failed exports'
       ],
       breaking_changes: false,
-      affected_users: 1200,
       view_count: 892,
       upvotes: 67,
       feedback_count: 18,
@@ -271,7 +267,6 @@ export default function ProductPage() {
         'Smart conflict resolution for data sync'
       ],
       breaking_changes: false,
-      affected_users: 800,
       view_count: 0,
       upvotes: 0,
       feedback_count: 0,
@@ -312,7 +307,6 @@ export default function ProductPage() {
           highlights: entry.tldr_bullet_points || [],
           breaking_changes: entry.breaking_changes || false,
           migration_notes: entry.migration_notes,
-          affected_users: entry.affected_users,
           view_count: entry.view_count || 0,
           upvotes: entry.upvotes || 0,
           feedback_count: entry.feedback_count || 0,
@@ -1576,411 +1570,14 @@ export default function ProductPage() {
           ) : activeTab === 'approval' ? (
             <div className="space-y-6">
               {/* Approval Dashboard */}
+              {/* Check if there are entries needing approval */}
               {changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval).length > 0 ? (
-                <>
-                  {/* Header with Bulk Actions */}
-                  <div className="calendly-card">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
-                          Review & Approve ({(() => {
-                            const needsApproval = changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval);
-                            console.log('🔍 Dashboard filter - total entries:', changelogEntries.length);
-                            console.log('🔍 Dashboard filter - needs approval:', needsApproval.length);
-                            console.log('🔍 Dashboard filter - needs approval entries:', needsApproval.map(e => ({ id: e.id, title: e.customer_facing_title })));
-                            return needsApproval.length;
-                          })()})
-                        </h3>
-                        <p className="calendly-body-sm text-gray-600">
-                          Review changelog entries before publishing to customers
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <button 
-                          className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
-                          onClick={() => console.log('Bulk approve all')}
-                        >
-                          Approve All
-                        </button>
-                        <button 
-                          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
-                          onClick={() => console.log('Bulk edit')}
-                        >
-                          Bulk Edit
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Enhanced List View */}
-                  <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                    <div className="divide-y divide-gray-200">
-                      {changelogEntries
-                        .filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval)
-                        .map((entry) => (
-                        <div key={entry.id} className="p-6 hover:bg-gray-50 transition-colors border border-gray-200 rounded-lg mb-4">
-                          {editingEntryId === entry.id ? (
-                            <>
-                              {/* Edit Mode - Same as changelog edit */}
-                              {/* Edit Header */}
-                              <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
-                                <div className="flex items-center space-x-3 flex-1">
-                                  <div className="text-2xl">{getCategoryIcon(editForm.category || entry.category)}</div>
-                                  <div className="flex-1">
-                                    <input
-                                      type="text"
-                                      value={editForm.customer_facing_title || ''}
-                                      onChange={(e) => updateEditForm('customer_facing_title', e.target.value)}
-                                      className="w-full text-lg font-medium calendly-body-sm border-0 border-b-2 border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent transition-all duration-200"
-                                      placeholder="Customer-facing title..."
-                                    />
-                                    <div className="flex items-center space-x-3 mt-2">
-                                      <input
-                                        type="text"
-                                        value={editForm.version || ''}
-                                        onChange={(e) => updateEditForm('version', e.target.value)}
-                                        className="px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                        placeholder="v1.0.0"
-                                      />
-                                      <span className="text-sm text-gray-500">
-                                        {entry.jira_story_key && <span className="text-blue-600">{entry.jira_story_key}</span>}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <select
-                                  value={editForm.category || entry.category}
-                                  onChange={(e) => updateEditForm('category', e.target.value)}
-                                  className="px-3 py-2 calendly-body-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                  style={{ background: 'white' }}
-                                >
-                                  <option value="Added">Added</option>
-                                  <option value="Fixed">Fixed</option>
-                                  <option value="Improved">Improved</option>
-                                  <option value="Security">Security</option>
-                                  <option value="Deprecated">Deprecated</option>
-                                </select>
-                              </div>
-
-                              {/* Description Edit */}
-                              <div style={{ marginBottom: '16px' }}>
-                                <label className="block text-sm font-medium text-gray-900 mb-2">
-                                  Customer Description
-                                </label>
-                                <textarea
-                                  value={editForm.customer_facing_description || ''}
-                                  onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                  style={{ minHeight: '80px', background: 'white' }}
-                                  placeholder="Describe what this update means for customers..."
-                                />
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              {/* View Mode - Approval Dashboard View */}
-                              {/* Entry Header */}
-                              <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
-                                <div className="flex items-center space-x-3">
-                                  <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
-                                  <div>
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <h3 className="calendly-h3" style={{ marginBottom: 0 }}>{entry.customer_facing_title}</h3>
-                                      <span className="text-sm font-medium text-gray-500">{entry.version}</span>
-                                    </div>
-                                    <p className="calendly-label-sm">
-                                      {entry.jira_story_key && (
-                                        <span className="text-blue-600">{entry.jira_story_key} • </span>
-                                      )}
-                                      {formatDistanceToNow(new Date(entry.release_date), { addSuffix: true })}
-                                    </p>
-                                  </div>
-                                </div>
-                                <span className={`calendly-badge ${getCategoryColor(entry.category)}`}>
-                                  {entry.category}
-                                </span>
-                              </div>
-                            </>
-                          )}
-
-                          {/* Shared content based on edit mode */}
-                          {editingEntryId === entry.id ? (
-                            <>
-                              {/* Highlights editing - same as changelog */}
-                              <div style={{ marginBottom: '16px' }}>
-                                <h4 className="text-sm font-medium text-gray-900 mb-2">What's New</h4>
-                                <div className="space-y-2">
-                                  {/* Edit Highlights */}
-                                  {(editForm.highlights || []).map((highlight, index) => (
-                                    <div key={index} className="flex items-center space-x-2">
-                                      <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                                      <input
-                                        type="text"
-                                        value={highlight}
-                                        onChange={(e) => {
-                                          const newHighlights = [...(editForm.highlights || [])];
-                                          newHighlights[index] = e.target.value;
-                                          updateEditForm('highlights', newHighlights);
-                                        }}
-                                        className="flex-1 px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                        style={{ background: 'white' }}
-                                        placeholder="Highlight description..."
-                                      />
-                                      <button
-                                        onClick={() => {
-                                          const newHighlights = (editForm.highlights || []).filter((_, i) => i !== index);
-                                          updateEditForm('highlights', newHighlights);
-                                        }}
-                                        className="text-red-500 hover:text-red-700 p-1"
-                                      >
-                                        ×
-                                      </button>
-                                    </div>
-                                  ))}
-                                  <button
-                                    onClick={() => {
-                                      const newHighlights = [...(editForm.highlights || []), ''];
-                                      updateEditForm('highlights', newHighlights);
-                                    }}
-                                    className="px-3 py-2 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
-                                  >
-                                    + Add Highlight
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Breaking Changes Toggle */}
-                              <div style={{ marginBottom: '16px' }}>
-                                <div className="flex items-center space-x-3">
-                                  <input
-                                    type="checkbox"
-                                    id={`breaking-changes-approval-${entry.id}`}
-                                    checked={editForm.breaking_changes || false}
-                                    onChange={(e) => updateEditForm('breaking_changes', e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                                  />
-                                  <label htmlFor={`breaking-changes-approval-${entry.id}`} className="calendly-body-sm font-medium text-gray-900">
-                                    This update includes breaking changes
-                                  </label>
-                                </div>
-                                
-                                {/* Migration Notes */}
-                                {editForm.breaking_changes && (
-                                  <div style={{ marginTop: '12px' }}>
-                                    <label className="block text-sm font-medium text-gray-900 mb-2">
-                                      Migration Notes
-                                    </label>
-                                    <textarea
-                                      value={editForm.migration_notes || ''}
-                                      onChange={(e) => updateEditForm('migration_notes', e.target.value)}
-                                      className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                      style={{ minHeight: '60px', background: 'white' }}
-                                      placeholder="Provide migration instructions for users..."
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              {/* View Mode Content */}
-                              {/* Description */}
-                              <p className="calendly-body-sm" style={{ marginBottom: '16px' }}>
-                                {entry.customer_facing_description}
-                              </p>
-
-                              {/* Key Details */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ marginBottom: '16px' }}>
-                                {entry.affected_users && (
-                                  <div className="flex items-center space-x-2">
-                                    <Users className="w-4 h-4 text-blue-500" />
-                                    <span className="calendly-body-sm">
-                                      {entry.affected_users.toLocaleString()} users affected
-                                    </span>
-                                  </div>
-                                )}
-                                {entry.breaking_changes && (
-                                  <div className="flex items-center space-x-2">
-                                    <AlertCircle className="w-4 h-4 text-red-500" />
-                                    <span className="calendly-body-sm text-red-600">Breaking Changes</span>
-                                  </div>
-                                )}
-                                <div className="flex items-center space-x-2">
-                                  <Calendar className="w-4 h-4 text-gray-500" />
-                                  <span className="calendly-body-sm">
-                                    Release: {new Date(entry.release_date).toLocaleDateString()}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Highlights Preview */}
-                              <div style={{ marginBottom: '20px' }}>
-                                <h4 className="text-sm font-medium text-gray-900 mb-2">Key Changes:</h4>
-                                <ul className="space-y-1">
-                                  {entry.highlights.slice(0, 2).map((highlight, index) => (
-                                    <li key={index} className="flex items-start space-x-2">
-                                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                                      <span className="calendly-body-sm">{highlight}</span>
-                                    </li>
-                                  ))}
-                                  {entry.highlights.length > 2 && (
-                                    <li className="calendly-body-sm text-gray-500 ml-6">
-                                      +{entry.highlights.length - 2} more changes
-                                    </li>
-                                  )}
-                                </ul>
-                              </div>
-                            </>
-                          )}
-
-                          {/* Approval Actions */}
-                          <div className="flex items-center justify-end space-x-3 pt-4" style={{ borderTop: '1px solid #e5e7eb' }}>
-                            {editingEntryId === entry.id ? (
-                              <>
-                                {/* Edit Mode Actions */}
-                                <button 
-                                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
-                                  onClick={handleSaveEdit}
-                                >
-                                  Save Changes
-                                </button>
-                                <button 
-                                  className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
-                                  onClick={handleCancelEdit}
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                {/* View Mode Actions */}
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-xs text-gray-600">Show:</span>
-                                  <div className="flex items-center">
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleToggleApprovalVisibility(entry.id);
-                                      }}
-                                      className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                                        !(entry as any).hidden_from_approval
-                                          ? 'bg-blue-600' 
-                                          : 'bg-gray-300'
-                                      }`}
-                                      title="Toggle visibility in approval queue"
-                                    >
-                                      <span
-                                        className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
-                                          !(entry as any).hidden_from_approval
-                                            ? 'translate-x-5' : 'translate-x-1'
-                                        }`}
-                                      />
-                                    </button>
-                                    <span className="ml-2 text-xs text-gray-500">
-                                      {!(entry as any).hidden_from_approval ? 'Visible' : 'Hidden'}
-                                    </span>
-                                  </div>
-                                </div>
-                                <button 
-                                  className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleEditEntry(entry);
-                                  }}
-                                >
-                                  Edit Details
-                                </button>
-                                <button 
-                                  className="px-6 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors font-medium"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    console.log('Approve entry:', entry.id);
-                                  }}
-                                >
-                                  Approve & Publish
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-
-                  {/* Hidden Entries Section */}
-                  {changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && (entry as any).hidden_from_approval).length > 0 && (
-                    <div className="mt-8">
-                      <div className="flex items-center space-x-2 mb-4">
-                        <span className="text-sm font-medium text-gray-500">Hidden Entries</span>
-                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                          {changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && (entry as any).hidden_from_approval).length}
-                        </span>
-                      </div>
-                      <div className="space-y-4">
-                        {changelogEntries
-                          .filter(entry => (entry as any).metadata?.needs_approval && (entry as any).hidden_from_approval)
-                          .map((entry) => (
-                            <div key={entry.id} className="calendly-card opacity-60 border-dashed">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center space-x-3">
-                                  <div className="text-2xl opacity-50">{getCategoryIcon(entry.category)}</div>
-                                  <div>
-                                    <div className="flex items-center space-x-2 mb-1">
-                                      <h3 className="calendly-h3 text-gray-500" style={{ marginBottom: 0 }}>{entry.customer_facing_title}</h3>
-                                      <span className="text-sm font-medium text-gray-400">{entry.version}</span>
-                                    </div>
-                                    <p className="calendly-label-sm text-gray-400">
-                                      {entry.jira_story_key && (
-                                        <span className="text-gray-400">{entry.jira_story_key} • </span>
-                                      )}
-                                      Hidden from approval queue
-                                    </p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-3">
-                                  <span className={`calendly-badge ${getCategoryColor(entry.category)} opacity-50`}>
-                                    {entry.category}
-                                  </span>
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-xs text-gray-600">Show:</span>
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleToggleApprovalVisibility(entry.id);
-                                      }}
-                                      className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 bg-gray-300"
-                                      title="Click to show in approval queue"
-                                    >
-                                      <span className="inline-block h-3 w-3 transform rounded-full bg-white transition-transform translate-x-1" />
-                                    </button>
-                                    <span className="ml-2 text-xs text-gray-500">Hidden</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                </>
+                <div className="approval-section">
+                  <div>Test approval content</div>
+                </div>
               ) : (
                 <div className="calendly-card text-center py-12">
-                  {/* No Pending Entries */}
-                  <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
-                  <h3 className="calendly-h3" style={{ marginBottom: '8px' }}>All Caught Up!</h3>
-                  <p className="calendly-body" style={{ marginBottom: '24px' }}>
-                    No changelog entries are currently pending approval. New entries from JIRA will appear here automatically.
-                  </p>
-                  <div className="flex items-center justify-center space-x-4">
-                    <button 
-                      className="calendly-btn-secondary"
-                      onClick={() => setActiveTab('changelog')}
-                    >
-                      View Published Entries
-                    </button>
-                    <button className="calendly-btn-primary">
-                      Create Manual Entry
-                    </button>
-                  </div>
+                  <div>Test empty state</div>
                 </div>
               )}
             </div>

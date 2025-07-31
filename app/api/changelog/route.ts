@@ -222,7 +222,7 @@ export async function GET(request: Request) {
         quality_score: entry.quality_score || 0.85,
         published_at: entry.release_date || entry.created_at,
         tldr_summary: entry.content_title, // Use title as summary for now
-        tldr_bullet_points: sourceData.highlights || [],
+        tldr_bullet_points: sourceData.highlights || sourceData.tldr_bullet_points || [],
         update_category: sourceData.category?.toLowerCase() || 'feature_update',
         layout_template: entry.layout_template || 'standard',
         importance_score: entry.importance_score || 0.7,
@@ -362,7 +362,7 @@ export async function PUT(request: Request) {
     if (updates.approval_status) {
       dbUpdates.approval_status = updates.approval_status;
       
-      // If approving, set additional fields
+      // If approving, set additional fields and update JIRA
       if (updates.approval_status === 'approved') {
         dbUpdates.approved_at = new Date().toISOString();
         
@@ -399,6 +399,34 @@ export async function PUT(request: Request) {
         { error: 'Failed to update entry' },
         { status: 500 }
       );
+    }
+
+    // If approved, update JIRA with the TLDR
+    if (updates.approval_status === 'approved' && data) {
+      try {
+        const sourceData = data.source_data || {};
+        const jiraStoryKey = sourceData.jira_story_key;
+        
+        if (jiraStoryKey) {
+          console.log(`🔄 Updating JIRA issue ${jiraStoryKey} with approved changelog...`);
+          
+          const JiraIntegration = require('../../../lib/jira-integration.js');
+          const jiraIntegration = new JiraIntegration();
+          
+          // Use the customer-facing title as TLDR
+          const tldr = updates.customer_facing_title || updates.content_title || data.content_title;
+          
+          const jiraUpdateResult = await jiraIntegration.updateTLDR(jiraStoryKey, tldr);
+          
+          if (jiraUpdateResult.success) {
+            console.log(`✅ Updated JIRA issue ${jiraStoryKey} with TLDR`);
+          } else {
+            console.warn(`⚠️ Failed to update JIRA issue ${jiraStoryKey}:`, jiraUpdateResult.error);
+          }
+        }
+      } catch (jiraError) {
+        console.warn('⚠️ JIRA update failed (non-blocking):', jiraError.message);
+      }
     }
 
     return NextResponse.json({

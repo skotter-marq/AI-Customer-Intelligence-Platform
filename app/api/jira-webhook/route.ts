@@ -539,7 +539,8 @@ async function saveForApproval(changelogEntry: any) {
           assignee: changelogEntry.assignee,
           components: changelogEntry.components,
           labels: changelogEntry.labels,
-          affected_users: changelogEntry.affected_users,
+          highlights: changelogEntry.highlights, // Add highlights to source_data
+          migration_notes: changelogEntry.migration_notes,
           needs_approval: true
         },
         generation_metadata: {
