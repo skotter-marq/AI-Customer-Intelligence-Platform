@@ -45,7 +45,8 @@ export async function GET(request: Request) {
     // Apply status filters
     if (status && status !== 'all') {
       if (status === 'pending') {
-        query = query.eq('status', 'pending_review');
+        // Filter for entries that need approval (from JIRA webhook)
+        query = query.eq('status', 'draft').filter('source_data->needs_approval', 'eq', true);
       } else if (status === 'approved') {
         query = query.eq('status', 'approved');
       } else if (status === 'published') {

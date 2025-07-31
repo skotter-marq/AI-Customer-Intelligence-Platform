@@ -526,7 +526,7 @@ async function saveForApproval(changelogEntry: any) {
         content_type: 'changelog_entry',
         content_format: 'markdown', // Required field - NOT NULL constraint
         target_audience: 'customers',
-        status: 'pending_review', // Set status for approval dashboard to filter by
+        status: 'draft', // Use valid status value
         quality_score: 0.85, // Based on AI analysis
         // Store additional data in existing JSONB fields
         source_data: {
@@ -539,7 +539,8 @@ async function saveForApproval(changelogEntry: any) {
           assignee: changelogEntry.assignee,
           components: changelogEntry.components,
           labels: changelogEntry.labels,
-          affected_users: changelogEntry.affected_users
+          affected_users: changelogEntry.affected_users,
+          needs_approval: true
         },
         generation_metadata: {
           auto_generated: true,
