@@ -3,32 +3,34 @@ FROM node:18-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files and npm configuration
-COPY package*.json .npmrc ./
+# Copy package files
+COPY package*.json ./
 
-# Install dependencies with legacy peer deps support
-RUN npm ci --only=production --legacy-peer-deps
+# Install all dependencies (including dev deps for build)
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .
 
-# Build the application
+# Build the application with standalone output
 RUN npm run build
 
-# Production stage
+# Production stage  
 FROM node:18-alpine AS runner
 
 WORKDIR /app
+
+# Install curl for health checks
+RUN apk add --no-cache curl
 
 # Add non-root user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-# Copy built application
+# Copy only necessary files from builder
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/node_modules ./node_modules
 
 # Change ownership to nextjs user
 RUN chown -R nextjs:nodejs /app
