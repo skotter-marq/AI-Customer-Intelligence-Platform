@@ -607,39 +607,10 @@ export default function ProductPage() {
   };
 
   const handleToggleApprovalVisibility = async (entryId: string) => {
-    const entry = changelogEntries.find(e => e.id === entryId);
-    if (!entry) return;
-    
-    const newHiddenState = !(entry as any).hidden_from_approval;
-    
-    try {
-      const response = await fetch(`/api/changelog?id=${entryId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          approval_status: newHiddenState ? 'hidden' : 'pending'
-        }),
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setChangelogEntries(prev => prev.map(entry => 
-          entry.id === entryId 
-            ? { ...entry, hidden_from_approval: newHiddenState }
-            : entry
-        ));
-        console.log('Successfully toggled approval queue visibility for entry:', entryId);
-      } else {
-        console.error('Failed to toggle approval visibility:', data.error);
-        alert('Failed to update approval visibility. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error toggling approval visibility:', error);
-      alert('Failed to update approval visibility. Please try again.');
-    }
+    // Temporarily disabled - API doesn't support approval status updates yet
+    console.log('Approval visibility toggle temporarily disabled');
+    alert('This feature is temporarily disabled while we improve the approval system.');
+    return;
   };
 
   if (loading) {
