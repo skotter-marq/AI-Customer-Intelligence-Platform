@@ -13,7 +13,15 @@ if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseKey)) {
 
 // Handle build-time when environment variables might not be available
 export const supabase = supabaseUrl && supabaseKey && supabaseUrl.startsWith('https://')
-  ? createClient(supabaseUrl, supabaseKey)
+  ? createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        storageKey: 'customer-intelligence-auth',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined
+      }
+    })
   : null;
 
 // User roles and permissions

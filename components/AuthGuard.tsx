@@ -20,13 +20,14 @@ export default function AuthGuard({
   const { user, userProfile, loading, hasPermission } = useAuth();
   const pathname = usePathname();
 
-  // Show loading state
+  // Show loading state with timeout
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Authenticating...</p>
+          <p className="text-xs text-gray-500 mt-2">This should only take a moment</p>
         </div>
       </div>
     );

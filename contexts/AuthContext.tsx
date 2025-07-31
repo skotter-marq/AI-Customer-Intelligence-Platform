@@ -17,33 +17,64 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Get initial session
+    // Get initial session with retry mechanism
     const getInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        setUser(session.user);
-        const profile = await authHelpers.getUserProfile(session.user.id);
-        setUserProfile(profile);
+      try {
+        setLoading(true);
+        
+        // First try to get session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Session fetch error:', error);
+          setLoading(false);
+          return;
+        }
+        
+        if (session?.user) {
+          console.log('✅ Session found, loading user profile...');
+          setUser(session.user);
+          
+          // Load user profile
+          const profile = await authHelpers.getUserProfile(session.user.id);
+          if (profile) {
+            setUserProfile(profile);
+            console.log('✅ User profile loaded:', profile.email);
+          } else {
+            console.warn('⚠️ No user profile found');
+          }
+        } else {
+          console.log('❌ No active session found');
+        }
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Error during session initialization:', error);
+        setLoading(false);
       }
-      
-      setLoading(false);
     };
 
     getInitialSession();
 
-    // Listen for auth changes
+    // Listen for auth changes with improved error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
-          setUser(session.user);
-          const profile = await authHelpers.getUserProfile(session.user.id);
-          setUserProfile(profile);
-        } else {
-          setUser(null);
-          setUserProfile(null);
+        console.log('🔄 Auth state change:', event, session?.user?.email || 'no user');
+        
+        try {
+          if (session?.user) {
+            setUser(session.user);
+            const profile = await authHelpers.getUserProfile(session.user.id);
+            setUserProfile(profile);
+          } else {
+            setUser(null);
+            setUserProfile(null);
+          }
+          setLoading(false);
+        } catch (error) {
+          console.error('Error handling auth state change:', error);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
