@@ -608,9 +608,9 @@ async function notifyTeam(changelogEntry: any) {
 // Verify webhook authenticity (optional)
 export async function GET() {
   return NextResponse.json({
-    message: 'JIRA Webhook endpoint is active',
+    message: 'JIRA Webhook endpoint is active - customer-facing check REMOVED',
     timestamp: new Date().toISOString(),
-    version: 'enhanced-logging-v2',
-    bypassEnabled: true
+    version: 'no-customer-facing-check-v3',
+    customerFacingCheckRemoved: true
   });
 }
