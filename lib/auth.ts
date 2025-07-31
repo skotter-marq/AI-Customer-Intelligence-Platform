@@ -3,8 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+// Validate environment variables
+if (typeof window !== 'undefined' && (!supabaseUrl || !supabaseKey)) {
+  console.error('Supabase configuration error:', {
+    url: supabaseUrl ? 'SET' : 'MISSING',
+    key: supabaseKey ? 'SET' : 'MISSING'
+  });
+}
+
 // Handle build-time when environment variables might not be available
-export const supabase = supabaseUrl && supabaseKey 
+export const supabase = supabaseUrl && supabaseKey && supabaseUrl.startsWith('https://')
   ? createClient(supabaseUrl, supabaseKey)
   : null;
 
