@@ -23,9 +23,9 @@ export async function GET() {
       console.error('Error fetching content:', contentError);
     }
 
-    // Get insights counts
+    // Get insights counts - using 'insights' table as suggested by database error
     const { data: insights, error: insightsError } = await supabase
-      .from('meeting_insights')
+      .from('insights')
       .select('*');
 
     if (insightsError) {
@@ -65,7 +65,7 @@ export async function GET() {
       .gte('created_at', oneWeekAgo.toISOString());
 
     const { data: recentInsights } = await supabase
-      .from('meeting_insights')
+      .from('insights')
       .select('*')
       .gte('created_at', oneWeekAgo.toISOString());
 

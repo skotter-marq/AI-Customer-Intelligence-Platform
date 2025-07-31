@@ -5,19 +5,10 @@ export async function GET() {
   try {
     console.log('🔍 Fetching recent insights for dashboard...');
 
-    // Get recent meeting insights - using 'insights' table as suggested by error
-    const { data: meetingInsights, error: meetingError } = await supabase
-      .from('insights')
-      .select(`
-        *,
-        meetings!inner(title, customer_name, meeting_date)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(10);
-
-    if (meetingError) {
-      console.error('Error fetching meeting insights:', meetingError);
-    }
+    // Get recent meeting insights - disabling temporarily due to schema relationship issues
+    const meetingInsights = null;
+    const meetingError = null;
+    console.log('⚠️ Meeting insights query disabled - foreign key relationship issue between insights and meetings tables');
 
     // Get pending product updates for approval
     const { data: pendingUpdates, error: updatesError } = await supabase
