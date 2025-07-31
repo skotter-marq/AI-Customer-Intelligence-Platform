@@ -88,6 +88,15 @@ export async function POST(request: Request) {
     // Check if story is marked as "Customer Facing"
     const isCustomerFacing = isStoryCustomerFacing(payload.issue);
     
+    // Enhanced debugging for customer-facing detection
+    console.log('🔍 Customer-facing check:', {
+      issueKey: payload.issue.key,
+      customField10000: payload.issue.fields.customfield_10000,
+      labels: payload.issue.fields.labels,
+      components: payload.issue.fields.components?.map(c => c.name),
+      isCustomerFacing
+    });
+    
     if (!isCustomerFacing) {
       console.log('📝 Story not marked as customer facing, skipping');
       return NextResponse.json({ 
