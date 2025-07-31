@@ -211,6 +211,7 @@ export interface AuthContextType {
   user: any;
   userProfile: UserProfile | null;
   loading: boolean;
+  authError: string | null;
   signIn: (email: string, password: string) => Promise<any>;
   signOut: () => Promise<void>;
   hasPermission: (path: string, level?: PermissionLevel) => boolean;

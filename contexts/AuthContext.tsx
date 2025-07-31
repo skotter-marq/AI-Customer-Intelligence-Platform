@@ -9,24 +9,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     // Handle case where supabase is not available (build time)
     if (!supabase) {
       setLoading(false);
+      setAuthError('Authentication service unavailable');
       return;
     }
+
+    let timeoutId: NodeJS.Timeout;
+    let isCancelled = false;
+
+    // Set a timeout to prevent infinite loading
+    const authTimeout = setTimeout(() => {
+      if (!isCancelled && loading) {
+        console.warn('⏰ Authentication timeout - forcing fallback');
+        setLoading(false);
+        setAuthError('Authentication timed out. Please refresh the page.');
+      }
+    }, 10000); // 10 second timeout
 
     // Get initial session with retry mechanism
     const getInitialSession = async () => {
       try {
-        setLoading(true);
+        if (isCancelled) return;
         
-        // First try to get session
-        const { data: { session }, error } = await supabase.auth.getSession();
+        setLoading(true);
+        setAuthError(null);
+        
+        // First try to get session with timeout
+        const sessionPromise = supabase.auth.getSession();
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error('Session fetch timeout')), 5000);
+        });
+        
+        const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+        
+        if (timeoutId) clearTimeout(timeoutId);
+        if (isCancelled) return;
         
         if (error) {
           console.error('Session fetch error:', error);
+          setAuthError(`Authentication error: ${error.message}`);
           setLoading(false);
           return;
         }
@@ -35,26 +61,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.log('✅ Session found, loading user profile...');
           setUser(session.user);
           
-          // Load user profile
-          const profile = await authHelpers.getUserProfile(session.user.id);
-          if (profile) {
-            setUserProfile(profile);
-            console.log('✅ User profile loaded:', profile.email);
-          } else {
-            console.warn('⚠️ No user profile found');
+          // Load user profile with timeout
+          try {
+            const profile = await Promise.race([
+              authHelpers.getUserProfile(session.user.id),
+              new Promise<null>((_, reject) => setTimeout(() => reject(new Error('Profile fetch timeout')), 3000))
+            ]);
+            
+            if (profile && !isCancelled) {
+              setUserProfile(profile);
+              console.log('✅ User profile loaded:', profile.email);
+            } else if (!isCancelled) {
+              console.warn('⚠️ No user profile found');
+              setAuthError('Unable to load user profile');
+            }
+          } catch (profileError) {
+            console.error('Profile fetch error:', profileError);
+            if (!isCancelled) {
+              setAuthError('Failed to load user profile');
+            }
           }
         } else {
           console.log('❌ No active session found');
         }
         
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       } catch (error) {
         console.error('Error during session initialization:', error);
-        setLoading(false);
+        if (!isCancelled) {
+          setAuthError(error instanceof Error ? error.message : 'Authentication failed');
+          setLoading(false);
+        }
       }
     };
 
     getInitialSession();
+
+    // Cleanup function
+    return () => {
+      isCancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      if (authTimeout) clearTimeout(authTimeout);
+    };
 
     // Listen for auth changes with improved error handling
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -101,6 +151,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     userProfile,
     loading,
+    authError,
     signIn,
     signOut,
     hasPermission

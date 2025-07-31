@@ -17,8 +17,35 @@ export default function AuthGuard({
   requiredPermission = 'view',
   fallback 
 }: AuthGuardProps) {
-  const { user, userProfile, loading, hasPermission } = useAuth();
+  const { user, userProfile, loading, hasPermission, authError } = useAuth();
   const pathname = usePathname();
+
+  // Show error state if authentication failed
+  if (authError && !loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6 text-center">
+          <AlertCircle className="w-12 h-12 text-red-600 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Authentication Error</h2>
+          <p className="text-gray-600 mb-4">{authError}</p>
+          <div className="space-y-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => window.location.href = '/login'}
+              className="w-full bg-gray-600 text-white py-2 px-4 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Sign In Again
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Show loading state with timeout
   if (loading) {
