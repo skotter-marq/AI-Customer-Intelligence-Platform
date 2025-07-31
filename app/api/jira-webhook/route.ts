@@ -576,7 +576,7 @@ async function notifyTeam(changelogEntry: any) {
       },
       body: JSON.stringify({
         action: 'send_notification',
-        type: 'info',
+        type: 'approval',
         templateId: 'slack-jira-story-completed',
         templateData: {
           jiraKey: changelogEntry.jira_story_key,

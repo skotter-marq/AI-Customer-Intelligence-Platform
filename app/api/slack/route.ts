@@ -156,13 +156,26 @@ async function sendSlackNotification(params: any) {
       };
     }
 
-    // Determine which webhook to use based on type or channel
+    // Determine which webhook to use based on type, templateId, or channel
     let webhookUrl = SLACK_WEBHOOKS.updates; // default
     if (type === 'approval') webhookUrl = SLACK_WEBHOOKS.approvals;
     if (type === 'insight') webhookUrl = SLACK_WEBHOOKS.insights;
     if (channel && channel.includes('content')) webhookUrl = SLACK_WEBHOOKS.content;
+    
+    // Template-specific routing
+    if (templateId === 'slack-jira-story-completed') {
+      webhookUrl = SLACK_WEBHOOKS.approvals; // JIRA completions go to approvals channel
+    }
 
-    console.log('Using webhook URL:', { type, webhookUrl: webhookUrl ? 'configured' : 'missing' });
+    console.log('Using webhook URL:', { 
+      type, 
+      templateId, 
+      webhookUrl: webhookUrl ? 'configured' : 'missing',
+      webhookType: webhookUrl === SLACK_WEBHOOKS.approvals ? 'approvals' : 
+                   webhookUrl === SLACK_WEBHOOKS.updates ? 'updates' : 
+                   webhookUrl === SLACK_WEBHOOKS.insights ? 'insights' : 
+                   webhookUrl === SLACK_WEBHOOKS.content ? 'content' : 'unknown'
+    });
 
     // Enable mock mode if webhooks not configured or if SLACK_MOCK_MODE is set
     if (!webhookUrl || process.env.SLACK_MOCK_MODE === 'true') {
