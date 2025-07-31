@@ -45,11 +45,11 @@ export async function GET(request: Request) {
     // Apply status filters
     if (status && status !== 'all') {
       if (status === 'pending') {
-        query = query.eq('approval_status', 'pending');
+        query = query.eq('status', 'pending_review');
       } else if (status === 'approved') {
-        query = query.eq('approval_status', 'approved');
+        query = query.eq('status', 'approved');
       } else if (status === 'published') {
-        query = query.eq('approval_status', 'approved').eq('is_public', true);
+        query = query.eq('status', 'published').eq('is_public', true);
       }
     }
 

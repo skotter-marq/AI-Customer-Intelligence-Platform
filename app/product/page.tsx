@@ -1570,7 +1570,7 @@ export default function ProductPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
-                          Review & Approve ({changelogEntries.filter(entry => entry.approval_status === 'pending' && !(entry as any).hidden_from_approval).length})
+                          Review & Approve ({changelogEntries.filter(entry => (entry as any).status === 'pending_review' && !(entry as any).hidden_from_approval).length})
                         </h3>
                         <p className="calendly-body-sm text-gray-600">
                           Review changelog entries before publishing to customers
@@ -1596,7 +1596,7 @@ export default function ProductPage() {
                   {/* Visible Pending Entries */}
                   <div className="space-y-4">
                     {changelogEntries
-                      .filter(entry => entry.approval_status === 'pending' && !(entry as any).hidden_from_approval)
+                      .filter(entry => (entry as any).status === 'pending_review' && !(entry as any).hidden_from_approval)
                       .map((entry) => (
                         <div key={entry.id} className="calendly-card">
                           {editingEntryId === entry.id ? (
@@ -1887,17 +1887,17 @@ export default function ProductPage() {
                   </div>
 
                   {/* Hidden Entries Section */}
-                  {changelogEntries.filter(entry => entry.approval_status === 'pending' && (entry as any).hidden_from_approval).length > 0 && (
+                  {changelogEntries.filter(entry => (entry as any).status === 'pending_review' && (entry as any).hidden_from_approval).length > 0 && (
                     <div className="mt-8">
                       <div className="flex items-center space-x-2 mb-4">
                         <span className="text-sm font-medium text-gray-500">Hidden Entries</span>
                         <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
-                          {changelogEntries.filter(entry => entry.approval_status === 'pending' && (entry as any).hidden_from_approval).length}
+                          {changelogEntries.filter(entry => (entry as any).status === 'pending_review' && (entry as any).hidden_from_approval).length}
                         </span>
                       </div>
                       <div className="space-y-4">
                         {changelogEntries
-                          .filter(entry => entry.approval_status === 'pending' && (entry as any).hidden_from_approval)
+                          .filter(entry => (entry as any).status === 'pending_review' && (entry as any).hidden_from_approval)
                           .map((entry) => (
                             <div key={entry.id} className="calendly-card opacity-60 border-dashed">
                               <div className="flex items-start justify-between">
