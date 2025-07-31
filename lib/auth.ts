@@ -1,9 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+// Handle build-time when environment variables might not be available
+export const supabase = supabaseUrl && supabaseKey 
+  ? createClient(supabaseUrl, supabaseKey)
+  : null;
 
 // User roles and permissions
 export const USER_ROLES = {
@@ -45,12 +48,14 @@ export interface UserProfile {
 export const authHelpers = {
   // Get current user session
   getCurrentUser: async () => {
+    if (!supabase) return null;
     const { data: { user } } = await supabase.auth.getUser();
     return user;
   },
 
   // Get user profile with role
   getUserProfile: async (userId: string): Promise<UserProfile | null> => {
+    if (!supabase) return null;
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -102,6 +107,7 @@ export const authHelpers = {
 
   // Sign in user
   signIn: async (email: string, password: string) => {
+    if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -113,6 +119,7 @@ export const authHelpers = {
 
   // Sign up user (admin only)
   signUp: async (email: string, password: string, fullName: string, role: UserRole = USER_ROLES.CS_USER) => {
+    if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -130,12 +137,14 @@ export const authHelpers = {
 
   // Sign out user
   signOut: async () => {
+    if (!supabase) throw new Error('Supabase not initialized');
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },
 
   // Update user profile
   updateUserProfile: async (userId: string, updates: Partial<UserProfile>) => {
+    if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase
       .from('user_profiles')
       .update({
@@ -151,6 +160,7 @@ export const authHelpers = {
 
   // Get all users (admin only)
   getAllUsers: async (): Promise<UserProfile[]> => {
+    if (!supabase) return [];
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -166,6 +176,7 @@ export const authHelpers = {
 
   // Deactivate user (admin only)
   deactivateUser: async (userId: string) => {
+    if (!supabase) throw new Error('Supabase not initialized');
     const { data, error } = await supabase
       .from('user_profiles')
       .update({ 
