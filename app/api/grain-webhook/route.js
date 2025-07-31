@@ -51,18 +51,23 @@ async function handleMeetingRecorded(data) {
       throw new Error('Database connection not available');
     }
 
+    // Enrich meeting data with additional processing
+    const enrichedData = await enrichMeetingData(meetingData, data);
+
     // Save basic meeting record to database (using actual schema)
     const { data: savedMeeting, error } = await supabase
       .from('meetings')
       .upsert({
-        grain_id: meetingData.grain_meeting_id,
-        title: meetingData.title,
-        date: meetingData.meeting_date,
-        duration_minutes: meetingData.duration_minutes,
-        participants: meetingData.attendees,
-        raw_transcript: null, // Will be updated when transcribed
-        customer_id: null, // You might want to implement customer matching
+        grain_id: enrichedData.grain_meeting_id,
+        title: enrichedData.title,
+        date: enrichedData.meeting_date,
+        duration_minutes: enrichedData.duration_minutes,
+        participants: enrichedData.attendees,
+        raw_transcript: enrichedData.raw_transcript || null,
+        customer_id: enrichedData.customer_id,
         created_at: new Date().toISOString()
+        // Note: metadata column not available in current schema
+        // Future: Add metadata JSON column for storing additional data
       }, {
         onConflict: 'grain_id'
       })
@@ -73,15 +78,24 @@ async function handleMeetingRecorded(data) {
       throw error;
     }
 
+    // If transcript is already available, trigger AI analysis
+    if (enrichedData.raw_transcript && enrichedData.raw_transcript.length > 50) {
+      console.log('🤖 Transcript available immediately, starting AI analysis...');
+      await analyzeMeetingWithAI(savedMeeting);
+    }
+
     // Send Slack notification about new meeting
     await notifyNewMeeting(savedMeeting);
 
-    console.log('✅ Meeting recorded and saved:', savedMeeting.id);
+    console.log('✅ Meeting recorded and saved with enriched data:', savedMeeting.id);
     
     return Response.json({
       success: true,
-      message: 'Meeting recorded and saved',
+      message: 'Meeting recorded and saved with enriched data',
       meeting_id: savedMeeting.id,
+      data_completeness: enrichedData.data_completeness,
+      customer_identified: !!enrichedData.customer_id,
+      transcript_available: !!enrichedData.raw_transcript,
       timestamp: new Date().toISOString()
     });
     
@@ -276,12 +290,231 @@ function extractMeetingData(webhookData) {
     meeting_type: inferMeetingType(meeting.title),
     recording_url: meeting.recording_url,
     grain_share_url: meeting.share_url,
+    raw_transcript: meeting.transcript || null,
     metadata: {
       grain_workspace: webhookData.workspace?.name,
       grain_meeting_type: meeting.type,
       original_webhook_data: webhookData
     }
   };
+}
+
+async function enrichMeetingData(meetingData, originalWebhookData) {
+  try {
+    console.log('🔍 Enriching meeting data for:', meetingData.title);
+    
+    // Calculate data completeness score
+    const completenessScore = calculateDataCompleteness(meetingData);
+    
+    // Match customer from database or create new one
+    const customerId = await matchOrCreateCustomer(meetingData.customer_name, meetingData.attendees);
+    
+    // Try to fetch additional data from Grain API if needed
+    let enrichedDuration = meetingData.duration_minutes;
+    let enrichedTranscript = meetingData.raw_transcript;
+    
+    // If critical data is missing and we have Grain API access, try to fetch it
+    if (!enrichedDuration || !enrichedTranscript) {
+      const grainApiData = await fetchFromGrainApi(meetingData.grain_meeting_id);
+      if (grainApiData) {
+        enrichedDuration = enrichedDuration || grainApiData.duration_minutes;
+        enrichedTranscript = enrichedTranscript || grainApiData.transcript;
+      }
+    }
+    
+    // Enhanced customer name extraction
+    const enhancedCustomerName = await enhanceCustomerName(meetingData.customer_name, meetingData.attendees);
+    
+    return {
+      ...meetingData,
+      duration_minutes: enrichedDuration,
+      raw_transcript: enrichedTranscript,
+      customer_id: customerId,
+      customer_name: enhancedCustomerName,
+      data_completeness: {
+        score: completenessScore,
+        missing_fields: getMissingFields(meetingData),
+        enrichment_applied: true,
+        enrichment_timestamp: new Date().toISOString()
+      }
+    };
+    
+  } catch (error) {
+    console.warn('⚠️ Data enrichment failed, using original data:', error.message);
+    return {
+      ...meetingData,
+      customer_id: null,
+      data_completeness: {
+        score: calculateDataCompleteness(meetingData),
+        missing_fields: getMissingFields(meetingData),
+        enrichment_applied: false,
+        enrichment_error: error.message
+      }
+    };
+  }
+}
+
+function calculateDataCompleteness(meetingData) {
+  const requiredFields = [
+    'grain_meeting_id',
+    'title', 
+    'meeting_date',
+    'duration_minutes',
+    'attendees',
+    'raw_transcript',
+    'customer_name'
+  ];
+  
+  const presentFields = requiredFields.filter(field => {
+    const value = meetingData[field];
+    return value !== null && value !== undefined && value !== '' && 
+           (Array.isArray(value) ? value.length > 0 : true);
+  });
+  
+  return Math.round((presentFields.length / requiredFields.length) * 100);
+}
+
+function getMissingFields(meetingData) {
+  const requiredFields = [
+    'duration_minutes',
+    'raw_transcript', 
+    'customer_name',
+    'organizer_email'
+  ];
+  
+  return requiredFields.filter(field => {
+    const value = meetingData[field];
+    return value === null || value === undefined || value === '';
+  });
+}
+
+async function matchOrCreateCustomer(customerName, attendees) {
+  try {
+    if (!customerName || customerName === 'Unknown Customer' || !supabase) {
+      return null;
+    }
+    
+    // First, try to find existing customer by name
+    const { data: existingCustomer } = await supabase
+      .from('customers')
+      .select('id')
+      .ilike('name', customerName)
+      .limit(1)
+      .single();
+    
+    if (existingCustomer) {
+      console.log('✅ Matched existing customer:', customerName);
+      return existingCustomer.id;
+    }
+    
+    // If no match, extract domain from external attendees
+    const externalDomains = attendees
+      .filter(a => a.email && !isInternalEmail(a.email))
+      .map(a => a.email.split('@')[1])
+      .filter(domain => domain);
+    
+    const primaryDomain = externalDomains[0];
+    
+    if (primaryDomain) {
+      // Try to find customer by domain
+      const { data: domainCustomer } = await supabase
+        .from('customers')
+        .select('id')
+        .ilike('domain', primaryDomain)
+        .limit(1)
+        .single();
+      
+      if (domainCustomer) {
+        console.log('✅ Matched customer by domain:', primaryDomain);
+        return domainCustomer.id;
+      }
+      
+      // Create new customer if none found
+      const { data: newCustomer, error } = await supabase
+        .from('customers')
+        .insert({
+          name: customerName,
+          domain: primaryDomain,
+          status: 'active',
+          source: 'grain_meeting',
+          created_at: new Date().toISOString()
+        })
+        .select('id')
+        .single();
+      
+      if (!error && newCustomer) {
+        console.log('✅ Created new customer:', customerName);
+        return newCustomer.id;
+      }
+    }
+    
+    return null;
+    
+  } catch (error) {
+    console.warn('⚠️ Customer matching failed:', error.message);
+    return null;
+  }
+}
+
+function isInternalEmail(email) {
+  const internalDomains = [
+    'company.com',      // Replace with your actual domain
+    'yourdomain.com',   // Replace with your actual domain
+    'marq.com',         // Add your actual company domain
+    'gmail.com'         // Often used for testing
+  ];
+  
+  const domain = email.split('@')[1]?.toLowerCase();
+  return internalDomains.includes(domain);
+}
+
+async function enhanceCustomerName(customerName, attendees) {
+  if (customerName && customerName !== 'Unknown Customer') {
+    return customerName;
+  }
+  
+  // Try to extract company name from external attendee domains
+  const externalAttendees = attendees.filter(a => a.email && !isInternalEmail(a.email));
+  
+  if (externalAttendees.length > 0) {
+    const domain = externalAttendees[0].email.split('@')[1];
+    // Convert domain to company name (e.g., "acme.com" -> "Acme")
+    const companyName = domain.split('.')[0];
+    return companyName.charAt(0).toUpperCase() + companyName.slice(1).toLowerCase();
+  }
+  
+  return customerName;
+}
+
+async function fetchFromGrainApi(grainMeetingId) {
+  try {
+    // This would use Grain's API to fetch additional meeting data
+    // For now, we'll return null since API integration would need API keys
+    console.log('🔗 Grain API fetch not implemented yet for:', grainMeetingId);
+    return null;
+    
+    /*
+    // Example implementation:
+    const response = await fetch(`https://api.grain.co/meetings/${grainMeetingId}`, {
+      headers: {
+        'Authorization': `Bearer ${process.env.GRAIN_API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return {
+        duration_minutes: data.duration ? Math.round(data.duration / 60) : null,
+        transcript: data.transcript
+      };
+    }
+    */
+    
+  } catch (error) {
+    console.warn('⚠️ Grain API fetch failed:', error.message);
+    return null;
+  }
 }
 
 function extractCustomerName(meeting) {
