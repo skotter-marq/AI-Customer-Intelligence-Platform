@@ -1,7 +1,11 @@
-import type { Metadata } from "next";
+'use client';
+
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navigation from "./components/Navigation";
+import { AuthProvider } from "../contexts/AuthContext";
+import AuthGuard from "../components/AuthGuard";
+import { usePathname } from 'next/navigation';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -13,27 +17,35 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "AI Customer Intelligence Platform",
-  description: "Automated content generation and competitive intelligence platform",
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const pathname = usePathname();
+  const isLoginPage = pathname === '/login';
+
   return (
     <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="flex min-h-screen">
-          <Navigation />
-          <main className="flex-1" style={{ marginLeft: '250px' }}>
-            {children}
-          </main>
-        </div>
+        <AuthProvider>
+          {isLoginPage ? (
+            // Login page without AuthGuard or Navigation
+            children
+          ) : (
+            // All other pages with AuthGuard and Navigation
+            <AuthGuard>
+              <div className="flex min-h-screen">
+                <Navigation />
+                <main className="flex-1" style={{ marginLeft: '250px' }}>
+                  {children}
+                </main>
+              </div>
+            </AuthGuard>
+          )}
+        </AuthProvider>
       </body>
     </html>
   );

@@ -89,13 +89,29 @@ interface MeetingDetail {
   confidence_score: number;
   meeting_summary: string;
   full_transcript: string;
+  raw_transcript: string;
   status: string;
   recording_url?: string;
   transcript_url?: string;
   grain_share_url?: string;
   attendees: any[];
+  participants: any[];
   organizer_email: string;
   meeting_type: string;
+  customer_id?: string;
+  data_source?: string;
+  data_summary?: string;
+  summary_points?: Array<{
+    timestamp: number;
+    text: string;
+  }>;
+  intelligence_notes?: string;
+  transcript_urls?: {
+    txt?: string;
+    srt?: string;
+    vtt?: string;
+    json?: string;
+  };
   metadata: any;
 }
 
@@ -168,7 +184,7 @@ export default function MeetingProfilePage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'transcript' | 'actions' | 'analysis'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'transcript' | 'actions' | 'analysis' | 'grain-intelligence'>('overview');
   const [transcriptSearchQuery, setTranscriptSearchQuery] = useState('');
   
   // Coda integration state
@@ -302,6 +318,59 @@ export default function MeetingProfilePage() {
     
     const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
     return text.replace(regex, '<mark style="background-color: #fef08a; padding: 1px 2px;">$1</mark>');
+  };
+
+  // Helper functions for Grain intelligence parsing
+  const extractKeyTakeaways = (intelligenceNotes: string) => {
+    if (!intelligenceNotes) return [];
+    
+    const takeawaysMatch = intelligenceNotes.match(/\*\*Key Takeaways\*\*\s*(.*?)(?:\*\*|$)/s);
+    if (takeawaysMatch) {
+      const takeawaysText = takeawaysMatch[1];
+      const takeaways = takeawaysText.match(/\[(.*?)\]\(.*?\)\s*-\s*(.*?)(?=\n|$)/g);
+      return takeaways ? takeaways.map(item => item.replace(/\[.*?\]\(.*?\)\s*-\s*/, '').trim()) : [];
+    }
+    
+    return [];
+  };
+
+  const extractActionItems = (intelligenceNotes: string) => {
+    if (!intelligenceNotes) return [];
+    
+    const actionItemsMatch = intelligenceNotes.match(/\*\*Action Items\*\*\s*(.*?)(?:\*\*|$)/s);
+    if (actionItemsMatch) {
+      const actionItemsText = actionItemsMatch[1];
+      const actions = actionItemsText.match(/\[(.*?)\]\(.*?\)\s*-\s*(.*?)(?=\n|$)/g);
+      return actions ? actions.map(item => item.replace(/\[.*?\]\(.*?\)\s*-\s*/, '').trim()) : [];
+    }
+    
+    return [];
+  };
+
+  const calculateDataCompleteness = () => {
+    if (!meeting) return { fields: [], completeness: 0, presentCount: 0, totalCount: 0 };
+    
+    const fields = [
+      { key: 'title', label: 'Title', present: !!meeting.title },
+      { key: 'duration', label: 'Duration', present: !!meeting.duration_minutes },
+      { key: 'participants', label: 'Participants', present: (meeting.attendees?.length || meeting.participants?.length || 0) > 0 },
+      { key: 'transcript', label: 'Transcript', present: !!(meeting.raw_transcript || meeting.full_transcript) },
+      { key: 'summary', label: 'AI Summary', present: !!meeting.data_summary },
+      { key: 'intelligence', label: 'Intelligence Notes', present: !!meeting.intelligence_notes },
+      { key: 'customer', label: 'Customer ID', present: !!meeting.customer_id },
+      { key: 'recording', label: 'Recording URL', present: !!(meeting.recording_url || meeting.grain_share_url) }
+    ];
+    
+    const presentCount = fields.filter(f => f.present).length;
+    const completeness = Math.round((presentCount / fields.length) * 100);
+    
+    return { fields, completeness, presentCount, totalCount: fields.length };
+  };
+
+  const formatTimestamp = (timestamp: number) => {
+    const minutes = Math.floor(timestamp / 60000);
+    const seconds = Math.floor((timestamp % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   const createJiraTicketsFromMeeting = async () => {
@@ -618,6 +687,51 @@ export default function MeetingProfilePage() {
                   <span>Share</span>
                 </button>
               )}
+              {/* Transcript Dropdown */}
+              {meeting.transcript_urls && (
+                <div className="relative group">
+                  <button className="calendly-btn-secondary flex items-center space-x-2">
+                    <Download className="w-4 h-4" />
+                    <span>Transcript</span>
+                    <ChevronRight className="w-3 h-3 transform group-hover:rotate-90 transition-transform" />
+                  </button>
+                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
+                    {meeting.transcript_urls.txt && (
+                      <a
+                        href={meeting.transcript_urls.txt}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg"
+                      >
+                        <FileText className="w-4 h-4" />
+                        <span>Plain Text (.txt)</span>
+                      </a>
+                    )}
+                    {meeting.transcript_urls.srt && (
+                      <a
+                        href={meeting.transcript_urls.srt}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      >
+                        <Video className="w-4 h-4" />
+                        <span>Subtitles (.srt)</span>
+                      </a>
+                    )}
+                    {meeting.transcript_urls.vtt && (
+                      <a
+                        href={meeting.transcript_urls.vtt}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 last:rounded-b-lg"
+                      >
+                        <BookOpen className="w-4 h-4" />
+                        <span>WebVTT (.vtt)</span>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
               {!meeting.coda_integrated ? (
                 <button 
                   onClick={() => setShowCodaModal(!showCodaModal)}
@@ -864,50 +978,167 @@ export default function MeetingProfilePage() {
             </div>
           )}
 
-          {/* Meeting Overview Cards */}
+          {/* Data Completeness Widget */}
+          {(() => {
+            const { fields, completeness, presentCount, totalCount } = calculateDataCompleteness();
+            return (
+              <div className="calendly-card mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                      completeness >= 80 ? 'bg-green-100' : 
+                      completeness >= 60 ? 'bg-yellow-100' : 'bg-red-100'
+                    }`}>
+                      <Database className={`w-5 h-5 ${
+                        completeness >= 80 ? 'text-green-600' : 
+                        completeness >= 60 ? 'text-yellow-600' : 'text-red-600'
+                      }`} />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-900">Data Completeness</h3>
+                      <p className="text-sm text-gray-600">{presentCount} of {totalCount} fields populated</p>
+                    </div>
+                  </div>
+                  
+                  <div className="text-right">
+                    <div className={`text-2xl font-bold ${
+                      completeness >= 80 ? 'text-green-600' : 
+                      completeness >= 60 ? 'text-yellow-600' : 'text-red-600'
+                    }`}>
+                      {completeness}%
+                    </div>
+                    <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
+                      <div 
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          completeness >= 80 ? 'bg-green-500' : 
+                          completeness >= 60 ? 'bg-yellow-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${completeness}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Field Breakdown */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {fields.map((field) => (
+                    <div key={field.key} className="flex items-center space-x-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        field.present ? 'bg-green-500' : 'bg-gray-300'
+                      }`} />
+                      <span className={`text-xs ${
+                        field.present ? 'text-gray-900' : 'text-gray-500'
+                      }`}>
+                        {field.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Enhancement Suggestions */}
+                {completeness < 100 && (
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                    <div className="flex items-start space-x-2">
+                      <Lightbulb className="w-4 h-4 text-blue-600 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium text-blue-800">Enhance this meeting:</p>
+                        <ul className="text-xs text-blue-700 mt-1 space-y-1">
+                          {!(meeting.raw_transcript || meeting.full_transcript) && (
+                            <li>• Fetch transcript from Grain for AI analysis</li>
+                          )}
+                          {!meeting.customer_id && (
+                            <li>• Link to customer record for better tracking</li>
+                          )}
+                          {!meeting.intelligence_notes && (
+                            <li>• Enable Grain AI for detailed insights</li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Enhanced Overview Cards with Grain Intelligence */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            {/* Enhanced Duration Card */}
             <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="calendly-label mb-1">Sentiment</p>
+                  <p className="calendly-label mb-1">Duration</p>
                   <div className="flex items-center space-x-2">
-                    {getSentimentIcon(meeting.sentiment_label, meeting.sentiment_score)}
-                    <span className="calendly-h3">{Math.round(meeting.sentiment_score * 100)}%</span>
+                    <Clock className="w-4 h-4 text-blue-500" />
+                    <span className="calendly-h3">{meeting.duration_minutes}m</span>
                   </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {meeting.summary_points?.length || 0} key points
+                  </p>
                 </div>
-                <span className={`calendly-badge ${getSentimentColor(meeting.sentiment_label)}`}>
-                  {meeting.sentiment_label}
+                <span className="calendly-badge calendly-badge-success">
+                  {meeting.duration_minutes > 45 ? 'Detailed' : 'Focused'}
                 </span>
               </div>
             </div>
 
+            {/* Enhanced Participants Card */}
             <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="calendly-label mb-1">Insights</p>
-                  <p className="calendly-h3">{insights.length}</p>
+                  <p className="calendly-label mb-1">Participants</p>
+                  <div className="flex items-center space-x-2">
+                    <Users className="w-4 h-4 text-green-500" />
+                    <span className="calendly-h3">{meeting.attendees?.length || 0}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {meeting.attendees?.filter((a: any) => a.scope === 'external').length || 0} external,{' '}
+                    {meeting.attendees?.filter((a: any) => a.scope === 'internal').length || 0} internal
+                  </p>
                 </div>
-                <Lightbulb className="w-8 h-8 text-yellow-500" />
+                <div className="text-right">
+                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <Building className="w-4 h-4 text-green-600" />
+                  </div>
+                </div>
               </div>
             </div>
 
+            {/* NEW: Grain Intelligence Card */}
             <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="calendly-label mb-1">Action Items</p>
-                  <p className="calendly-h3">{actionItems.length}</p>
+                  <p className="calendly-label mb-1">AI Insights</p>
+                  <div className="flex items-center space-x-2">
+                    <Bot className="w-4 h-4 text-purple-500" />
+                    <span className="calendly-h3">{meeting.intelligence_notes ? 'Rich' : 'Basic'}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {meeting.intelligence_notes ? 'Action items detected' : 'Processing...'}
+                  </p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-blue-500" />
+                <span className={`calendly-badge ${meeting.intelligence_notes ? 'calendly-badge-success' : 'calendly-badge-warning'}`}>
+                  {meeting.intelligence_notes ? 'Complete' : 'Pending'}
+                </span>
               </div>
             </div>
 
+            {/* Enhanced Customer Card */}
             <div className="calendly-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="calendly-label mb-1">Feature Requests</p>
-                  <p className="calendly-h3">{featureRequests.length}</p>
+                  <p className="calendly-label mb-1">Customer</p>
+                  <div className="flex items-center space-x-2">
+                    <Building className="w-4 h-4 text-orange-500" />
+                    <span className="calendly-h3 text-sm">{meeting.customer_name || 'Unknown'}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {meeting.attendees?.filter((a: any) => a.scope === 'external')[0]?.email?.split('@')[1] || 'N/A'}
+                  </p>
                 </div>
-                <Star className="w-8 h-8 text-purple-500" />
+                <span className={`calendly-badge ${meeting.customer_id ? 'calendly-badge-success' : 'calendly-badge-info'}`}>
+                  {meeting.customer_id ? 'Linked' : 'Detected'}
+                </span>
               </div>
             </div>
           </div>
@@ -918,6 +1149,7 @@ export default function MeetingProfilePage() {
             <div className="flex border-b border-gray-200">
               {[
                 { id: 'overview', label: 'Overview', icon: Eye },
+                { id: 'grain-intelligence', label: 'Grain Intelligence', icon: Bot },
                 { id: 'insights', label: 'Insights', icon: Lightbulb },
                 { id: 'transcript', label: 'Transcript', icon: FileText },
                 { id: 'actions', label: 'Actions', icon: CheckCircle },
@@ -1014,22 +1246,106 @@ export default function MeetingProfilePage() {
                   </div>
                 </div>
 
-                {/* Attendees */}
+                {/* Enhanced Attendees Section with Rich Participant Data */}
                 <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">Attendees ({meeting.attendees.length})</h3>
+                  <h3 className="calendly-h3 mb-4">
+                    Participants ({meeting.attendees?.length || 0})
+                  </h3>
+                  
+                  {/* Participant Summary */}
+                  <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">Internal Team</p>
+                      <p className="text-xl font-bold text-blue-600">
+                        {meeting.attendees?.filter((a: any) => a.scope === 'internal').length || 0}
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm text-gray-600">External Stakeholders</p>
+                      <p className="text-xl font-bold text-green-600">
+                        {meeting.attendees?.filter((a: any) => a.scope === 'external').length || 0}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Participant List */}
                   <div className="space-y-3">
-                    {meeting.attendees.map((attendee, idx) => (
-                      <div key={idx} className="flex items-center space-x-3">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                          <User className="w-4 h-4 text-blue-600" />
+                    {meeting.attendees?.map((attendee: any, idx: number) => (
+                      <div key={idx} className="flex items-center justify-between p-3 rounded-lg border">
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                            attendee.scope === 'internal' 
+                              ? 'bg-blue-100 text-blue-600' 
+                              : 'bg-green-100 text-green-600'
+                          }`}>
+                            {attendee.scope === 'internal' ? (
+                              <User className="w-5 h-5" />
+                            ) : (
+                              <Building className="w-5 h-5" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{attendee.name}</p>
+                            <p className="text-sm text-gray-600">{attendee.email}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="font-medium">{attendee.name}</p>
-                          <p className="text-sm text-gray-600">{attendee.role || attendee.email}</p>
+                        
+                        <div className="flex items-center space-x-2">
+                          {/* Attendance Status */}
+                          {attendee.confirmed_attendee && (
+                            <div className="w-3 h-3 bg-green-500 rounded-full" title="Confirmed Attendee" />
+                          )}
+                          
+                          {/* Role Badge */}
+                          <span className={`calendly-badge text-xs ${
+                            attendee.scope === 'internal' 
+                              ? 'calendly-badge-info' 
+                              : 'calendly-badge-success'
+                          }`}>
+                            {attendee.scope === 'internal' ? 'Team' : 'Customer'}
+                          </span>
+                          
+                          {/* Primary Contact Indicator */}
+                          {attendee.role === 'host' && (
+                            <span className="calendly-badge calendly-badge-warning text-xs">
+                              Host
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
                   </div>
+
+                  {/* Customer Contact Actions */}
+                  {meeting.attendees?.filter((a: any) => a.scope === 'external').length > 0 && (
+                    <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <Mail className="w-4 h-4 text-green-600" />
+                          <span className="text-sm font-medium text-green-800">Customer Contacts</span>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            onClick={() => {
+                              const emails = meeting.attendees
+                                ?.filter((a: any) => a.scope === 'external')
+                                .map((a: any) => a.email)
+                                .join(';');
+                              window.open(`mailto:${emails}?subject=Follow-up: ${meeting.title}`);
+                            }}
+                            className="text-xs text-green-600 hover:text-green-800 flex items-center space-x-1"
+                          >
+                            <Mail className="w-3 h-3" />
+                            <span>Email All</span>
+                          </button>
+                          <button className="text-xs text-green-600 hover:text-green-800 flex items-center space-x-1">
+                            <User className="w-3 h-3" />
+                            <span>Add to CRM</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1542,6 +1858,161 @@ export default function MeetingProfilePage() {
                         {Math.round((insights.length + actionItems.length + featureRequests.length * 2) / 3 * 10)}
                       </span>
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* New Grain Intelligence Tab Content */}
+          {activeTab === 'grain-intelligence' && (
+            <div className="space-y-6">
+              {/* Grain Summary */}
+              {meeting.data_summary && (
+                <div className="calendly-card">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Bot className="w-5 h-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="calendly-h3">AI-Generated Summary</h3>
+                      <p className="text-sm text-gray-600">Powered by Grain Intelligence</p>
+                    </div>
+                  </div>
+                  <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
+                    <p className="text-blue-800 leading-relaxed">{meeting.data_summary}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Summary Points Timeline */}
+              {meeting.summary_points && meeting.summary_points.length > 0 && (
+                <div className="calendly-card">
+                  <h3 className="calendly-h3 mb-4">Key Moments Timeline</h3>
+                  <div className="space-y-4">
+                    {meeting.summary_points.map((point, index) => (
+                      <div key={index} className="flex items-start space-x-4">
+                        <div className="flex-shrink-0 w-16 text-right">
+                          <span className="text-xs text-gray-500 font-mono">
+                            {formatTimestamp(point.timestamp)}
+                          </span>
+                        </div>
+                        <div className="flex-shrink-0 w-3 h-3 bg-blue-500 rounded-full mt-2"></div>
+                        <div className="flex-1">
+                          <p className="text-gray-800 leading-relaxed">{point.text}</p>
+                          {meeting.grain_share_url && (
+                            <button
+                              onClick={() => window.open(`${meeting.grain_share_url}?t=${point.timestamp}`, '_blank')}
+                              className="text-blue-600 hover:text-blue-800 text-xs mt-1 flex items-center space-x-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              <span>Jump to moment</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Grain Intelligence Notes */}
+              {meeting.intelligence_notes && (
+                <div className="space-y-6">
+                  {/* Key Takeaways */}
+                  <div className="calendly-card">
+                    <h3 className="calendly-h3 mb-4">Key Takeaways</h3>
+                    <div className="space-y-3">
+                      {extractKeyTakeaways(meeting.intelligence_notes).map((takeaway, index) => (
+                        <div key={index} className="border-l-4 border-green-400 bg-green-50 p-4 rounded-r-lg">
+                          <div className="flex items-start space-x-3">
+                            <Lightbulb className="w-5 h-5 text-green-600 mt-0.5" />
+                            <p className="text-green-800 leading-relaxed">{takeaway}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Action Items from Grain */}
+                  <div className="calendly-card">
+                    <h3 className="calendly-h3 mb-4">Action Items (Grain AI)</h3>
+                    <div className="space-y-3">
+                      {extractActionItems(meeting.intelligence_notes).map((action, index) => (
+                        <div key={index} className="border-l-4 border-orange-400 bg-orange-50 p-4 rounded-r-lg">
+                          <div className="flex items-start space-x-3">
+                            <CheckCircle className="w-5 h-5 text-orange-600 mt-0.5" />
+                            <div className="flex-1">
+                              <p className="text-orange-800 leading-relaxed">{action}</p>
+                              <div className="mt-2 flex items-center space-x-2">
+                                <span className="calendly-badge calendly-badge-warning text-xs">Pending</span>
+                                <button className="text-xs text-orange-600 hover:text-orange-800">
+                                  Create JIRA Ticket
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Implementation Details */}
+                  <div className="calendly-card">
+                    <h3 className="calendly-h3 mb-4">Implementation Details</h3>
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <div className="prose prose-sm max-w-none">
+                        <div dangerouslySetInnerHTML={{ __html: meeting.intelligence_notes.replace(/\*\*/g, '<strong>').replace(/\n/g, '<br/>') }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Meeting Health Score */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="calendly-card">
+                  <h4 className="font-medium text-gray-900 mb-3">Engagement Level</h4>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full"
+                        style={{ width: `${Math.min(100, (meeting.summary_points?.length || 0) * 25)}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-green-600">
+                      {Math.min(100, (meeting.summary_points?.length || 0) * 25)}%
+                    </span>
+                  </div>
+                </div>
+
+                <div className="calendly-card">
+                  <h4 className="font-medium text-gray-900 mb-3">Content Richness</h4>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full"
+                        style={{ width: `${meeting.intelligence_notes ? 90 : 30}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-blue-600">
+                      {meeting.intelligence_notes ? '90%' : '30%'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="calendly-card">
+                  <h4 className="font-medium text-gray-900 mb-3">Follow-up Priority</h4>
+                  <div className="flex items-center space-x-3">
+                    <div className="flex-1 bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-orange-500 h-2 rounded-full"
+                        style={{ width: `${meeting.intelligence_notes?.toLowerCase().includes('contract') ? 95 : 60}%` }}
+                      />
+                    </div>
+                    <span className="text-sm font-medium text-orange-600">
+                      {meeting.intelligence_notes?.toLowerCase().includes('contract') ? 'High' : 'Medium'}
+                    </span>
                   </div>
                 </div>
               </div>

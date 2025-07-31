@@ -12,10 +12,14 @@ import {
   Users,
   FolderOpen,
   Tag,
-  ArrowLeft,
-  CheckCircle
+  CheckCircle,
+  Globe,
+  Target,
+  Copy,
+  ExternalLink
 } from 'lucide-react';
 import Breadcrumb from '../../components/Breadcrumb';
+import MultiSelect from './components/MultiSelect';
 
 interface JIRAFilter {
   id: string;
@@ -30,6 +34,9 @@ interface JIRAFilter {
   labels: string[];
   notificationTemplate: string;
   slackChannel: string;
+  // Essential filtering options
+  customerFacingOnly: boolean;
+  changelogCategory: 'Added' | 'Fixed' | 'Changed' | 'Deprecated' | 'Removed';
 }
 
 export default function JIRAFiltersPage() {
@@ -38,6 +45,14 @@ export default function JIRAFiltersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  
+  // JIRA metadata state
+  const [jiraMetadata, setJiraMetadata] = useState<any>(null);
+  const [metadataLoading, setMetadataLoading] = useState(true);
+  
+  // Slack channels state
+  const [slackChannels, setSlackChannels] = useState<any[]>([]);
+  const [slackLoading, setSlackLoading] = useState(true);
 
   const breadcrumbItems = [
     { label: 'Admin Settings', href: '/admin/settings' },
@@ -46,7 +61,57 @@ export default function JIRAFiltersPage() {
 
   useEffect(() => {
     loadFilters();
+    loadJiraMetadata();
+    loadSlackChannels();
   }, []);
+
+  const loadJiraMetadata = async () => {
+    try {
+      console.log('🔍 Loading JIRA metadata...');
+      const response = await fetch('/api/jira/metadata');
+      const data = await response.json();
+      
+      if (data.success) {
+        setJiraMetadata(data.data);
+        console.log('✅ JIRA metadata loaded:', Object.keys(data.data));
+      } else {
+        console.warn('⚠️ Using fallback metadata:', data.error);
+        setJiraMetadata(data.data); // Fallback data
+      }
+    } catch (error) {
+      console.error('❌ Failed to load JIRA metadata:', error);
+      // Set minimal fallback data
+      setJiraMetadata({
+        projects: [],
+        statuses: [],
+        issueTypes: [],
+        priorities: [],
+        users: [],
+        customFields: [],
+        statusCategories: []
+      });
+    } finally {
+      setMetadataLoading(false);
+    }
+  };
+
+  const loadSlackChannels = async () => {
+    try {
+      console.log('🔍 Loading Slack channels...');
+      const response = await fetch('/api/slack/channels');
+      const data = await response.json();
+      
+      if (data.success || data.data) {
+        setSlackChannels(data.data);
+        console.log('✅ Slack channels loaded:', data.data.length);
+      }
+    } catch (error) {
+      console.error('❌ Failed to load Slack channels:', error);
+      setSlackChannels([]);
+    } finally {
+      setSlackLoading(false);
+    }
+  };
 
   const loadFilters = async () => {
     try {
@@ -65,21 +130,10 @@ export default function JIRAFiltersPage() {
           assignees: [],
           labels: ['customer-facing', 'product-update'],
           notificationTemplate: 'product-update-notification',
-          slackChannel: '#product-updates'
-        },
-        {
-          id: 'customer-requests',
-          name: 'Customer Requests',
-          description: 'Notify when customer-requested features are completed',
-          enabled: true,
-          projects: ['PRESS', 'SUPPORT'],
-          teams: ['Engineering', 'Customer Success'],
-          statuses: ['Done', 'Resolved'],
-          issueTypes: ['Story', 'Bug', 'Task'],
-          assignees: [],
-          labels: ['customer-request', 'urgent'],
-          notificationTemplate: 'customer-insight-alert',
-          slackChannel: '#customer-insights'
+          slackChannel: '#product-updates',
+          // Essential fields
+          customerFacingOnly: true,
+          changelogCategory: 'Added'
         }
       ];
       
@@ -126,7 +180,10 @@ export default function JIRAFiltersPage() {
       assignees: [],
       labels: [],
       notificationTemplate: 'product-update-notification',
-      slackChannel: '#product-updates'
+      slackChannel: '#product-updates',
+      // Essential field defaults
+      customerFacingOnly: true,
+      changelogCategory: 'Added'
     };
     
     setFilters([...filters, newFilter]);
@@ -150,7 +207,7 @@ export default function JIRAFiltersPage() {
     updateFilter(filterId, { [field]: newArray });
   };
 
-  if (loading) {
+  if (loading || metadataLoading || slackLoading) {
     return (
       <div className="min-h-screen pt-4" style={{ background: '#f8fafc' }}>
         <div className="p-4">
@@ -159,7 +216,7 @@ export default function JIRAFiltersPage() {
             <div className="flex items-center justify-center py-12">
               <div className="text-center">
                 <Settings className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
-                <p className="calendly-body text-gray-600">Loading JIRA filters...</p>
+                <p className="calendly-body text-gray-600">Loading JIRA filters, workspace data, and Slack channels...</p>
               </div>
             </div>
           </div>
@@ -177,9 +234,9 @@ export default function JIRAFiltersPage() {
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h1 className="calendly-h2">JIRA Notification Filters</h1>
+              <h1 className="calendly-h2">JIRA Webhook Filters</h1>
               <p className="calendly-body text-gray-600 mt-2">
-                Configure which JIRA updates trigger Slack notifications based on projects, teams, status, and more.
+                Control which completed JIRA stories trigger changelog entries and Slack notifications.
               </p>
             </div>
             <div className="flex items-center space-x-3">
@@ -205,6 +262,7 @@ export default function JIRAFiltersPage() {
             </div>
           </div>
 
+
           {/* Success/Error Message */}
           {message && (
             <div className={`mb-6 p-4 rounded-lg border flex items-center space-x-3 ${
@@ -225,9 +283,10 @@ export default function JIRAFiltersPage() {
           <div className="space-y-6">
             {filters.map((filter) => (
               <div key={filter.id} className="calendly-card">
+                  {/* Filter Header */}
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
-                    <Filter className="w-5 h-5 text-blue-600" />
+                    <div className={`w-3 h-3 rounded-full ${filter.enabled ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                     <input
                       type="text"
                       value={filter.name}
@@ -253,7 +312,8 @@ export default function JIRAFiltersPage() {
                   </button>
                 </div>
 
-                <div className="mb-4">
+                {/* Description & Webhook URL */}
+                <div className="mb-6 space-y-3">
                   <textarea
                     value={filter.description}
                     onChange={(e) => updateFilter(filter.id, { description: e.target.value })}
@@ -261,117 +321,226 @@ export default function JIRAFiltersPage() {
                     rows={2}
                     placeholder="Description of when this filter should trigger notifications"
                   />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Projects */}
-                  <div>
-                    <label className="flex items-center space-x-2 mb-2">
-                      <FolderOpen className="w-4 h-4 text-gray-600" />
-                      <span className="calendly-label font-medium">Projects</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={filter.projects.join(', ')}
-                      onChange={(e) => updateArrayField(filter.id, 'projects', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
-                      placeholder="PRESS, PROD, SUPPORT"
-                    />
-                  </div>
-
-                  {/* Teams */}
-                  <div>
-                    <label className="flex items-center space-x-2 mb-2">
-                      <Users className="w-4 h-4 text-gray-600" />
-                      <span className="calendly-label font-medium">Teams</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={filter.teams.join(', ')}
-                      onChange={(e) => updateArrayField(filter.id, 'teams', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
-                      placeholder="Engineering, Product, Design"
-                    />
-                  </div>
-
-                  {/* Statuses */}
-                  <div>
-                    <label className="flex items-center space-x-2 mb-2">
-                      <CheckCircle className="w-4 h-4 text-gray-600" />
-                      <span className="calendly-label font-medium">Trigger Statuses</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={filter.statuses.join(', ')}
-                      onChange={(e) => updateArrayField(filter.id, 'statuses', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
-                      placeholder="Done, Deployed, Released"
-                    />
-                  </div>
-
-                  {/* Issue Types */}
-                  <div>
-                    <label className="flex items-center space-x-2 mb-2">
-                      <Tag className="w-4 h-4 text-gray-600" />
-                      <span className="calendly-label font-medium">Issue Types</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={filter.issueTypes.join(', ')}
-                      onChange={(e) => updateArrayField(filter.id, 'issueTypes', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
-                      placeholder="Story, Feature, Epic, Bug"
-                    />
-                  </div>
-
-                  {/* Labels */}
-                  <div>
-                    <label className="flex items-center space-x-2 mb-2">
-                      <Tag className="w-4 h-4 text-gray-600" />
-                      <span className="calendly-label font-medium">Required Labels</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={filter.labels.join(', ')}
-                      onChange={(e) => updateArrayField(filter.id, 'labels', e.target.value)}
-                      className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
-                      placeholder="customer-facing, product-update, urgent"
-                    />
-                  </div>
-
-                  {/* Slack Channel */}
-                  <div>
-                    <label className="flex items-center space-x-2 mb-2">
-                      <span className="calendly-label font-medium">Slack Channel</span>
-                    </label>
-                    <select
-                      value={filter.slackChannel}
-                      onChange={(e) => updateFilter(filter.id, { slackChannel: e.target.value })}
-                      className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
-                    >
-                      <option value="#product-updates">#product-updates</option>
-                      <option value="#customer-insights">#customer-insights</option>
-                      <option value="#content-approvals">#content-approvals</option>
-                      <option value="#content-pipeline">#content-pipeline</option>
-                    </select>
+                  
+                  {/* Webhook URL */}
+                  <div className="bg-gray-50 rounded-lg p-3 border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700 flex items-center space-x-2">
+                        <ExternalLink className="w-4 h-4" />
+                        <span>Webhook Endpoint</span>
+                      </span>
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText('https://customer-intelligence-platform-skotter-1947s-projects.vercel.app/api/jira-webhook');
+                          // Could add a toast notification here
+                        }}
+                        className="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                        title="Copy webhook URL"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <code className="text-xs text-gray-600 bg-white px-2 py-1 rounded border font-mono break-all">
+                      https://customer-intelligence-platform-skotter-1947s-projects.vercel.app/api/jira-webhook
+                    </code>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Configure this URL in your JIRA webhook settings or Zapier integration
+                    </p>
                   </div>
                 </div>
 
-                {/* Notification Template */}
-                <div className="mt-4">
-                  <label className="flex items-center space-x-2 mb-2">
-                    <span className="calendly-label font-medium">Notification Template</span>
-                  </label>
-                  <select
-                    value={filter.notificationTemplate}
-                    onChange={(e) => updateFilter(filter.id, { notificationTemplate: e.target.value })}
-                    className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
-                  >
-                    <option value="product-update-notification">Product Update Published</option>
-                    <option value="customer-insight-alert">Customer Insight Alert</option>
-                    <option value="approval-request">Content Approval Request</option>
-                    <option value="daily-summary">Daily Summary</option>
-                  </select>
+                {/* Filter Criteria */}
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-4 flex items-center space-x-2">
+                    <Filter className="w-4 h-4" />
+                    <span>Filter Criteria</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Projects */}
+                    <div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <FolderOpen className="w-4 h-4 text-gray-600" />
+                        <span className="calendly-label font-medium">Projects</span>
+                      </label>
+                      <MultiSelect
+                        options={jiraMetadata?.projects?.map((p: any) => ({
+                          value: p.key,
+                          label: `${p.key} - ${p.name}`,
+                          description: p.projectTypeKey
+                        })) || []}
+                        selected={filter.projects}
+                        onChange={(selected) => updateFilter(filter.id, { projects: selected })}
+                        placeholder="Select projects..."
+                      />
+                    </div>
+
+                    {/* Teams/Components */}
+                    <div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <Users className="w-4 h-4 text-gray-600" />
+                        <span className="calendly-label font-medium">Product Teams</span>
+                      </label>
+                      <MultiSelect
+                        options={jiraMetadata?.components?.map((comp: string) => ({
+                          value: comp,
+                          label: comp,
+                          description: `${comp} team`
+                        })) || []}
+                        selected={filter.teams}
+                        onChange={(selected) => updateFilter(filter.id, { teams: selected })}
+                        placeholder="Select product teams..."
+                      />
+                    </div>
+
+                    {/* Issue Types */}
+                    <div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <Tag className="w-4 h-4 text-gray-600" />
+                        <span className="calendly-label font-medium">Issue Types</span>
+                      </label>
+                      <MultiSelect
+                        options={jiraMetadata?.issueTypes?.map((it: any) => ({
+                          value: it.name,
+                          label: it.name,
+                          description: it.description,
+                          iconUrl: it.iconUrl
+                        })) || []}
+                        selected={filter.issueTypes}
+                        onChange={(selected) => updateFilter(filter.id, { issueTypes: selected })}
+                        placeholder="Select issue types..."
+                      />
+                    </div>
+
+                    {/* Labels */}
+                    <div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <Tag className="w-4 h-4 text-gray-600" />
+                        <span className="calendly-label font-medium">Required Labels</span>
+                      </label>
+                      <MultiSelect
+                        options={jiraMetadata?.labels?.map((label: string) => ({
+                          value: label,
+                          label: label,
+                          description: `Filter by ${label} label`
+                        })) || []}
+                        selected={filter.labels}
+                        onChange={(selected) => updateFilter(filter.id, { labels: selected })}
+                        placeholder="Select labels..."
+                        maxDisplayed={5}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trigger Conditions */}
+                <div className="mb-6">
+                  <h4 className="font-medium text-gray-900 mb-4 flex items-center space-x-2">
+                    <Target className="w-4 h-4" />
+                    <span>Trigger Conditions</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* When Status Changes To */}
+                    <div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <CheckCircle className="w-4 h-4 text-gray-600" />
+                        <span className="calendly-label font-medium">When Status Changes To</span>
+                      </label>
+                      <MultiSelect
+                        options={jiraMetadata?.statuses?.filter((status: any) => status.statusCategory.key === 'done')?.map((status: any) => ({
+                          value: status.name,
+                          label: status.name,
+                          description: status.description || 'Completion status'
+                        })) || [
+                          { value: 'Done', label: 'Done', description: 'Story completed' },
+                          { value: 'Closed', label: 'Closed', description: 'Issue closed' },
+                          { value: 'Deployed', label: 'Deployed', description: 'Feature deployed' },
+                          { value: 'Released', label: 'Released', description: 'Feature released' }
+                        ]}
+                        selected={filter.statuses}
+                        onChange={(selected) => updateFilter(filter.id, { statuses: selected })}
+                        placeholder="Select completion statuses..."
+                      />
+                    </div>
+
+                    {/* Customer Facing + Changelog Category */}
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        <Globe className="w-5 h-5 text-blue-600" />
+                        <div className="flex-1">
+                          <label className="flex items-center space-x-2">
+                            <input
+                              type="checkbox"
+                              checked={filter.customerFacingOnly}
+                              onChange={(e) => updateFilter(filter.id, { customerFacingOnly: e.target.checked })}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <span className="calendly-label font-medium text-blue-800">Customer Facing Only</span>
+                          </label>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <label className="calendly-label font-medium mb-2 block">Changelog Category</label>
+                        <select
+                          value={filter.changelogCategory}
+                          onChange={(e) => updateFilter(filter.id, { changelogCategory: e.target.value as any })}
+                          className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
+                        >
+                          <option value="Added">Added</option>
+                          <option value="Fixed">Fixed</option>
+                          <option value="Changed">Changed</option>
+                          <option value="Deprecated">Deprecated</option>
+                          <option value="Removed">Removed</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+
+                {/* Notification Settings */}
+                <div className="mb-4">
+                  <h4 className="font-medium text-gray-900 mb-4 flex items-center space-x-2">
+                    <Settings className="w-4 h-4" />
+                    <span>Notification Settings</span>
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Slack Channel */}
+                    <div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <span className="calendly-label font-medium">Slack Channel</span>
+                      </label>
+                      <select
+                        value={filter.slackChannel}
+                        onChange={(e) => updateFilter(filter.id, { slackChannel: e.target.value })}
+                        className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
+                      >
+                        {slackChannels.map((channel) => (
+                          <option key={channel.id} value={channel.name}>
+                            {channel.name}
+                            {channel.purpose && ` - ${channel.purpose}`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Notification Template */}
+                    <div>
+                      <label className="flex items-center space-x-2 mb-2">
+                        <span className="calendly-label font-medium">Notification Template</span>
+                      </label>
+                      <select
+                        value={filter.notificationTemplate}
+                        onChange={(e) => updateFilter(filter.id, { notificationTemplate: e.target.value })}
+                        className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
+                      >
+                        <option value="slack-jira-story-completed">JIRA Story Completed</option>
+                        <option value="product-update-notification">Product Update Published</option>
+                        <option value="customer-insight-alert">Customer Insight Alert</option>
+                        <option value="approval-request">Content Approval Request</option>
+                        <option value="daily-summary">Daily Summary</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

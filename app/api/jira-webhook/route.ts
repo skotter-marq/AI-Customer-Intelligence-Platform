@@ -185,7 +185,37 @@ function shouldProcessWebhook(payload: JiraWebhookPayload): boolean {
       return false;
     });
     
-    return Boolean(statusChanges && statusChanges.length > 0);
+    // If we have changelog data, use it
+    if (payload.changelog?.items?.length) {
+      return Boolean(statusChanges && statusChanges.length > 0);
+    }
+    
+    // ZAPIER FALLBACK: No changelog data (common with Zapier)
+    // Check current status directly - this is safe because:
+    // 1. We still check for customer-facing flag
+    // 2. We still check for duplicates in the database
+    console.log('📦 Zapier webhook detected (no changelog), checking current status');
+    
+    const currentStatusCategory = payload.issue?.fields?.status?.statusCategory?.key;
+    const currentStatusName = payload.issue?.fields?.status?.name?.toLowerCase() || '';
+    
+    // Check if current status is "done" category
+    if (currentStatusCategory === 'done') {
+      console.log('✅ Current status is in done category:', payload.issue.fields.status.name);
+      return true;
+    }
+    
+    // Fallback: Check specific status names
+    const doneStatuses = ['done', 'deployed', 'released', 'closed', 'resolved', 'completed'];
+    const isCurrentStatusDone = doneStatuses.some(status => currentStatusName.includes(status));
+    
+    if (isCurrentStatusDone) {
+      console.log('✅ Current status is done state:', payload.issue.fields.status.name);
+      return true;
+    }
+    
+    console.log('⏭️ Current status is not done:', payload.issue.fields.status.name);
+    return false;
   }
   
   // Don't process new issues automatically - only status changes to done

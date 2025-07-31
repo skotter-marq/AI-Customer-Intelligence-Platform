@@ -20,6 +20,8 @@ import {
   ChevronDown,
   LogOut,
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import UserMenu from '../../components/UserMenu';
 
 interface NavigationItem {
   href: string;
@@ -30,9 +32,8 @@ interface NavigationItem {
 
 export default function Navigation() {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+  const { hasPermission } = useAuth();
   const pathname = usePathname();
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Update the main content margin when sidebar state changes
   useEffect(() => {
@@ -42,19 +43,6 @@ export default function Navigation() {
     }
   }, [isCollapsed]);
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsProfileDropdownOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   const navigationItems: NavigationItem[] = [
     { 
@@ -167,6 +155,11 @@ export default function Navigation() {
       {/* Navigation Items */}
       <nav className="flex-1 px-4 py-5 space-y-2">
         {navigationItems.map((item) => {
+          // Check if user has permission to access this route
+          if (!hasPermission(item.href)) {
+            return null;
+          }
+
           const Icon = item.icon;
           const isActive = isActiveRoute(item.href);
           
@@ -211,49 +204,13 @@ export default function Navigation() {
 
       {/* User Profile Section */}
       <div className="border-t" style={{ borderColor: '#f1f5f9' }}>
-        <div className="relative" ref={dropdownRef}>
-          <button
-            onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
-            className={`w-full p-5 flex items-center ${isCollapsed ? 'justify-center' : 'space-x-3'} hover:bg-gray-50 transition-colors`}
-          >
+        <div className={`p-5 ${isCollapsed ? 'flex justify-center' : ''}`}>
+          {isCollapsed ? (
             <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ background: '#e2e8f0' }}>
               <User className="w-4 h-4" style={{ color: '#718096' }} />
             </div>
-            {!isCollapsed && (
-              <>
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="calendly-body-sm font-medium truncate" style={{ color: '#1a1a1a', marginBottom: '2px' }}>User Account</p>
-                  <p className="calendly-label-sm truncate">admin@company.com</p>
-                </div>
-                <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
-              </>
-            )}
-          </button>
-
-          {/* Dropdown Menu */}
-          {isProfileDropdownOpen && !isCollapsed && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-              <div className="py-2">
-                <Link
-                  href="/admin/settings"
-                  className="flex items-center px-4 py-3 hover:bg-gray-50 transition-colors"
-                  onClick={() => setIsProfileDropdownOpen(false)}
-                >
-                  <Settings className="w-4 h-4 text-gray-500 mr-3" />
-                  <span className="calendly-body-sm">Admin Settings</span>
-                </Link>
-                <button
-                  className="w-full flex items-center px-4 py-3 hover:bg-gray-50 transition-colors text-left"
-                  onClick={() => {
-                    setIsProfileDropdownOpen(false);
-                    // Add logout logic here
-                  }}
-                >
-                  <LogOut className="w-4 h-4 text-gray-500 mr-3" />
-                  <span className="calendly-body-sm">Sign Out</span>
-                </button>
-              </div>
-            </div>
+          ) : (
+            <UserMenu />
           )}
         </div>
       </div>

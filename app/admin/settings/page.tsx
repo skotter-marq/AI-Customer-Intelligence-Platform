@@ -58,6 +58,7 @@ export default function AdminSettingsPage() {
           id: 'webhook-config',
           label: 'Webhook Configuration',
           description: 'Manage JIRA and other webhook integrations',
+          href: '/admin/webhook-config',
           icon: Webhook,
           status: 'active'
         },
@@ -123,8 +124,9 @@ export default function AdminSettingsPage() {
           id: 'user-management',
           label: 'User Management',
           description: 'Add, remove, and manage user accounts',
+          href: '/admin/users',
           icon: Users,
-          status: 'pending'
+          status: 'active'
         },
         {
           id: 'api-keys',
