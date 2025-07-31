@@ -85,28 +85,8 @@ export async function POST(request: Request) {
       });
     }
 
-    // Check if story is marked as "Customer Facing"
-    const isCustomerFacing = isStoryCustomerFacing(payload.issue);
-    
-    // Enhanced debugging for customer-facing detection
-    console.log('🔍 Customer-facing check:', {
-      issueKey: payload.issue.key,
-      customField10000: payload.issue.fields.customfield_10000,
-      labels: payload.issue.fields.labels,
-      components: payload.issue.fields.components?.map(c => c.name),
-      isCustomerFacing
-    });
-    
-    if (!isCustomerFacing) {
-      console.log('📝 Story not marked as customer facing, but processing anyway for debugging');
-      // Temporarily skip the customer-facing check to see the full payload
-      // return NextResponse.json({ 
-      //   success: true, 
-      //   message: 'Story not customer facing' 
-      // });
-    }
-
-    console.log('🎯 Processing customer-facing story:', payload.issue.key);
+    // Customer-facing check removed - process all completed stories
+    console.log('🎯 Processing story (customer-facing check disabled):', payload.issue.key);
     
     // Check if we've already processed this story to prevent duplicates
     const alreadyProcessed = await checkIfAlreadyProcessed(payload.issue.key);
