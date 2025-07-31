@@ -35,7 +35,7 @@ export async function GET(request: Request) {
     const timeRange = searchParams.get('timeRange');
     const status = searchParams.get('status'); // 'pending', 'approved', 'published', 'all'
 
-    // Fetch real data from Supabase
+    // Fetch real data from Supabase - get all changelog entries
     let query = supabase
       .from('generated_content')
       .select('*')
@@ -206,33 +206,45 @@ export async function GET(request: Request) {
     }
 
     // Transform database results to match frontend interface
-    const transformedEntries = (entries || []).map((entry: any) => ({
-      id: entry.id,
-      content_title: entry.content_title,
-      generated_content: entry.generated_content,
-      content_type: 'changelog_entry',
-      target_audience: entry.target_audience || 'customers',
-      status: entry.status,
-      approval_status: entry.approval_status,
-      quality_score: entry.quality_score || 0.85,
-      published_at: entry.release_date || entry.created_at,
-      tldr_summary: entry.tldr_summary || entry.content_title,
-      tldr_bullet_points: entry.tldr_bullet_points || [],
-      update_category: entry.update_category,
-      layout_template: entry.layout_template || 'standard',
-      importance_score: entry.importance_score || 0.7,
-      breaking_changes: entry.breaking_changes || false,
-      migration_notes: entry.migration_notes,
-      affected_users: entry.affected_users,
-      tags: entry.tags || [],
-      is_public: entry.is_public || false,
-      public_changelog_visible: entry.public_changelog_visible || false,
-      version: entry.version,
-      release_date: entry.release_date,
-      created_at: entry.created_at,
-      updated_at: entry.updated_at,
-      metadata: entry.metadata || {}
-    }));
+    const transformedEntries = (entries || []).map((entry: any) => {
+      // Extract data from source_data JSONB field if it exists
+      const sourceData = entry.source_data || {};
+      
+      return {
+        id: entry.id,
+        content_title: entry.content_title,
+        generated_content: entry.generated_content,
+        content_type: 'changelog_entry',
+        target_audience: entry.target_audience || 'customers',
+        status: entry.status || 'draft',
+        approval_status: entry.status || 'pending', // Map status to approval_status
+        quality_score: entry.quality_score || 0.85,
+        published_at: entry.release_date || entry.created_at,
+        tldr_summary: entry.content_title, // Use title as summary for now
+        tldr_bullet_points: sourceData.highlights || [],
+        update_category: sourceData.category?.toLowerCase() || 'feature_update',
+        layout_template: entry.layout_template || 'standard',
+        importance_score: entry.importance_score || 0.7,
+        breaking_changes: sourceData.breaking_changes || false,
+        migration_notes: sourceData.migration_notes,
+        affected_users: sourceData.affected_users,
+        tags: sourceData.labels || [],
+        is_public: entry.is_public || false,
+        public_changelog_visible: entry.is_public || false,
+        version: sourceData.version,
+        release_date: entry.release_date,
+        created_at: entry.created_at,
+        updated_at: entry.updated_at,
+        metadata: {
+          jira_story_key: sourceData.jira_story_key,
+          jira_issue_id: sourceData.jira_issue_id,
+          priority: sourceData.priority,
+          assignee: sourceData.assignee,
+          components: sourceData.components,
+          ...entry.generation_metadata
+        }
+      };
+    });
 
     return NextResponse.json({
       success: true,

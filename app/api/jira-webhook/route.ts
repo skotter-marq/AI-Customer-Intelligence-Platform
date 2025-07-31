@@ -575,6 +575,8 @@ async function notifyTeam(changelogEntry: any) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        action: 'send_notification',
+        type: 'info',
         templateId: 'slack-jira-story-completed',
         templateData: {
           jiraKey: changelogEntry.jira_story_key,
@@ -586,7 +588,7 @@ async function notifyTeam(changelogEntry: any) {
           category: changelogEntry.category,
           affectedUsers: changelogEntry.affected_users || 'TBD',
           dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/content-pipeline`,
-          jiraUrl: `https://your-jira-instance.atlassian.net/browse/${changelogEntry.jira_story_key}`,
+          jiraUrl: `https://marq.atlassian.net/browse/${changelogEntry.jira_story_key}`,
           editUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/content-pipeline?filter=${changelogEntry.jira_story_key}`
         }
       })

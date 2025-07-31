@@ -692,6 +692,29 @@ async function getSlackTemplate(templateId: string) {
 
 [View Full Update]({changelogUrl}) | [JIRA Ticket]({jiraUrl})`
     },
+    'slack-jira-story-completed': {
+      message_template: `🎉 **JIRA Story Completed - Changelog Generated**
+
+**Story:** {jiraKey} - {storyTitle}
+**Assignee:** {assignee}
+**Priority:** {priority}
+**Category:** {category}
+
+**Customer-Facing Title:**
+{customerTitle}
+
+**Description:**
+{customerDescription}
+
+**Affected Users:** ~{affectedUsers}
+
+**Next Steps:**
+• Review the generated changelog entry
+• Approve for publication
+• Make any necessary edits
+
+[View in Dashboard]({dashboardUrl}) | [JIRA Ticket]({jiraUrl}) | [Edit Entry]({editUrl})`
+    },
     'daily-summary': {
       message_template: `📊 **Daily Content Pipeline Summary**
 
