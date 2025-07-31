@@ -4,7 +4,7 @@ import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { PermissionLevel } from '../lib/auth';
 import { usePathname } from 'next/navigation';
-import { Shield, Lock } from 'lucide-react';
+import { Shield, Lock, AlertCircle } from 'lucide-react';
 
 interface AuthGuardProps {
   children: React.ReactNode;

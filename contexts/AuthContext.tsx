@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Set a timeout to prevent infinite loading
     const authTimeout = setTimeout(() => {
-      if (!isCancelled && loading) {
+      if (!isCancelled) {
         console.warn('⏰ Authentication timeout - forcing fallback');
         setLoading(false);
         setAuthError('Authentication timed out. Please refresh the page.');
@@ -54,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           console.error('Session fetch error:', error);
           setAuthError(`Authentication error: ${error.message}`);
           setLoading(false);
+          clearTimeout(authTimeout); // Clear the timeout on error
           return;
         }
         
@@ -87,12 +88,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         if (!isCancelled) {
           setLoading(false);
+          clearTimeout(authTimeout); // Clear the timeout on successful completion
         }
       } catch (error) {
         console.error('Error during session initialization:', error);
         if (!isCancelled) {
           setAuthError(error instanceof Error ? error.message : 'Authentication failed');
           setLoading(false);
+          clearTimeout(authTimeout); // Clear the timeout on error
         }
       }
     };
