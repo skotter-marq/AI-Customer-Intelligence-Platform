@@ -1581,7 +1581,7 @@ export default function ProductPage() {
           ) : activeTab === 'approval' ? (
             <div className="space-y-6">
               {/* Approval Dashboard */}
-              {changelogEntries.filter(entry => entry.approval_status === 'pending').length > 0 ? (
+              {changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval).length > 0 ? (
                 <>
                   {/* Header with Bulk Actions */}
                   <div className="calendly-card">
