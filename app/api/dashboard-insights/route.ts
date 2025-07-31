@@ -5,9 +5,9 @@ export async function GET() {
   try {
     console.log('🔍 Fetching recent insights for dashboard...');
 
-    // Get recent meeting insights
+    // Get recent meeting insights - using 'insights' table as suggested by error
     const { data: meetingInsights, error: meetingError } = await supabase
-      .from('meeting_insights')
+      .from('insights')
       .select(`
         *,
         meetings!inner(title, customer_name, meeting_date)
@@ -42,19 +42,10 @@ export async function GET() {
       console.error('Error fetching HubSpot deals:', dealsError);
     }
 
-    // Get recent competitive intelligence
-    const { data: competitiveIntel, error: compError } = await supabase
-      .from('meeting_competitive_intel')
-      .select(`
-        *,
-        meetings!inner(title, customer_name)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(5);
-
-    if (compError) {
-      console.error('Error fetching competitive intel:', compError);
-    }
+    // Get recent competitive intelligence - disabling temporarily due to schema issues
+    const competitiveIntel = null;
+    const compError = null;
+    console.log('⚠️ Competitive intel query disabled - table schema issue');
 
     // Transform data into dashboard insights format
     const insights = [];
