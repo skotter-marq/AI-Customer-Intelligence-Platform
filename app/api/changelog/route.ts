@@ -242,6 +242,7 @@ export async function GET(request: Request) {
           priority: sourceData.priority,
           assignee: sourceData.assignee,
           components: sourceData.components,
+          needs_approval: sourceData.needs_approval, // Add the needs_approval flag
           ...entry.generation_metadata
         }
       };
