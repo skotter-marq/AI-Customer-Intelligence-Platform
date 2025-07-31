@@ -629,6 +629,8 @@ async function notifyTeam(changelogEntry: any) {
 export async function GET() {
   return NextResponse.json({
     message: 'JIRA Webhook endpoint is active',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    version: 'enhanced-logging-v2',
+    bypassEnabled: true
   });
 }
