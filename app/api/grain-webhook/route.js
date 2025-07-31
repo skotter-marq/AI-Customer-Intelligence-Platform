@@ -661,32 +661,32 @@ async function notifyMeetingAnalyzed(meeting, analysis) {
 
 // Zapier Grain app integration functions
 function isGrainZapierData(webhookData) {
-  // Zapier typically sends data with different structure than direct Grain webhooks
-  // Common Zapier indicators:
-  // 1. Has zapier-specific fields like 'id' at root level
-  // 2. Flattened structure instead of nested 'meeting' object
-  // 3. Different field naming conventions
-  // 4. May include 'recorded_at' instead of 'started_at'
-  
+  // Enhanced Zapier detection for comprehensive Grain payload
   const zapierIndicators = [
-    // Check for Zapier-specific field patterns
+    // Check for Zapier-specific field patterns from your payload
     webhookData.hasOwnProperty('recording_id') && !webhookData.hasOwnProperty('event'),
-    webhookData.hasOwnProperty('recorded_at') && !webhookData.meeting,
-    webhookData.hasOwnProperty('grain_recording_id'),
-    webhookData.hasOwnProperty('grain_meeting_title'),
-    // Zapier often flattens nested objects, so check for flattened structure
-    typeof webhookData.meeting === 'undefined' && webhookData.hasOwnProperty('title'),
-    // Check for Zapier's common field naming
-    webhookData.hasOwnProperty('created_at_iso') || webhookData.hasOwnProperty('updated_at_iso')
+    webhookData.hasOwnProperty('recording_title') && !webhookData.meeting,
+    webhookData.hasOwnProperty('data_owners'),
+    webhookData.hasOwnProperty('data_participants'),
+    webhookData.hasOwnProperty('data_summary'),
+    webhookData.hasOwnProperty('summary_points'),
+    webhookData.hasOwnProperty('recording_start_datetime'),
+    webhookData.hasOwnProperty('recording_end_datetime'),
+    webhookData.hasOwnProperty('data_transcript_json_url'),
+    // Zapier often flattens nested objects
+    typeof webhookData.meeting === 'undefined' && (webhookData.hasOwnProperty('recording_title') || webhookData.hasOwnProperty('recording_id'))
   ];
   
   // If any Zapier indicators are present, treat as Zapier data
   const isZapier = zapierIndicators.some(indicator => indicator);
   
-  console.log('🔍 Zapier detection results:', {
+  console.log('🔍 Enhanced Zapier detection results:', {
     isZapier,
-    indicators: zapierIndicators,
-    sampleFields: Object.keys(webhookData).slice(0, 10)
+    hasRecordingId: !!webhookData.recording_id,
+    hasParticipants: !!webhookData.data_participants,
+    hasSummaryPoints: !!webhookData.summary_points,
+    hasTranscriptUrl: !!webhookData.data_transcript_json_url,
+    sampleFields: Object.keys(webhookData).slice(0, 15)
   });
   
   return isZapier;
@@ -694,49 +694,76 @@ function isGrainZapierData(webhookData) {
 
 async function handleGrainZapierData(webhookData) {
   try {
-    console.log('📱 Processing Grain Zapier "Recorded Added" trigger data...');
+    console.log('📱 Processing comprehensive Grain Zapier data...');
     
-    // Map Zapier Grain app fields to our expected format
-    // Common Zapier Grain app field mappings:
+    // Calculate actual duration from start/end times
+    let durationMinutes = null;
+    if (webhookData.recording_start_datetime && webhookData.recording_end_datetime) {
+      const startTime = new Date(webhookData.recording_start_datetime);
+      const endTime = new Date(webhookData.recording_end_datetime);
+      durationMinutes = Math.round((endTime - startTime) / (1000 * 60));
+    }
+    
+    // Parse comprehensive participant data
+    const participants = parseComprehensiveParticipants(webhookData.data_participants);
+    
+    // Fetch transcript if URL is provided
+    let transcript = null;
+    if (webhookData.data_transcript_txt_url) {
+      transcript = await fetchTranscriptFromUrl(webhookData.data_transcript_txt_url);
+    }
+    
+    // Map comprehensive Zapier Grain data
     const mappedData = {
-      grain_meeting_id: webhookData.recording_id || webhookData.grain_recording_id || webhookData.id,
-      title: webhookData.title || webhookData.grain_meeting_title || webhookData.meeting_title || 'Untitled Meeting',
-      meeting_date: webhookData.recorded_at || webhookData.created_at || webhookData.started_at || new Date().toISOString(),
-      duration_minutes: webhookData.duration_minutes || 
-                       (webhookData.duration_seconds ? Math.round(webhookData.duration_seconds / 60) : null) ||
-                       (webhookData.duration ? Math.round(webhookData.duration / 60) : null),
-      participants: parseZapierParticipants(webhookData),
-      raw_transcript: webhookData.transcript || webhookData.transcript_text || null,
-      customer_id: null, // Will be determined later
-      recording_url: webhookData.recording_url || webhookData.grain_recording_url,
-      share_url: webhookData.share_url || webhookData.grain_share_url,
-      organizer_email: webhookData.organizer_email || webhookData.host_email,
-      workspace: webhookData.workspace_name || webhookData.grain_workspace
+      grain_meeting_id: webhookData.recording_id,
+      title: webhookData.recording_title || 'Untitled Meeting',
+      meeting_date: webhookData.recording_start_datetime || new Date().toISOString(),
+      duration_minutes: durationMinutes,
+      participants: participants,
+      raw_transcript: transcript,
+      customer_id: null, // Will be determined during enrichment
+      recording_url: webhookData.recording_url,
+      share_url: webhookData['recording_viewer-only_url'],
+      data_source: webhookData.data_source, // e.g., 'zoom'
+      data_summary: webhookData.data_summary,
+      summary_points: webhookData.summary_points,
+      intelligence_notes: webhookData['recording_intelligence_notes_(markdown)'],
+      ical_uid: webhookData.data_ical_uid,
+      customer_name: extractCustomerFromParticipants(participants),
+      meeting_type: inferMeetingTypeFromSummary(webhookData.data_summary),
+      workspace: 'grain_zapier'
     };
     
-    console.log('🔄 Mapped Zapier data:', {
+    console.log('🔄 Mapped comprehensive Zapier data:', {
       grain_id: mappedData.grain_meeting_id,
       title: mappedData.title,
       duration: mappedData.duration_minutes,
-      has_transcript: !!mappedData.raw_transcript
+      participants_count: mappedData.participants?.length || 0,
+      has_transcript: !!mappedData.raw_transcript,
+      has_summary: !!mappedData.data_summary,
+      has_intelligence: !!mappedData.intelligence_notes,
+      customer_identified: mappedData.customer_name
     });
+    
+    // Enrich the data using our existing enrichment function
+    const enrichedData = await enrichMeetingData(mappedData, webhookData);
     
     // Check if Supabase client is available
     if (!supabase) {
       throw new Error('Database connection not available');
     }
     
-    // Save meeting to database using actual schema
+    // Save comprehensive meeting to database
     const { data: savedMeeting, error } = await supabase
       .from('meetings')
       .upsert({
-        grain_id: mappedData.grain_meeting_id,
-        title: mappedData.title,
-        date: mappedData.meeting_date,
-        duration_minutes: mappedData.duration_minutes,
-        participants: mappedData.participants,
-        raw_transcript: mappedData.raw_transcript,
-        customer_id: mappedData.customer_id,
+        grain_id: enrichedData.grain_meeting_id,
+        title: enrichedData.title,
+        date: enrichedData.meeting_date,
+        duration_minutes: enrichedData.duration_minutes,
+        participants: enrichedData.participants,
+        raw_transcript: enrichedData.raw_transcript,
+        customer_id: enrichedData.customer_id,
         created_at: new Date().toISOString()
       }, {
         onConflict: 'grain_id'
@@ -748,29 +775,41 @@ async function handleGrainZapierData(webhookData) {
       throw error;
     }
     
-    console.log('✅ Zapier meeting saved:', savedMeeting.id);
+    console.log('✅ Comprehensive Zapier meeting saved:', savedMeeting.id);
     
-    // If transcript is available, trigger AI analysis
-    if (mappedData.raw_transcript && mappedData.raw_transcript.length > 50) {
-      console.log('🤖 Starting AI analysis of Zapier meeting content...');
-      await analyzeMeetingWithAI(savedMeeting);
+    // If transcript is available OR we have rich intelligence notes, trigger AI analysis
+    if ((enrichedData.raw_transcript && enrichedData.raw_transcript.length > 50) || 
+        mappedData.intelligence_notes) {
+      console.log('🤖 Starting AI analysis with rich Grain data...');
+      await analyzeMeetingWithAI(savedMeeting, {
+        grain_summary: mappedData.data_summary,
+        summary_points: mappedData.summary_points,
+        intelligence_notes: mappedData.intelligence_notes
+      });
     }
     
-    // Send notifications
-    await notifyNewMeeting(savedMeeting);
+    // Send enhanced notifications with Grain insights
+    await notifyNewMeetingWithGrainData(savedMeeting, mappedData);
     
     return Response.json({
       success: true,
-      message: 'Zapier Grain meeting processed successfully',
+      message: 'Comprehensive Zapier Grain meeting processed successfully',
       meeting_id: savedMeeting.id,
-      source: 'zapier_grain_app',
-      data_mapped: true,
-      ai_analysis: !!mappedData.raw_transcript,
+      source: 'zapier_grain_comprehensive',
+      data_completeness: enrichedData.data_completeness,
+      features_extracted: {
+        transcript: !!enrichedData.raw_transcript,
+        summary: !!mappedData.data_summary,
+        intelligence_notes: !!mappedData.intelligence_notes,
+        summary_points: mappedData.summary_points?.length || 0,
+        participants: mappedData.participants?.length || 0,
+        customer_identified: !!enrichedData.customer_id
+      },
       timestamp: new Date().toISOString()
     });
     
   } catch (error) {
-    console.error('❌ Failed to process Zapier Grain data:', error);
+    console.error('❌ Failed to process comprehensive Zapier Grain data:', error);
     throw error;
   }
 }
@@ -844,6 +883,190 @@ function parseZapierParticipants(webhookData) {
   
   console.log('👥 Parsed participants:', participants.length, 'attendees');
   return participants;
+}
+
+function parseComprehensiveParticipants(dataParticipants) {
+  if (!dataParticipants || !Array.isArray(dataParticipants)) {
+    return [];
+  }
+  
+  return dataParticipants.map(participant => ({
+    id: participant.data_participants_id,
+    name: participant.data_participants_name,
+    email: participant.data_participants_email,
+    scope: participant.data_participants_scope, // 'internal' or 'external'
+    confirmed_attendee: participant.data_participants_confirmed_attendee,
+    role: participant.data_participants_scope === 'internal' ? 'host' : 'attendee'
+  }));
+}
+
+function extractCustomerFromParticipants(participants) {
+  if (!participants || !Array.isArray(participants)) {
+    return 'Unknown Customer';
+  }
+  
+  // Find external participants (customers)
+  const externalParticipants = participants.filter(p => 
+    p.scope === 'external' || (!isInternalEmail(p.email))
+  );
+  
+  if (externalParticipants.length > 0) {
+    // Extract company name from first external participant's email domain
+    const email = externalParticipants[0].email;
+    if (email) {
+      const domain = email.split('@')[1];
+      // Convert domain to company name (e.g., "moreheadstate.edu" -> "Morehead State")
+      return formatCompanyName(domain);
+    }
+  }
+  
+  return 'Unknown Customer';
+}
+
+function formatCompanyName(domain) {
+  // Handle common domain patterns
+  const domainMappings = {
+    'moreheadstate.edu': 'Morehead State University',
+    'gmail.com': 'Gmail User',
+    'outlook.com': 'Outlook User',
+    'yahoo.com': 'Yahoo User'
+  };
+  
+  if (domainMappings[domain]) {
+    return domainMappings[domain];
+  }
+  
+  // Generic domain to company name conversion
+  const companyName = domain.split('.')[0];
+  return companyName.charAt(0).toUpperCase() + companyName.slice(1).toLowerCase();
+}
+
+function inferMeetingTypeFromSummary(summary) {
+  if (!summary) return 'general';
+  
+  const summaryLower = summary.toLowerCase();
+  
+  if (summaryLower.includes('single sign-on') || summaryLower.includes('sso')) return 'implementation';
+  if (summaryLower.includes('demo') || summaryLower.includes('demonstration')) return 'demo';
+  if (summaryLower.includes('training') || summaryLower.includes('onboarding')) return 'training';
+  if (summaryLower.includes('support') || summaryLower.includes('troubleshoot')) return 'support';
+  if (summaryLower.includes('discovery') || summaryLower.includes('consultation')) return 'discovery';
+  if (summaryLower.includes('contract') || summaryLower.includes('agreement')) return 'contract';
+  
+  return 'general';
+}
+
+async function fetchTranscriptFromUrl(transcriptUrl) {
+  try {
+    console.log('📥 Fetching transcript from URL:', transcriptUrl);
+    
+    const response = await fetch(transcriptUrl);
+    if (response.ok) {
+      const transcript = await response.text();
+      console.log(`✅ Transcript fetched: ${transcript.length} characters`);
+      return transcript;
+    } else {
+      console.warn('⚠️ Failed to fetch transcript:', response.status);
+      return null;
+    }
+  } catch (error) {
+    console.warn('⚠️ Transcript fetch error:', error.message);
+    return null;
+  }
+}
+
+async function notifyNewMeetingWithGrainData(meeting, grainData) {
+  try {
+    console.log('📢 Sending enhanced notification with Grain intelligence...');
+    
+    // Extract key insights from Grain's intelligence notes
+    const keyTakeaways = extractKeyTakeaways(grainData.intelligence_notes);
+    const actionItems = extractActionItems(grainData.intelligence_notes);
+    
+    // Use enhanced customer insight template
+    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'send_notification',
+        templateId: 'customer-insight-alert',
+        type: 'insight',
+        templateData: {
+          customerName: grainData.customer_name || 'Unknown Customer',
+          meetingTitle: meeting.title,
+          insightType: 'Grain AI Analysis',
+          priorityScore: calculatePriorityFromGrainData(grainData),
+          insightSummary: grainData.data_summary || 'Meeting processed with Grain AI intelligence',
+          actionItems: actionItems.join('\n• ') || 'No specific action items identified',
+          customerQuote: keyTakeaways[0] || 'See Grain recording for details',
+          meetingUrl: grainData.share_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=Follow%20up:%20${encodeURIComponent(meeting.title)}`
+        },
+        metadata: {
+          meeting_id: meeting.id,
+          customer: grainData.customer_name,
+          duration: meeting.duration_minutes,
+          source: 'grain_zapier_enhanced',
+          grain_summary_points: grainData.summary_points?.length || 0,
+          has_intelligence_notes: !!grainData.intelligence_notes
+        }
+      })
+    });
+    
+    console.log('✅ Enhanced Grain notification sent successfully');
+  } catch (error) {
+    console.warn('Failed to send enhanced Grain notification:', error);
+  }
+}
+
+function extractKeyTakeaways(intelligenceNotes) {
+  if (!intelligenceNotes) return [];
+  
+  // Extract content from **Key Takeaways** section
+  const takeawaysMatch = intelligenceNotes.match(/\*\*Key Takeaways\*\*\s*(.*?)(?:\*\*|$)/s);
+  if (takeawaysMatch) {
+    const takeawaysText = takeawaysMatch[1];
+    // Extract bullet points or numbered items
+    const takeaways = takeawaysText.match(/\[(.*?)\]\(.*?\)\s*-\s*(.*?)(?=\n|$)/g);
+    return takeaways ? takeaways.map(item => item.replace(/\[.*?\]\(.*?\)\s*-\s*/, '').trim()) : [];
+  }
+  
+  return [];
+}
+
+function extractActionItems(intelligenceNotes) {
+  if (!intelligenceNotes) return [];
+  
+  // Extract content from **Action Items** section
+  const actionItemsMatch = intelligenceNotes.match(/\*\*Action Items\*\*\s*(.*?)(?:\*\*|$)/s);
+  if (actionItemsMatch) {
+    const actionItemsText = actionItemsMatch[1];
+    // Extract bullet points or action items
+    const actions = actionItemsText.match(/\[(.*?)\]\(.*?\)\s*-\s*(.*?)(?=\n|$)/g);
+    return actions ? actions.map(item => item.replace(/\[.*?\]\(.*?\)\s*-\s*/, '').trim()) : [];
+  }
+  
+  return [];
+}
+
+function calculatePriorityFromGrainData(grainData) {
+  let score = 5; // Base priority
+  
+  // Increase priority based on content
+  if (grainData.intelligence_notes) {
+    if (grainData.intelligence_notes.toLowerCase().includes('contract')) score += 2;
+    if (grainData.intelligence_notes.toLowerCase().includes('urgent')) score += 3;
+    if (grainData.intelligence_notes.toLowerCase().includes('implementation')) score += 1;
+  }
+  
+  // Increase based on external participants
+  const externalCount = grainData.participants?.filter(p => p.scope === 'external').length || 0;
+  if (externalCount > 2) score += 1;
+  
+  // Increase based on summary points
+  if (grainData.summary_points?.length > 3) score += 1;
+  
+  return Math.min(score, 10); // Cap at 10
 }
 
 export async function GET() {
