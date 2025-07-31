@@ -70,8 +70,12 @@ export async function POST(request: Request) {
     console.log('🔗 JIRA Webhook received:', {
       event: payload.webhookEvent,
       issueKey: payload.issue?.key,
-      eventType: payload.issue_event_type_name
+      eventType: payload.issue_event_type_name,
+      timestamp: new Date().toISOString()
     });
+
+    // Log the full payload for debugging (remove this later)
+    console.log('📋 Full JIRA payload:', JSON.stringify(payload, null, 2));
 
     // Only process relevant events
     if (!shouldProcessWebhook(payload)) {
