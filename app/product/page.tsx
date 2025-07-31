@@ -631,6 +631,73 @@ export default function ProductPage() {
     return;
   };
 
+  const handleApproveEntry = async (entryId: string, makePublic: boolean = true) => {
+    try {
+      console.log(`Approving entry ${entryId} with public visibility: ${makePublic}`);
+      
+      const response = await fetch(`/api/changelog?id=${entryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          approval_status: 'approved',
+          public_visibility: makePublic,
+          release_date: new Date().toISOString(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to approve entry');
+      }
+
+      const result = await response.json();
+      console.log('Entry approved successfully:', result);
+
+      // Refresh the changelog data
+      await fetchChangelogData();
+      
+      alert('Changelog entry approved and published successfully! The JIRA ticket has been updated with the TLDR.');
+    } catch (error) {
+      console.error('Error approving entry:', error);
+      alert('Failed to approve entry. Please try again.');
+    }
+  };
+
+  const handleRejectEntry = async (entryId: string) => {
+    try {
+      if (!confirm('Are you sure you want to reject this changelog entry? It will be hidden from the approval queue.')) {
+        return;
+      }
+
+      console.log(`Rejecting entry ${entryId}`);
+      
+      // For now, we'll just hide it from approval queue
+      // In the future, this could set a "rejected" status
+      const response = await fetch(`/api/changelog?id=${entryId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          approval_status: 'rejected',
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject entry');
+      }
+
+      // Refresh the changelog data
+      await fetchChangelogData();
+      
+      alert('Changelog entry rejected and removed from approval queue.');
+    } catch (error) {
+      console.error('Error rejecting entry:', error);
+      alert('Failed to reject entry. Please try again.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
@@ -1572,12 +1639,198 @@ export default function ProductPage() {
               {/* Approval Dashboard */}
               {/* Check if there are entries needing approval */}
               {changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval).length > 0 ? (
-                <div className="approval-section">
-                  <div>Test approval content</div>
-                </div>
+                <>
+                  {/* Header with Stats */}
+                  <div className="calendly-card">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
+                          Review & Approve ({changelogEntries.filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval).length})
+                        </h3>
+                        <p className="calendly-body-sm text-gray-600">
+                          Review changelog entries before publishing to customers
+                        </p>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <button className="calendly-btn-secondary">
+                          Approve All
+                        </button>
+                        <button className="calendly-btn-primary">
+                          Bulk Actions
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Approval Cards */}
+                  <div className="space-y-4">
+                    {changelogEntries
+                      .filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval)
+                      .map((entry) => (
+                        <div key={entry.id} className="calendly-card hover:shadow-md transition-shadow duration-200">
+                          {/* Card Header with JIRA Context */}
+                          <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
+                            <div className="flex items-center space-x-3">
+                              <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-2 mb-2">
+                                  {/* JIRA Story Key */}
+                                  {(entry as any).metadata?.jira_story_key && (
+                                    <a 
+                                      href={`https://marq.atlassian.net/browse/${(entry as any).metadata.jira_story_key}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full hover:bg-blue-200 transition-colors"
+                                    >
+                                      🎫 {(entry as any).metadata.jira_story_key}
+                                    </a>
+                                  )}
+                                  
+                                  {/* Priority Badge */}
+                                  {(entry as any).metadata?.priority && (
+                                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getJiraPriorityColor((entry as any).metadata.priority)}`}>
+                                      {(entry as any).metadata.priority}
+                                    </span>
+                                  )}
+                                  
+                                  {/* Category Badge */}
+                                  <span className={`calendly-badge ${getCategoryColor(entry.category)}`}>
+                                    {entry.category}
+                                  </span>
+                                </div>
+                                
+                                <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
+                                  {entry.customer_facing_title}
+                                </h3>
+                                
+                                <p className="calendly-label-sm text-gray-500">
+                                  {(entry as any).metadata?.webhook_timestamp && (
+                                    <span>Generated {formatTimeAgo((entry as any).metadata.webhook_timestamp)} • </span>
+                                  )}
+                                  {(entry as any).metadata?.ai_provider && (
+                                    <span>AI Generated ({(entry as any).metadata.ai_provider})</span>
+                                  )}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <button 
+                                className="px-3 py-1 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                                onClick={() => handleEditEntry(entry)}
+                              >
+                                Edit
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Content */}
+                          <div style={{ marginBottom: '16px' }}>
+                            <p className="calendly-body-sm text-gray-700" style={{ marginBottom: '12px' }}>
+                              {entry.customer_facing_description}
+                            </p>
+                          </div>
+
+                          {/* Key Changes Section */}
+                          {entry.highlights && entry.highlights.length > 0 && (
+                            <div style={{ marginBottom: '16px' }}>
+                              <h4 className="text-sm font-medium text-gray-900 mb-2">Key Changes:</h4>
+                              <ul className="space-y-1">
+                                {entry.highlights.slice(0, 3).map((highlight, index) => (
+                                  <li key={index} className="flex items-start space-x-2">
+                                    <span className="text-green-500 mt-1">•</span>
+                                    <span className="calendly-body-sm text-gray-700">{highlight}</span>
+                                  </li>
+                                ))}
+                                {entry.highlights.length > 3 && (
+                                  <li className="calendly-body-sm text-gray-500 italic">
+                                    +{entry.highlights.length - 3} more changes
+                                  </li>
+                                )}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* Key Details Row */}
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ marginBottom: '16px' }}>
+                            {entry.breaking_changes && (
+                              <div className="flex items-center space-x-2">
+                                <AlertCircle className="w-4 h-4 text-red-500" />
+                                <span className="calendly-body-sm text-red-600">Breaking Changes</span>
+                              </div>
+                            )}
+                            
+                            <div className="flex items-center space-x-2">
+                              <Clock className="w-4 h-4 text-blue-500" />
+                              <span className="calendly-body-sm">
+                                Quality Score: {Math.round((entry.quality_score || 0.85) * 100)}%
+                              </span>
+                            </div>
+                            
+                            <div className="flex items-center space-x-2">
+                              <Users className="w-4 h-4 text-green-500" />
+                              <span className="calendly-body-sm">All Users</span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons */}
+                          <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #e5e7eb' }}>
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <input
+                                  type="checkbox"
+                                  id={`public-${entry.id}`}
+                                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                  defaultChecked={true}
+                                />
+                                <label htmlFor={`public-${entry.id}`} className="calendly-body-sm text-gray-700">
+                                  Make public
+                                </label>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center space-x-3">
+                              <button 
+                                className="px-4 py-2 bg-gray-100 text-gray-700 calendly-body-sm rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                                onClick={() => handleRejectEntry(entry.id)}
+                              >
+                                Reject
+                              </button>
+                              <button 
+                                className="px-4 py-2 bg-green-600 text-white calendly-body-sm rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                onClick={() => {
+                                  const checkbox = document.getElementById(`public-${entry.id}`) as HTMLInputElement;
+                                  const makePublic = checkbox?.checked ?? true;
+                                  handleApproveEntry(entry.id, makePublic);
+                                }}
+                              >
+                                Approve & Publish
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </>
               ) : (
                 <div className="calendly-card text-center py-12">
-                  <div>Test empty state</div>
+                  {/* No Pending Entries */}
+                  <CheckCircle className="w-16 h-16 mx-auto mb-4 text-green-500" />
+                  <h3 className="calendly-h3" style={{ marginBottom: '8px' }}>All Caught Up!</h3>
+                  <p className="calendly-body" style={{ marginBottom: '24px' }}>
+                    No changelog entries are currently pending approval. New entries from JIRA will appear here automatically.
+                  </p>
+                  <div className="flex items-center justify-center space-x-4">
+                    <button 
+                      className="calendly-btn-secondary"
+                      onClick={() => setActiveTab('changelog')}
+                    >
+                      View Published Entries
+                    </button>
+                    <button className="calendly-btn-primary">
+                      Create Manual Entry
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
