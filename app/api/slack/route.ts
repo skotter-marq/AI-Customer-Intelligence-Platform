@@ -484,8 +484,10 @@ async function handleInteraction(params: any) {
       const contentId = value.replace('approve_', '');
       await approveChangelogViaSlack(contentId, user.username);
       return NextResponse.json({
-        text: `✅ Changelog approved and published by ${user.username}`,
-        response_type: 'in_channel'
+        text: `✅ Changelog approved and published by ${user.username}!`,
+        response_type: 'in_channel',
+        replace_original: false,
+        delete_original: false
       });
     }
     
@@ -494,7 +496,9 @@ async function handleInteraction(params: any) {
       await rejectChangelogViaSlack(contentId, user.username);
       return NextResponse.json({
         text: `❌ Changelog rejected by ${user.username}`,
-        response_type: 'in_channel'
+        response_type: 'in_channel',
+        replace_original: false,
+        delete_original: false
       });
     }
     
@@ -512,8 +516,10 @@ async function handleInteraction(params: any) {
       const contentId = value.replace('changes_', '');
       await requestChangesViaSlack(contentId, user.username);
       return NextResponse.json({
-        text: `Changes requested by ${user.username}`,
-        response_type: 'in_channel'
+        text: `🔄 Changes requested by ${user.username} - please review and update`,
+        response_type: 'in_channel',
+        replace_original: false,
+        delete_original: false
       });
     }
     
@@ -638,22 +644,33 @@ async function approveContentViaSlack(contentId: string, username: string) {
 
 async function requestChangesViaSlack(contentId: string, username: string) {
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/approval`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'request_changes',
-        contentId,
-        reviewerId: `slack_${username}`,
-        comments: 'Changes requested via Slack'
+    console.log(`🔍 Attempting to request changes for changelog with ID: ${contentId}`);
+    
+    // Try direct database update first
+    const { data, error } = await supabase
+      .from('generated_content')
+      .update({
+        approval_status: 'changes_requested',
+        status: 'needs_changes',
+        review_comments: 'Changes requested via Slack',
+        reviewed_at: new Date().toISOString(),
+        reviewed_by: `slack_${username}`
       })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to request changes');
+      .eq('id', contentId)
+      .select();
+      
+    if (error) {
+      console.error('Database update error:', error);
+      throw new Error(`Database update failed: ${error.message}`);
+    }
+    
+    if (!data || data.length === 0) {
+      console.warn(`No record found with ID: ${contentId}`);
+      throw new Error(`No changelog entry found with ID: ${contentId}`);
     }
 
-    console.log(`Changes requested for ${contentId} via Slack by ${username}`);
+    console.log(`✅ Changes requested for ${contentId} via Slack by ${username}`);
+    console.log('Updated record:', data[0]);
 
   } catch (error) {
     console.error('Error requesting changes via Slack:', error);
@@ -688,23 +705,33 @@ async function rejectContentViaSlack(contentId: string, username: string) {
 
 async function approveChangelogViaSlack(contentId: string, username: string) {
   try {
-    // Use the changelog API to approve and publish
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/changelog?id=${contentId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    console.log(`🔍 Attempting to approve changelog with ID: ${contentId}`);
+    
+    // Try direct database update first
+    const { data, error } = await supabase
+      .from('generated_content')
+      .update({
         approval_status: 'approved',
-        public_visibility: true,
-        approved_by: `slack_${username}`,
-        approved_at: new Date().toISOString()
+        is_public: true,
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        approved_by: `slack_${username}`
       })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to approve changelog');
+      .eq('id', contentId)
+      .select();
+      
+    if (error) {
+      console.error('Database update error:', error);
+      throw new Error(`Database update failed: ${error.message}`);
+    }
+    
+    if (!data || data.length === 0) {
+      console.warn(`No record found with ID: ${contentId}`);
+      throw new Error(`No changelog entry found with ID: ${contentId}`);
     }
 
-    console.log(`Changelog ${contentId} approved via Slack by ${username}`);
+    console.log(`✅ Changelog ${contentId} approved via Slack by ${username}`);
+    console.log('Updated record:', data[0]);
 
   } catch (error) {
     console.error('Error approving changelog via Slack:', error);
@@ -714,23 +741,33 @@ async function approveChangelogViaSlack(contentId: string, username: string) {
 
 async function rejectChangelogViaSlack(contentId: string, username: string) {
   try {
-    // Use the changelog API to reject
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/changelog?id=${contentId}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    console.log(`🔍 Attempting to reject changelog with ID: ${contentId}`);
+    
+    // Try direct database update first
+    const { data, error } = await supabase
+      .from('generated_content')
+      .update({
         approval_status: 'rejected',
-        public_visibility: false,
-        rejected_by: `slack_${username}`,
-        rejected_at: new Date().toISOString()
+        is_public: false,
+        status: 'rejected',
+        rejected_at: new Date().toISOString(),
+        rejected_by: `slack_${username}`
       })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to reject changelog');
+      .eq('id', contentId)
+      .select();
+      
+    if (error) {
+      console.error('Database update error:', error);
+      throw new Error(`Database update failed: ${error.message}`);
+    }
+    
+    if (!data || data.length === 0) {
+      console.warn(`No record found with ID: ${contentId}`);
+      throw new Error(`No changelog entry found with ID: ${contentId}`);
     }
 
-    console.log(`Changelog ${contentId} rejected via Slack by ${username}`);
+    console.log(`✅ Changelog ${contentId} rejected via Slack by ${username}`);
+    console.log('Updated record:', data[0]);
 
   } catch (error) {
     console.error('Error rejecting changelog via Slack:', error);

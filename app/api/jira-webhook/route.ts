@@ -104,7 +104,10 @@ export async function POST(request: Request) {
     
     if (changelogEntry) {
       // Save to database for approval
-      await saveForApproval(changelogEntry);
+      const savedEntry = await saveForApproval(changelogEntry);
+      
+      // Add the database ID to the changelog entry
+      changelogEntry.database_id = savedEntry?.[0]?.id;
       
       // Notify team (optional Slack notification)
       await notifyTeam(changelogEntry);
@@ -570,7 +573,7 @@ async function saveForApproval(changelogEntry: any) {
     }
     
     console.log('✅ Changelog entry saved for approval');
-    return data;
+    return data; // This returns an array, so we use [0] to get the first item
     
   } catch (error) {
     console.error('Failed to save changelog entry:', error);
@@ -590,7 +593,7 @@ async function notifyTeam(changelogEntry: any) {
       },
       body: JSON.stringify({
         action: 'approval_request',
-        contentId: `jira-${changelogEntry.jira_story_key}`,
+        contentId: changelogEntry.database_id || `jira-${changelogEntry.jira_story_key}`,
         contentTitle: changelogEntry.customer_facing_title,
         contentSummary: changelogEntry.customer_facing_description,
         jiraKey: changelogEntry.jira_story_key,
