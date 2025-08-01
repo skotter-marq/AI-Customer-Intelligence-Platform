@@ -646,6 +646,29 @@ async function requestChangesViaSlack(contentId: string, username: string) {
   try {
     console.log(`🔍 Attempting to request changes for changelog with ID: ${contentId}`);
     
+    // Handle legacy contentId format (jira-STORY-123) by looking up the real UUID
+    let actualContentId = contentId;
+    if (contentId.startsWith('jira-')) {
+      const jiraKey = contentId.replace('jira-', '');
+      console.log(`🔍 Looking up database ID for JIRA key: ${jiraKey}`);
+      
+      const { data: lookupData, error: lookupError } = await supabase
+        .from('generated_content')
+        .select('id')
+        .eq('content_type', 'changelog_entry')
+        .contains('source_data', { jira_story_key: jiraKey })
+        .limit(1)
+        .single();
+        
+      if (lookupError || !lookupData) {
+        console.error('Failed to find changelog entry for JIRA key:', jiraKey, lookupError);
+        throw new Error(`Could not find changelog entry for JIRA story: ${jiraKey}`);
+      }
+      
+      actualContentId = lookupData.id;
+      console.log(`✅ Found database ID: ${actualContentId} for JIRA key: ${jiraKey}`);
+    }
+    
     // Try direct database update using existing columns
     const { data, error } = await supabase
       .from('generated_content')
@@ -662,7 +685,7 @@ async function requestChangesViaSlack(contentId: string, username: string) {
           review_comments: 'Changes requested via Slack'
         }
       })
-      .eq('id', contentId)
+      .eq('id', actualContentId)
       .select();
       
     if (error) {
@@ -671,11 +694,11 @@ async function requestChangesViaSlack(contentId: string, username: string) {
     }
     
     if (!data || data.length === 0) {
-      console.warn(`No record found with ID: ${contentId}`);
-      throw new Error(`No changelog entry found with ID: ${contentId}`);
+      console.warn(`No record found with ID: ${actualContentId}`);
+      throw new Error(`No changelog entry found with ID: ${actualContentId}`);
     }
 
-    console.log(`✅ Changes requested for ${contentId} via Slack by ${username}`);
+    console.log(`✅ Changes requested for ${actualContentId} via Slack by ${username}`);
     console.log('Updated record:', data[0]);
 
   } catch (error) {
@@ -713,6 +736,29 @@ async function approveChangelogViaSlack(contentId: string, username: string) {
   try {
     console.log(`🔍 Attempting to approve changelog with ID: ${contentId}`);
     
+    // Handle legacy contentId format (jira-STORY-123) by looking up the real UUID
+    let actualContentId = contentId;
+    if (contentId.startsWith('jira-')) {
+      const jiraKey = contentId.replace('jira-', '');
+      console.log(`🔍 Looking up database ID for JIRA key: ${jiraKey}`);
+      
+      const { data: lookupData, error: lookupError } = await supabase
+        .from('generated_content')
+        .select('id')
+        .eq('content_type', 'changelog_entry')
+        .contains('source_data', { jira_story_key: jiraKey })
+        .limit(1)
+        .single();
+        
+      if (lookupError || !lookupData) {
+        console.error('Failed to find changelog entry for JIRA key:', jiraKey, lookupError);
+        throw new Error(`Could not find changelog entry for JIRA story: ${jiraKey}`);
+      }
+      
+      actualContentId = lookupData.id;
+      console.log(`✅ Found database ID: ${actualContentId} for JIRA key: ${jiraKey}`);
+    }
+    
     // Try direct database update using existing columns
     const { data, error } = await supabase
       .from('generated_content')
@@ -728,7 +774,7 @@ async function approveChangelogViaSlack(contentId: string, username: string) {
           approval_method: 'slack_button'
         }
       })
-      .eq('id', contentId)
+      .eq('id', actualContentId)
       .select();
       
     if (error) {
@@ -737,11 +783,11 @@ async function approveChangelogViaSlack(contentId: string, username: string) {
     }
     
     if (!data || data.length === 0) {
-      console.warn(`No record found with ID: ${contentId}`);
-      throw new Error(`No changelog entry found with ID: ${contentId}`);
+      console.warn(`No record found with ID: ${actualContentId}`);
+      throw new Error(`No changelog entry found with ID: ${actualContentId}`);
     }
 
-    console.log(`✅ Changelog ${contentId} approved via Slack by ${username}`);
+    console.log(`✅ Changelog ${actualContentId} approved via Slack by ${username}`);
     console.log('Updated record:', data[0]);
 
   } catch (error) {
@@ -753,6 +799,29 @@ async function approveChangelogViaSlack(contentId: string, username: string) {
 async function rejectChangelogViaSlack(contentId: string, username: string) {
   try {
     console.log(`🔍 Attempting to reject changelog with ID: ${contentId}`);
+    
+    // Handle legacy contentId format (jira-STORY-123) by looking up the real UUID
+    let actualContentId = contentId;
+    if (contentId.startsWith('jira-')) {
+      const jiraKey = contentId.replace('jira-', '');
+      console.log(`🔍 Looking up database ID for JIRA key: ${jiraKey}`);
+      
+      const { data: lookupData, error: lookupError } = await supabase
+        .from('generated_content')
+        .select('id')
+        .eq('content_type', 'changelog_entry')
+        .contains('source_data', { jira_story_key: jiraKey })
+        .limit(1)
+        .single();
+        
+      if (lookupError || !lookupData) {
+        console.error('Failed to find changelog entry for JIRA key:', jiraKey, lookupError);
+        throw new Error(`Could not find changelog entry for JIRA story: ${jiraKey}`);
+      }
+      
+      actualContentId = lookupData.id;
+      console.log(`✅ Found database ID: ${actualContentId} for JIRA key: ${jiraKey}`);
+    }
     
     // Try direct database update using existing columns
     const { data, error } = await supabase
@@ -769,7 +838,7 @@ async function rejectChangelogViaSlack(contentId: string, username: string) {
           approval_method: 'slack_button'
         }
       })
-      .eq('id', contentId)
+      .eq('id', actualContentId)
       .select();
       
     if (error) {
@@ -778,11 +847,11 @@ async function rejectChangelogViaSlack(contentId: string, username: string) {
     }
     
     if (!data || data.length === 0) {
-      console.warn(`No record found with ID: ${contentId}`);
-      throw new Error(`No changelog entry found with ID: ${contentId}`);
+      console.warn(`No record found with ID: ${actualContentId}`);
+      throw new Error(`No changelog entry found with ID: ${actualContentId}`);
     }
 
-    console.log(`✅ Changelog ${contentId} rejected via Slack by ${username}`);
+    console.log(`✅ Changelog ${actualContentId} rejected via Slack by ${username}`);
     console.log('Updated record:', data[0]);
 
   } catch (error) {
