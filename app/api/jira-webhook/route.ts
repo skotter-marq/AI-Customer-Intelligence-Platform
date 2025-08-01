@@ -582,29 +582,21 @@ async function notifyTeam(changelogEntry: any) {
   try {
     console.log('📢 Notifying team about completed JIRA story:', changelogEntry.jira_story_key);
     
-    // Send JIRA-specific Slack notification
+    // Send approval request using the new brief template
     const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        action: 'send_notification',
-        type: 'approval',
-        templateId: 'slack-jira-story-completed',
-        templateData: {
-          jiraKey: changelogEntry.jira_story_key,
-          storyTitle: changelogEntry.technical_summary,
-          assignee: changelogEntry.assignee || 'Unassigned',
-          priority: changelogEntry.priority,
-          customerTitle: changelogEntry.customer_facing_title,
-          customerDescription: changelogEntry.customer_facing_description,
-          category: changelogEntry.category,
-          affectedUsers: changelogEntry.affected_users || 'TBD',
-          dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/content-pipeline`,
-          jiraUrl: `https://marq.atlassian.net/browse/${changelogEntry.jira_story_key}`,
-          editUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/content-pipeline?filter=${changelogEntry.jira_story_key}`
-        }
+        action: 'approval_request',
+        contentId: `jira-${changelogEntry.jira_story_key}`,
+        contentTitle: changelogEntry.customer_facing_title,
+        contentSummary: changelogEntry.customer_facing_description,
+        jiraKey: changelogEntry.jira_story_key,
+        category: changelogEntry.category || 'feature_update',
+        assignee: changelogEntry.assignee || 'Unassigned',
+        qualityScore: 0.85
       })
     });
 
