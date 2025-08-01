@@ -38,20 +38,6 @@ export async function POST(request: Request) {
   }
   
   try {
-    // Check if this is a Slack interactive component (form-encoded)
-    const contentType = request.headers.get('content-type') || '';
-    
-    if (contentType.includes('application/x-www-form-urlencoded')) {
-      // Handle Slack interactive components (buttons, menus, etc.)
-      const formData = await request.formData();
-      const payload = formData.get('payload') as string;
-      
-      if (payload) {
-        const slackPayload = JSON.parse(payload);
-        return await handleSlackInteraction(slackPayload);
-      }
-    }
-    
     // Handle JSON requests (our internal API calls)
     const body = await request.json();
     const { action, ...params } = body;
@@ -67,8 +53,6 @@ export async function POST(request: Request) {
         return await sendSlackNotification(params);
       case 'handle_command':
         return await handleSlashCommand(params);
-      case 'handle_interaction':
-        return await handleInteraction(params);
       default:
         return NextResponse.json(
           { error: 'Invalid action' },
@@ -85,39 +69,7 @@ export async function POST(request: Request) {
   }
 }
 
-// Handle Slack interactive components (buttons, menus, etc.)
-async function handleSlackInteraction(slackPayload: any) {
-  try {
-    console.log('📋 Slack interaction received:', JSON.stringify(slackPayload, null, 2));
-    
-    // Extract the action from the Slack payload
-    const action = slackPayload.actions?.[0];
-    if (!action) {
-      return NextResponse.json({ error: 'No action found in payload' }, { status: 400 });
-    }
-
-    const { action_id, value } = action;
-    const user = slackPayload.user;
-    const response_url = slackPayload.response_url;
-    
-    console.log('🎯 Processing action:', { action_id, value, user: user?.username, response_url });
-    
-    // Call the existing handleInteraction function with the parsed data
-    return await handleInteraction({
-      action_id,
-      value,
-      user,
-      response_url
-    });
-
-  } catch (error) {
-    console.error('Error handling Slack interaction:', error);
-    return NextResponse.json(
-      { error: 'Failed to process interaction' },
-      { status: 500 }
-    );
-  }
-}
+// Slack interactive components removed - using direct dashboard links instead
 
 // Handle Slack slash commands
 export async function GET(request: Request) {
@@ -270,7 +222,7 @@ async function sendApprovalRequest(params: any) {
       reviewerIds = [] 
     } = params;
     
-    // Create the approval message with interactive buttons
+    // Create the approval message with direct link to dashboard (no interactive buttons)
     const approvalMessage = {
       text: `📋 Changelog Entry Ready for Review - ${jiraKey || contentTitle}`,
       username: 'Changelog Bot',
@@ -280,54 +232,29 @@ async function sendApprovalRequest(params: any) {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: '📋 Changelog Approval Required'
+            text: '📋 Changelog Review Needed'
           }
         },
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${jiraKey || 'Story'}* has been completed and needs changelog approval.\n\n*Title:* ${contentTitle}\n*Category:* ${category || 'feature_update'}\n*Summary:* ${contentSummary || 'Review the content for details'}`
+            text: `*${jiraKey || 'Story'}* has been completed and the changelog entry is ready for review.\n\n*Title:* ${contentTitle}\n*Category:* ${category || 'feature_update'}\n*Assignee:* ${assignee || 'Unassigned'}\n*Summary:* ${contentSummary || 'Review the content for details'}`
           }
         },
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `<${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product|📊 View Dashboard> | <${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product#entry-${contentId}|✏️ Edit Entry>${jiraKey ? ` | <https://marq.atlassian.net/browse/${jiraKey}|🎫 JIRA Ticket>` : ''}`
+            text: `👉 *<${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product|Review & Approve in Dashboard>*\n\nClick the link above to review, edit, and approve this changelog entry.${jiraKey ? `\n\n🎫 <https://marq.atlassian.net/browse/${jiraKey}|View JIRA Ticket>` : ''}`
           }
         },
         {
-          type: 'actions',
+          type: 'context',
           elements: [
             {
-              type: 'button',
-              text: {
-                type: 'plain_text',
-                text: '✅ Approve & Publish'
-              },
-              style: 'primary',
-              value: `approve_${contentId}`,
-              action_id: 'approve_changelog'
-            },
-            {
-              type: 'button',
-              text: {
-                type: 'plain_text',
-                text: '✏️ Request Changes'
-              },
-              value: `changes_${contentId}`,
-              action_id: 'request_changes'
-            },
-            {
-              type: 'button',
-              text: {
-                type: 'plain_text',
-                text: '❌ Reject'
-              },
-              style: 'danger',
-              value: `reject_${contentId}`,
-              action_id: 'reject_changelog'
+              type: 'mrkdwn',
+              text: `Quality Score: ${qualityScore}% | Content ID: ${contentId}`
             }
           ]
         }
@@ -477,130 +404,7 @@ async function handleSlashCommand(params: SlackCommand) {
   }
 }
 
-async function handleInteraction(params: any) {
-  try {
-    const { action_id, value, user, response_url } = params;
-    
-    // Handle changelog-specific actions
-    if (action_id === 'approve_changelog') {
-      const contentId = value.replace('approve_', '');
-      await approveChangelogViaSlack(contentId, user.username);
-      
-      // Update the original message using response_url
-      if (response_url) {
-        const updatedMessage = {
-          replace_original: true,
-          blocks: [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `✅ *Changelog Approved & Published*\n\nApproved by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry has been published and is now live._`
-              }
-            }
-          ]
-        };
-        
-        await updateSlackMessage(response_url, updatedMessage);
-      }
-      
-      // Return immediate response
-      return NextResponse.json({
-        text: 'Changelog approved!',
-        response_type: 'ephemeral'
-      });
-    }
-    
-    if (action_id === 'reject_changelog') {
-      const contentId = value.replace('reject_', '');
-      await rejectChangelogViaSlack(contentId, user.username);
-      
-      // Update the original message using response_url
-      if (response_url) {
-        const updatedMessage = {
-          replace_original: true,
-          blocks: [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `❌ *Changelog Rejected*\n\nRejected by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry has been rejected and will not be published._`
-              }
-            }
-          ]
-        };
-        
-        await updateSlackMessage(response_url, updatedMessage);
-      }
-      
-      // Return immediate response
-      return NextResponse.json({
-        text: 'Changelog rejected.',
-        response_type: 'ephemeral'
-      });
-    }
-    
-    if (action_id === 'request_changes') {
-      const contentId = value.replace('changes_', '');
-      await requestChangesViaSlack(contentId, user.username);
-      
-      // Update the original message using response_url
-      if (response_url) {
-        const updatedMessage = {
-          replace_original: true,
-          blocks: [
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: `🔄 *Changes Requested*\n\nRequested by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry needs changes before it can be published. Please review and update the content._`
-              }
-            }
-          ]
-        };
-        
-        await updateSlackMessage(response_url, updatedMessage);
-      }
-      
-      // Return immediate response
-      return NextResponse.json({
-        text: 'Changes requested.',
-        response_type: 'ephemeral'
-      });
-    }
-    
-    // Handle legacy content actions
-    if (action_id === 'approve_content') {
-      const contentId = value.replace('approve_', '');
-      await approveContentViaSlack(contentId, user.username);
-      return NextResponse.json({
-        text: `Content approved by ${user.username}`,
-        response_type: 'in_channel'
-      });
-    }
-    
-    if (action_id === 'reject_content') {
-      const contentId = value.replace('reject_', '');
-      await rejectContentViaSlack(contentId, user.username);
-      return NextResponse.json({
-        text: `Content rejected by ${user.username}`,
-        response_type: 'in_channel'
-      });
-    }
-
-    return NextResponse.json({
-      text: 'Action completed',
-      response_type: 'ephemeral'
-    });
-
-  } catch (error) {
-    console.error('Error handling interaction:', error);
-    return NextResponse.json({
-      text: 'Sorry, there was an error processing your action.',
-      response_type: 'ephemeral'
-    });
-  }
-}
+// Interactive button handling removed - using dashboard links instead
 
 async function getContentStats() {
   try {
@@ -673,280 +477,7 @@ function getHelpMessage() {
   };
 }
 
-async function approveContentViaSlack(contentId: string, username: string) {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/approval`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'approve',
-        contentId,
-        reviewerId: `slack_${username}`,
-        comments: 'Approved via Slack'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to approve content');
-    }
-
-    console.log(`Content ${contentId} approved via Slack by ${username}`);
-
-  } catch (error) {
-    console.error('Error approving content via Slack:', error);
-    throw error;
-  }
-}
-
-async function requestChangesViaSlack(contentId: string, username: string) {
-  try {
-    console.log(`🔍 Attempting to request changes for changelog with ID: ${contentId}`);
-    
-    // Handle legacy contentId format (jira-STORY-123) by looking up the real UUID
-    let actualContentId = contentId;
-    if (contentId.startsWith('jira-')) {
-      const jiraKey = contentId.replace('jira-', '');
-      console.log(`🔍 Looking up database ID for JIRA key: ${jiraKey}`);
-      
-      const { data: lookupData, error: lookupError } = await supabase
-        .from('generated_content')
-        .select('id')
-        .eq('content_type', 'changelog_entry')
-        .contains('source_data', { jira_story_key: jiraKey })
-        .limit(1)
-        .single();
-        
-      if (lookupError || !lookupData) {
-        console.error('Failed to find changelog entry for JIRA key:', jiraKey, lookupError);
-        throw new Error(`Could not find changelog entry for JIRA story: ${jiraKey}`);
-      }
-      
-      actualContentId = lookupData.id;
-      console.log(`✅ Found database ID: ${actualContentId} for JIRA key: ${jiraKey}`);
-    }
-    
-    // Try direct database update using existing columns
-    const { data, error } = await supabase
-      .from('generated_content')
-      .update({
-        status: 'needs_changes',
-        updated_at: new Date().toISOString(),
-        // Store additional info in generation_metadata
-        generation_metadata: {
-          auto_generated: true,
-          source: 'slack_changes_requested',
-          reviewed_by: `slack_${username}`,
-          reviewed_at: new Date().toISOString(),
-          approval_method: 'slack_button',
-          review_comments: 'Changes requested via Slack'
-        }
-      })
-      .eq('id', actualContentId)
-      .select();
-      
-    if (error) {
-      console.error('Database update error:', error);
-      throw new Error(`Database update failed: ${error.message}`);
-    }
-    
-    if (!data || data.length === 0) {
-      console.warn(`No record found with ID: ${actualContentId}`);
-      throw new Error(`No changelog entry found with ID: ${actualContentId}`);
-    }
-
-    console.log(`✅ Changes requested for ${actualContentId} via Slack by ${username}`);
-    console.log('Updated record:', data[0]);
-
-  } catch (error) {
-    console.error('Error requesting changes via Slack:', error);
-    throw error;
-  }
-}
-
-async function rejectContentViaSlack(contentId: string, username: string) {
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/approval`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'reject',
-        contentId,
-        reviewerId: `slack_${username}`,
-        comments: 'Rejected via Slack'
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to reject content');
-    }
-
-    console.log(`Content ${contentId} rejected via Slack by ${username}`);
-
-  } catch (error) {
-    console.error('Error rejecting content via Slack:', error);
-    throw error;
-  }
-}
-
-async function approveChangelogViaSlack(contentId: string, username: string) {
-  try {
-    console.log(`🔍 Attempting to approve changelog with ID: ${contentId}`);
-    
-    // Handle legacy contentId format (jira-STORY-123) by looking up the real UUID
-    let actualContentId = contentId;
-    if (contentId.startsWith('jira-')) {
-      const jiraKey = contentId.replace('jira-', '');
-      console.log(`🔍 Looking up database ID for JIRA key: ${jiraKey}`);
-      
-      const { data: lookupData, error: lookupError } = await supabase
-        .from('generated_content')
-        .select('id')
-        .eq('content_type', 'changelog_entry')
-        .contains('source_data', { jira_story_key: jiraKey })
-        .limit(1)
-        .single();
-        
-      if (lookupError || !lookupData) {
-        console.error('Failed to find changelog entry for JIRA key:', jiraKey, lookupError);
-        throw new Error(`Could not find changelog entry for JIRA story: ${jiraKey}`);
-      }
-      
-      actualContentId = lookupData.id;
-      console.log(`✅ Found database ID: ${actualContentId} for JIRA key: ${jiraKey}`);
-    }
-    
-    // Try direct database update using existing columns
-    const { data, error } = await supabase
-      .from('generated_content')
-      .update({
-        status: 'approved',
-        updated_at: new Date().toISOString(),
-        // Store additional info in generation_metadata
-        generation_metadata: {
-          auto_generated: true,
-          source: 'slack_approval',
-          approved_by: `slack_${username}`,
-          approved_at: new Date().toISOString(),
-          approval_method: 'slack_button'
-        }
-      })
-      .eq('id', actualContentId)
-      .select();
-      
-    if (error) {
-      console.error('Database update error:', error);
-      throw new Error(`Database update failed: ${error.message}`);
-    }
-    
-    if (!data || data.length === 0) {
-      console.warn(`No record found with ID: ${actualContentId}`);
-      throw new Error(`No changelog entry found with ID: ${actualContentId}`);
-    }
-
-    console.log(`✅ Changelog ${actualContentId} approved via Slack by ${username}`);
-    console.log('Updated record:', data[0]);
-
-  } catch (error) {
-    console.error('Error approving changelog via Slack:', error);
-    throw error;
-  }
-}
-
-async function rejectChangelogViaSlack(contentId: string, username: string) {
-  try {
-    console.log(`🔍 Attempting to reject changelog with ID: ${contentId}`);
-    
-    // Handle legacy contentId format (jira-STORY-123) by looking up the real UUID
-    let actualContentId = contentId;
-    if (contentId.startsWith('jira-')) {
-      const jiraKey = contentId.replace('jira-', '');
-      console.log(`🔍 Looking up database ID for JIRA key: ${jiraKey}`);
-      
-      const { data: lookupData, error: lookupError } = await supabase
-        .from('generated_content')
-        .select('id')
-        .eq('content_type', 'changelog_entry')
-        .contains('source_data', { jira_story_key: jiraKey })
-        .limit(1)
-        .single();
-        
-      if (lookupError || !lookupData) {
-        console.error('Failed to find changelog entry for JIRA key:', jiraKey, lookupError);
-        throw new Error(`Could not find changelog entry for JIRA story: ${jiraKey}`);
-      }
-      
-      actualContentId = lookupData.id;
-      console.log(`✅ Found database ID: ${actualContentId} for JIRA key: ${jiraKey}`);
-    }
-    
-    // Try direct database update using existing columns
-    const { data, error } = await supabase
-      .from('generated_content')
-      .update({
-        status: 'rejected',
-        updated_at: new Date().toISOString(),
-        // Store additional info in generation_metadata
-        generation_metadata: {
-          auto_generated: true,
-          source: 'slack_rejection',
-          rejected_by: `slack_${username}`,
-          rejected_at: new Date().toISOString(),
-          approval_method: 'slack_button'
-        }
-      })
-      .eq('id', actualContentId)
-      .select();
-      
-    if (error) {
-      console.error('Database update error:', error);
-      throw new Error(`Database update failed: ${error.message}`);
-    }
-    
-    if (!data || data.length === 0) {
-      console.warn(`No record found with ID: ${actualContentId}`);
-      throw new Error(`No changelog entry found with ID: ${actualContentId}`);
-    }
-
-    console.log(`✅ Changelog ${actualContentId} rejected via Slack by ${username}`);
-    console.log('Updated record:', data[0]);
-
-  } catch (error) {
-    console.error('Error rejecting changelog via Slack:', error);
-    throw error;
-  }
-}
-
-async function updateSlackMessage(responseUrl: string, message: any) {
-  try {
-    console.log('🔄 Updating Slack message via response_url...');
-    
-    const response = await fetch(responseUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(message)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Slack message update error:', {
-        status: response.status,
-        statusText: response.statusText,
-        responseText: errorText
-      });
-      throw new Error(`Slack message update failed: ${response.status} ${response.statusText}`);
-    }
-
-    console.log('✅ Slack message updated successfully');
-    return true;
-
-  } catch (error) {
-    console.error('Error updating Slack message:', error);
-    // Don't throw - message update failure shouldn't break the workflow
-    return false;
-  }
-}
+// Slack interaction functions removed - users now go directly to dashboard for approvals
 
 async function sendToSlackWebhook(webhookUrl: string, message: any) {
   try {
