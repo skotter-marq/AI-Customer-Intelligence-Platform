@@ -646,15 +646,21 @@ async function requestChangesViaSlack(contentId: string, username: string) {
   try {
     console.log(`🔍 Attempting to request changes for changelog with ID: ${contentId}`);
     
-    // Try direct database update first
+    // Try direct database update using existing columns
     const { data, error } = await supabase
       .from('generated_content')
       .update({
-        approval_status: 'changes_requested',
         status: 'needs_changes',
-        review_comments: 'Changes requested via Slack',
-        reviewed_at: new Date().toISOString(),
-        reviewed_by: `slack_${username}`
+        updated_at: new Date().toISOString(),
+        // Store additional info in generation_metadata
+        generation_metadata: {
+          auto_generated: true,
+          source: 'slack_changes_requested',
+          reviewed_by: `slack_${username}`,
+          reviewed_at: new Date().toISOString(),
+          approval_method: 'slack_button',
+          review_comments: 'Changes requested via Slack'
+        }
       })
       .eq('id', contentId)
       .select();
@@ -707,15 +713,20 @@ async function approveChangelogViaSlack(contentId: string, username: string) {
   try {
     console.log(`🔍 Attempting to approve changelog with ID: ${contentId}`);
     
-    // Try direct database update first
+    // Try direct database update using existing columns
     const { data, error } = await supabase
       .from('generated_content')
       .update({
-        approval_status: 'approved',
-        is_public: true,
         status: 'approved',
-        approved_at: new Date().toISOString(),
-        approved_by: `slack_${username}`
+        updated_at: new Date().toISOString(),
+        // Store additional info in generation_metadata
+        generation_metadata: {
+          auto_generated: true,
+          source: 'slack_approval',
+          approved_by: `slack_${username}`,
+          approved_at: new Date().toISOString(),
+          approval_method: 'slack_button'
+        }
       })
       .eq('id', contentId)
       .select();
@@ -743,15 +754,20 @@ async function rejectChangelogViaSlack(contentId: string, username: string) {
   try {
     console.log(`🔍 Attempting to reject changelog with ID: ${contentId}`);
     
-    // Try direct database update first
+    // Try direct database update using existing columns
     const { data, error } = await supabase
       .from('generated_content')
       .update({
-        approval_status: 'rejected',
-        is_public: false,
         status: 'rejected',
-        rejected_at: new Date().toISOString(),
-        rejected_by: `slack_${username}`
+        updated_at: new Date().toISOString(),
+        // Store additional info in generation_metadata
+        generation_metadata: {
+          auto_generated: true,
+          source: 'slack_rejection',
+          rejected_by: `slack_${username}`,
+          rejected_at: new Date().toISOString(),
+          approval_method: 'slack_button'
+        }
       })
       .eq('id', contentId)
       .select();
