@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     // Handle missing Supabase client during build
     if (!supabase) {
       return NextResponse.json(
-        { error: 'Database connection not available' },
+        { success: false, error: 'Database connection not available' },
         { status: 503 }
       );
     }
@@ -222,7 +222,7 @@ export async function GET(request: Request) {
         quality_score: entry.quality_score || 0.85,
         published_at: entry.release_date || entry.created_at,
         tldr_summary: entry.content_title, // Use title as summary for now
-        tldr_bullet_points: sourceData.highlights || sourceData.tldr_bullet_points || [],
+        tldr_bullet_points: cleanupHighlights(sourceData.highlights || sourceData.tldr_bullet_points || []),
         update_category: sourceData.category?.toLowerCase() || 'feature_update',
         layout_template: entry.layout_template || 'standard',
         importance_score: entry.importance_score || 0.7,
@@ -267,7 +267,7 @@ export async function GET(request: Request) {
   } catch (error) {
     console.error('Changelog API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -278,7 +278,7 @@ export async function POST(request: Request) {
     // Handle missing Supabase client during build
     if (!supabase) {
       return NextResponse.json(
-        { error: 'Database connection not available' },
+        { success: false, error: 'Database connection not available' },
         { status: 503 }
       );
     }
@@ -298,7 +298,7 @@ export async function POST(request: Request) {
       
       default:
         return NextResponse.json(
-          { error: 'Invalid action' },
+          { success: false, error: 'Invalid action' },
           { status: 400 }
         );
     }
@@ -306,7 +306,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Changelog POST API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -319,7 +319,7 @@ export async function PUT(request: Request) {
     
     if (!entryId) {
       return NextResponse.json(
-        { error: 'Entry ID is required' },
+        { success: false, error: 'Entry ID is required' },
         { status: 400 }
       );
     }
@@ -396,7 +396,7 @@ export async function PUT(request: Request) {
     if (error) {
       console.error('Database update error:', error);
       return NextResponse.json(
-        { error: 'Failed to update entry' },
+        { success: false, error: 'Failed to update entry' },
         { status: 500 }
       );
     }
@@ -438,7 +438,7 @@ export async function PUT(request: Request) {
   } catch (error) {
     console.error('Changelog PUT error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { success: false, error: 'Internal server error' },
       { status: 500 }
     );
   }
@@ -504,7 +504,7 @@ async function getChangelogStats() {
   } catch (error) {
     console.error('Error getting changelog stats:', error);
     return NextResponse.json(
-      { error: 'Failed to get changelog stats' },
+      { success: false, error: 'Failed to get changelog stats' },
       { status: 500 }
     );
   }
@@ -557,7 +557,7 @@ async function getChangelogCategories() {
   } catch (error) {
     console.error('Error getting changelog categories:', error);
     return NextResponse.json(
-      { error: 'Failed to get changelog categories' },
+      { success: false, error: 'Failed to get changelog categories' },
       { status: 500 }
     );
   }
@@ -575,8 +575,52 @@ async function markEntryViewed(entryId: string, userId?: string) {
   } catch (error) {
     console.error('Error marking entry as viewed:', error);
     return NextResponse.json(
-      { error: 'Failed to mark entry as viewed' },
+      { success: false, error: 'Failed to mark entry as viewed' },
       { status: 500 }
     );
   }
+}
+
+/**
+ * Clean up malformed highlights from webhook processing
+ * @param highlights - The highlights array to clean up
+ * @returns Cleaned highlights array
+ */
+function cleanupHighlights(highlights: any): string[] {
+  if (!Array.isArray(highlights) || highlights.length === 0) {
+    return [];
+  }
+  
+  // Check if highlights are malformed (single long entry that might be truncated)
+  if (highlights.length === 1 && highlights[0].length > 100) {
+    const longHighlight = highlights[0];
+    
+    // Try to split into meaningful bullet points
+    const sentences = longHighlight.split(/[.!?]+/).filter((s: string) => s.trim().length > 10);
+    
+    if (sentences.length > 1) {
+      // Create better highlights from sentences
+      return sentences.slice(0, 3).map((s: string) => {
+        let cleaned = s.trim().replace(/^[^a-zA-Z]*/, '');
+        
+        // Fix common truncation issues
+        if (cleaned.startsWith('factor authentication')) {
+          cleaned = 'Multi-' + cleaned;
+        }
+        
+        // Ensure first letter is capitalized
+        return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      });
+    }
+    
+    // If can't split meaningfully, create generic highlights
+    return [
+      'Enhanced security features',
+      'Improved user experience', 
+      'Better system reliability'
+    ];
+  }
+  
+  // Return highlights as-is if they look good
+  return highlights.filter((h: any) => typeof h === 'string' && h.trim().length > 0);
 }

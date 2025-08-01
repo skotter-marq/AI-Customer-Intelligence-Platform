@@ -79,6 +79,8 @@ interface EnhancedChangelogEntry {
   external_link?: string;
   video_url?: string;
   image_url?: string;
+  // Related JIRA stories
+  related_stories?: string[];
 }
 
 export default function ProductPage() {
@@ -450,16 +452,6 @@ export default function ProductPage() {
     }
   };
 
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'Added': return '🆕';
-      case 'Improved': return '⚡';
-      case 'Fixed': return '🔧';
-      case 'Security': return '🔒';
-      case 'Deprecated': return '⚠️';
-      default: return '📝';
-    }
-  };
 
   const filteredUpdates = productUpdates.filter(update => {
     const matchesSearch = !searchQuery || 
@@ -509,7 +501,8 @@ export default function ProductPage() {
       layout_template: entry.layout_template || 'standard',
       external_link: entry.external_link || '',
       video_url: entry.video_url || '',
-      image_url: entry.image_url || ''
+      image_url: entry.image_url || '',
+      related_stories: entry.related_stories || []
     });
   };
 
@@ -517,6 +510,16 @@ export default function ProductPage() {
     if (!editingEntryId) return;
     
     try {
+      console.log('🔧 Saving edit form data:', editForm);
+      console.log('🔧 Entry ID:', editingEntryId);
+      
+      // Check if we can find the entry being edited
+      const entryBeingEdited = changelogEntries.find(e => e.id === editingEntryId);
+      console.log('🔧 Found entry being edited:', !!entryBeingEdited);
+      if (entryBeingEdited) {
+        console.log('🔧 Entry title:', entryBeingEdited.content_title);
+      }
+      
       const response = await fetch(`/api/changelog?id=${editingEntryId}`, {
         method: 'PUT',
         headers: {
@@ -526,14 +529,15 @@ export default function ProductPage() {
       });
       
       const data = await response.json();
+      console.log('🔧 Save response:', { success: data.success, status: response.status });
       
       if (data.success) {
-        // Update the entry in the state
-        setChangelogEntries(prev => prev.map(entry => 
-          entry.id === editingEntryId 
-            ? { ...entry, ...editForm }
-            : entry
-        ));
+        console.log('✅ Save successful, updating state...');
+        
+        // Refresh the data to get the updated entry from the server
+        await fetchChangelogData();
+        
+        console.log('✅ Data refreshed successfully');
         
         // Send Slack notification if approval status changed
         if (editForm.approval_status === 'approved') {
@@ -550,12 +554,15 @@ export default function ProductPage() {
         
         console.log('Successfully saved changes for entry:', editingEntryId);
       } else {
-        console.error('Failed to save changes:', data.error);
-        alert('Failed to save changes. Please try again.');
+        console.error('Failed to save changes:', data.error || data);
+        console.error('Response status:', response.status);
+        console.error('Full response data:', data);
+        alert(`Failed to save changes: ${data.error || 'Unknown error'}. Please try again.`);
       }
     } catch (error) {
       console.error('Error saving changes:', error);
-      alert('Failed to save changes. Please try again.');
+      console.error('Error details:', error.message);
+      alert(`Failed to save changes: ${error.message}. Please try again.`);
     }
     
     // Reset editing state
@@ -702,6 +709,108 @@ export default function ProductPage() {
     } catch (error) {
       console.error('Error rejecting entry:', error);
       alert('Failed to reject entry. Please try again.');
+    }
+  };
+
+  const handleRegenerateContent = async () => {
+    if (!editingEntryId) return;
+    
+    try {
+      console.log('🔄 Regenerating content with related stories...');
+      
+      // Get the related stories from the edit form
+      const relatedStories = editForm.related_stories?.filter(story => story && story.trim()) || [];
+      
+      if (relatedStories.length === 0) {
+        alert('Please add at least one related JIRA story to regenerate content.');
+        return;
+      }
+      
+      // Show loading state
+      const button = document.activeElement as HTMLButtonElement;
+      const originalText = button?.textContent || '';
+      if (button) {
+        button.textContent = 'Regenerating...';
+        button.disabled = true;
+      }
+      
+      // Call the regeneration API
+      const response = await fetch('/api/regenerate-changelog', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          entryId: editingEntryId,
+          relatedStories: relatedStories
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        console.log('✅ Content regenerated successfully');
+        
+        // Update the edit form with the enhanced content
+        const enhancedContent = data.enhancedContent;
+        setEditForm(prev => ({
+          ...prev,
+          customer_facing_title: enhancedContent.customer_facing_title,
+          customer_facing_description: enhancedContent.customer_facing_description,
+          highlights: enhancedContent.highlights,
+          category: enhancedContent.category,
+          breaking_changes: enhancedContent.breaking_changes,
+          migration_notes: enhancedContent.migration_notes || prev.migration_notes
+        }));
+        
+        // Show detailed success message
+        let successMessage = `✅ Content regenerated successfully with context from ${data.relatedStoriesProcessed} related stories!`;
+        
+        if (data.failedStories && data.failedStories.length > 0) {
+          successMessage += `\n\n⚠️ Note: Could not access ${data.failedStories.length} stories (${data.failedStories.join(', ')}). This may be due to permissions or the stories not existing.`;
+        }
+        
+        alert(successMessage);
+        
+      } else {
+        console.error('❌ Regeneration failed:', data.error);
+        
+        // Provide detailed error feedback
+        let errorMessage = `Failed to regenerate content: ${data.error}`;
+        
+        if (data.details) {
+          errorMessage += `\n\nDetails: ${data.details}`;
+        }
+        
+        if (data.failedStories && data.failedStories.length > 0) {
+          errorMessage += `\n\nFailed stories: ${data.failedStories.join(', ')}`;
+        }
+        
+        // Check for authentication issues
+        if (data.error.includes('Could not fetch any of the related stories from JIRA')) {
+          errorMessage += '\n\n💡 Tip: This may be due to JIRA authentication issues or story access permissions. Please verify your JIRA credentials and story keys.';
+        }
+        
+        alert(errorMessage);
+      }
+      
+      // Restore button state after both success and error
+      const button = document.activeElement as HTMLButtonElement;
+      if (button) {
+        button.textContent = originalText;
+        button.disabled = false;
+      }
+      
+    } catch (error) {
+      console.error('❌ Error regenerating content:', error);
+      alert('Failed to regenerate content. Please check your network connection and try again.');
+      
+      // Restore button state on network/other errors
+      const button = document.activeElement as HTMLButtonElement;
+      if (button) {
+        button.textContent = originalText;
+        button.disabled = false;
+      }
     }
   };
 
@@ -933,11 +1042,11 @@ export default function ProductPage() {
                       style={{ border: '1px solid #e2e8f0', background: 'white' }}
                     >
                       <option value="all">All Categories</option>
-                      <option value="Added">🆕 Added</option>
-                      <option value="Improved">⚡ Improved</option>
-                      <option value="Fixed">🔧 Fixed</option>
-                      <option value="Security">🔒 Security</option>
-                      <option value="Deprecated">⚠️ Deprecated</option>
+                      <option value="Added">Added</option>
+                      <option value="Improved">Improved</option>
+                      <option value="Fixed">Fixed</option>
+                      <option value="Security">Security</option>
+                      <option value="Deprecated">Deprecated</option>
                     </select>
                   </>
                 )}
@@ -986,7 +1095,16 @@ export default function ProductPage() {
                       {/* Edit Header */}
                       <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
                         <div className="flex items-center space-x-3 flex-1">
-                          <div className="text-2xl">{getCategoryIcon(editForm.category || entry.category)}</div>
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                            (editForm.category || entry.category) === 'Added' ? 'bg-green-100 text-green-800' :
+                            (editForm.category || entry.category) === 'Fixed' ? 'bg-blue-100 text-blue-800' :
+                            (editForm.category || entry.category) === 'Security' ? 'bg-red-100 text-red-800' :
+                            (editForm.category || entry.category) === 'Improved' ? 'bg-purple-100 text-purple-800' :
+                            (editForm.category || entry.category) === 'Deprecated' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {editForm.category || entry.category}
+                          </span>
                           <div className="flex-1">
                             <input
                               type="text"
@@ -1011,11 +1129,11 @@ export default function ProductPage() {
                             className="px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             style={{ background: 'white' }}
                           >
-                            <option value="Added">🆕 Added</option>
-                            <option value="Improved">⚡ Improved</option>
-                            <option value="Fixed">🔧 Fixed</option>
-                            <option value="Security">🔒 Security</option>
-                            <option value="Deprecated">⚠️ Deprecated</option>
+                            <option value="Added">Added</option>
+                            <option value="Improved">Improved</option>
+                            <option value="Fixed">Fixed</option>
+                            <option value="Security">Security</option>
+                            <option value="Deprecated">Deprecated</option>
                           </select>
                         </div>
                       </div>
@@ -1034,7 +1152,7 @@ export default function ProductPage() {
                             }`}
                             onClick={() => updateEditForm('layout_template', 'standard')}
                           >
-                            <div className="text-sm font-medium mb-1">📝 Standard</div>
+                            <div className="text-sm font-medium mb-1">Standard</div>
                             <div className="text-xs text-gray-600">Title + Description + Bullet highlights</div>
                           </div>
                           
@@ -1046,7 +1164,7 @@ export default function ProductPage() {
                             }`}
                             onClick={() => updateEditForm('layout_template', 'feature_spotlight')}
                           >
-                            <div className="text-sm font-medium mb-1">🌟 Feature Spotlight</div>
+                            <div className="text-sm font-medium mb-1">Feature Spotlight</div>
                             <div className="text-xs text-gray-600">Hero layout with key benefits & demo</div>
                           </div>
                           
@@ -1070,7 +1188,7 @@ export default function ProductPage() {
                             }`}
                             onClick={() => updateEditForm('layout_template', 'security_notice')}
                           >
-                            <div className="text-sm font-medium mb-1">🔒 Security Notice</div>
+                            <div className="text-sm font-medium mb-1">Security Notice</div>
                             <div className="text-xs text-gray-600">Prominent alert with action items</div>
                           </div>
                           
@@ -1082,7 +1200,7 @@ export default function ProductPage() {
                             }`}
                             onClick={() => updateEditForm('layout_template', 'deprecation_warning')}
                           >
-                            <div className="text-sm font-medium mb-1">⚠️ Deprecation</div>
+                            <div className="text-sm font-medium mb-1">Deprecation</div>
                             <div className="text-xs text-gray-600">Timeline + migration guide layout</div>
                           </div>
                           
@@ -1094,7 +1212,7 @@ export default function ProductPage() {
                             }`}
                             onClick={() => updateEditForm('layout_template', 'minimal')}
                           >
-                            <div className="text-sm font-medium mb-1">✨ Minimal</div>
+                            <div className="text-sm font-medium mb-1">Minimal</div>
                             <div className="text-xs text-gray-600">Clean, simple single-paragraph style</div>
                           </div>
                         </div>
@@ -1358,7 +1476,16 @@ export default function ProductPage() {
                       {/* Changelog Header */}
                       <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
                         <div className="flex items-center space-x-3">
-                          <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
+                          <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                            entry.category === 'Added' ? 'bg-green-100 text-green-800' :
+                            entry.category === 'Fixed' ? 'bg-blue-100 text-blue-800' :
+                            entry.category === 'Security' ? 'bg-red-100 text-red-800' :
+                            entry.category === 'Improved' ? 'bg-purple-100 text-purple-800' :
+                            entry.category === 'Deprecated' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {entry.category}
+                          </span>
                           <div>
                             <div className="flex items-center space-x-2 mb-1">
                               <h3 className="calendly-h3" style={{ marginBottom: 0 }}>{entry.customer_facing_title}</h3>
@@ -1494,7 +1621,7 @@ export default function ProductPage() {
                           className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                         />
                         <label htmlFor={`breaking-changes-${entry.id}`} className="calendly-body-sm font-medium text-gray-900">
-                          This update includes breaking changes
+                          Breaking changes
                         </label>
                       </div>
                       
@@ -1525,7 +1652,7 @@ export default function ProductPage() {
                       </h4>
                       <div className="p-3 bg-red-50 rounded-md border border-red-200">
                         <span className="calendly-body-sm text-red-700">
-                          This update includes breaking changes. Please review the migration notes below.
+                          Please review the migration notes below.
                         </span>
                       </div>
                     </div>
@@ -1562,13 +1689,13 @@ export default function ProductPage() {
                         <>
                           {/* Edit Mode Buttons */}
                           <button 
-                            className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                            className="calendly-btn-primary"
                             onClick={handleSaveEdit}
                           >
                             Save Changes
                           </button>
                           <button 
-                            className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition-colors"
+                            className="calendly-btn-secondary"
                             onClick={handleCancelEdit}
                           >
                             Cancel
@@ -1578,14 +1705,14 @@ export default function ProductPage() {
                         <>
                           {/* View Mode Buttons */}
                           <button 
-                            className="px-4 py-2 bg-blue-100 text-blue-700 calendly-body-sm rounded-lg hover:bg-blue-200 transition-colors font-medium"
+                            className="calendly-btn-secondary"
                             onClick={() => handleEditEntry(entry)}
                           >
                             Edit Entry
                           </button>
                           {entry.public_visibility && (
                             <button 
-                              className="px-4 py-2 bg-gray-100 text-gray-700 calendly-body-sm rounded-lg hover:bg-gray-200 transition-colors font-medium flex items-center space-x-2"
+                              className="calendly-btn-secondary flex items-center space-x-2"
                               onClick={() => {
                                 window.open('/public-changelog', '_blank');
                               }}
@@ -1680,13 +1807,22 @@ export default function ProductPage() {
                               {/* Edit Mode */}
                               <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
                                 <div className="flex items-center space-x-3 flex-1">
-                                  <div className="text-2xl">{getCategoryIcon(editForm.category || entry.category)}</div>
+                                  <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                                    (editForm.category || entry.category) === 'Added' ? 'bg-green-100 text-green-800' :
+                                    (editForm.category || entry.category) === 'Fixed' ? 'bg-blue-100 text-blue-800' :
+                                    (editForm.category || entry.category) === 'Security' ? 'bg-red-100 text-red-800' :
+                                    (editForm.category || entry.category) === 'Improved' ? 'bg-purple-100 text-purple-800' :
+                                    (editForm.category || entry.category) === 'Deprecated' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {editForm.category || entry.category}
+                                  </span>
                                   <div className="flex-1">
                                     <div className="flex items-center space-x-2 mb-2">
                                       {/* JIRA Story Key (read-only in edit mode) */}
                                       {(entry as any).metadata?.jira_story_key && (
                                         <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
-                                          🎫 {(entry as any).metadata.jira_story_key}
+                                          {(entry as any).metadata.jira_story_key}
                                         </span>
                                       )}
                                       
@@ -1696,11 +1832,11 @@ export default function ProductPage() {
                                         onChange={(e) => updateEditForm('category', e.target.value)}
                                         className="px-2 py-1 text-xs border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
                                       >
-                                        <option value="Added">🆕 Added</option>
-                                        <option value="Improved">⚡ Improved</option>
-                                        <option value="Fixed">🔧 Fixed</option>
-                                        <option value="Security">🔒 Security</option>
-                                        <option value="Deprecated">⚠️ Deprecated</option>
+                                        <option value="Added">Added</option>
+                                        <option value="Improved">Improved</option>
+                                        <option value="Fixed">Fixed</option>
+                                        <option value="Security">Security</option>
+                                        <option value="Deprecated">Deprecated</option>
                                       </select>
                                     </div>
                                     
@@ -1717,13 +1853,13 @@ export default function ProductPage() {
                                 
                                 <div className="flex items-center space-x-2">
                                   <button 
-                                    className="px-3 py-1 text-green-600 hover:text-green-800 calendly-body-sm font-medium rounded-lg hover:bg-green-50 transition-colors"
+                                    className="calendly-btn-primary"
                                     onClick={handleSaveEdit}
                                   >
-                                    Save
+                                    Save Changes
                                   </button>
                                   <button 
-                                    className="px-3 py-1 text-gray-600 hover:text-gray-800 calendly-body-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                    className="calendly-btn-secondary"
                                     onClick={handleCancelEdit}
                                   >
                                     Cancel
@@ -1819,6 +1955,61 @@ export default function ProductPage() {
                                 </div>
                               </div>
 
+                              {/* Related Stories */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">Related JIRA Stories</h4>
+                                <p className="text-xs text-gray-600 mb-3">
+                                  Add related JIRA story keys to automatically include their context and regenerate the changelog content.
+                                </p>
+                                <div className="space-y-2">
+                                  {(editForm.related_stories || []).map((storyKey, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                      <span className="text-xs text-gray-500 w-12">JIRA:</span>
+                                      <input
+                                        type="text"
+                                        value={storyKey}
+                                        onChange={(e) => {
+                                          const newRelatedStories = [...(editForm.related_stories || [])];
+                                          newRelatedStories[index] = e.target.value.toUpperCase();
+                                          updateEditForm('related_stories', newRelatedStories);
+                                        }}
+                                        className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                        placeholder="PRESS-12345"
+                                        pattern="[A-Z]+-[0-9]+"
+                                      />
+                                      <button
+                                        onClick={() => {
+                                          const newRelatedStories = (editForm.related_stories || []).filter((_, i) => i !== index);
+                                          updateEditForm('related_stories', newRelatedStories);
+                                        }}
+                                        className="text-red-500 hover:text-red-700 p-1 text-sm"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      onClick={() => {
+                                        const newRelatedStories = [...(editForm.related_stories || []), ''];
+                                        updateEditForm('related_stories', newRelatedStories);
+                                      }}
+                                      className="px-3 py-2 text-blue-600 hover:text-blue-800 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                                    >
+                                      + Add Related Story
+                                    </button>
+                                    {(editForm.related_stories || []).length > 0 && (
+                                      <button
+                                        onClick={handleRegenerateContent}
+                                        className="calendly-btn-secondary"
+                                      >
+                                        Regenerate with Related Stories
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+
                               {/* Breaking Changes Toggle */}
                               <div style={{ marginBottom: '16px' }}>
                                 <div className="flex items-center space-x-3">
@@ -1830,7 +2021,7 @@ export default function ProductPage() {
                                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                   />
                                   <label htmlFor={`breaking-changes-${entry.id}`} className="calendly-body-sm font-medium text-gray-900">
-                                    This update includes breaking changes
+                                    Breaking changes
                                   </label>
                                 </div>
                               </div>
@@ -1840,7 +2031,16 @@ export default function ProductPage() {
                               {/* View Mode */}
                               <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
                                 <div className="flex items-center space-x-3">
-                                  <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
+                                  <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
+                                    entry.category === 'Added' ? 'bg-green-100 text-green-800' :
+                                    entry.category === 'Fixed' ? 'bg-blue-100 text-blue-800' :
+                                    entry.category === 'Security' ? 'bg-red-100 text-red-800' :
+                                    entry.category === 'Improved' ? 'bg-purple-100 text-purple-800' :
+                                    entry.category === 'Deprecated' ? 'bg-yellow-100 text-yellow-800' :
+                                    'bg-gray-100 text-gray-800'
+                                  }`}>
+                                    {entry.category}
+                                  </span>
                                   <div className="flex-1">
                                     <div className="flex items-center space-x-2 mb-2">
                                       {/* JIRA Story Key */}
@@ -1851,7 +2051,7 @@ export default function ProductPage() {
                                           rel="noopener noreferrer"
                                           className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full hover:bg-blue-200 transition-colors"
                                         >
-                                          🎫 {(entry as any).metadata.jira_story_key}
+                                          {(entry as any).metadata.jira_story_key}
                                         </a>
                                       )}
                                       
@@ -1885,7 +2085,7 @@ export default function ProductPage() {
                                 
                                 <div className="flex items-center space-x-2">
                                   <button 
-                                    className="px-3 py-1 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                                    className="calendly-btn-secondary text-sm"
                                     onClick={() => handleEditEntry(entry)}
                                   >
                                     Edit
@@ -1935,14 +2135,12 @@ export default function ProductPage() {
                                     {(entry as any).video_url && (
                                       <a href={(entry as any).video_url} target="_blank" rel="noopener noreferrer"
                                          className="inline-flex items-center space-x-1 px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-full hover:bg-purple-100 transition-colors">
-                                        <span>📹</span>
                                         <span>Watch Video</span>
                                       </a>
                                     )}
                                     {(entry as any).image_url && (
                                       <a href={(entry as any).image_url} target="_blank" rel="noopener noreferrer"
                                          className="inline-flex items-center space-x-1 px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full hover:bg-green-100 transition-colors">
-                                        <span>🖼️</span>
                                         <span>View Image</span>
                                       </a>
                                     )}

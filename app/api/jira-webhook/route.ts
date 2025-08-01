@@ -341,7 +341,17 @@ async function analyzeIssueForChangelog(issue: JiraWebhookPayload['issue']) {
       const aiProvider = new AIProvider();
       
       console.log('🤖 Using AI to generate changelog content...');
+      console.log('🔧 AI Provider Config:', {
+        provider: aiProvider.provider,
+        hasOpenAI: !!aiProvider.openai,
+        hasAnthropic: !!aiProvider.anthropic
+      });
       const aiAnalysis = await aiProvider.generateChangelogEntry(issue);
+      
+      console.log('🔍 AI Analysis Result:');
+      console.log('   Customer Title:', aiAnalysis.customer_title);
+      console.log('   Highlights:', JSON.stringify(aiAnalysis.highlights, null, 2));
+      console.log('   Category:', aiAnalysis.category);
       
       // Map AI response to our expected format
       return {
@@ -355,7 +365,8 @@ async function analyzeIssueForChangelog(issue: JiraWebhookPayload['issue']) {
       };
       
     } catch (aiError) {
-      console.warn('🚨 AI analysis failed, falling back to rule-based analysis:', aiError.message);
+      console.error('🚨 AI analysis failed, falling back to rule-based analysis:', aiError.message);
+      console.error('🚨 AI Error Stack:', aiError.stack);
       
       // Fallback to rule-based analysis
       const summary = issue.fields.summary.toLowerCase();
@@ -516,6 +527,7 @@ async function saveForApproval(changelogEntry: any) {
 
     // In production, save to your Supabase table
     console.log('💾 Saving changelog entry for approval:', changelogEntry.jira_story_key);
+    console.log('🔍 Changelog Entry Highlights:', JSON.stringify(changelogEntry.highlights, null, 2));
     
     // Save to generated_content table using existing columns only
     const { data, error } = await supabase
