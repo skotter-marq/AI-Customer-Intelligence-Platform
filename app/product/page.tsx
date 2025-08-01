@@ -302,6 +302,8 @@ export default function ProductPage() {
         
         if (tabParam === 'approval') {
           console.log('✅ Setting tab to APPROVAL');
+          // Temporary alert for debugging
+          alert(`DEBUG: Found ?tab=approval parameter, switching to approval tab!`);
           setActiveTab('approval');
         } else if (tabParam === 'changelog') {
           console.log('✅ Setting tab to CHANGELOG');
