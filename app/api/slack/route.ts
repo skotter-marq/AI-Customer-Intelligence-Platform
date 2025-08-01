@@ -9,13 +9,7 @@ const SLACK_WEBHOOKS = {
   content: process.env.SLACK_WEBHOOK_CONTENT
 };
 
-// Debug logging to check webhook URLs
-console.log('🔧 Slack webhook configuration:', {
-  approvals: SLACK_WEBHOOKS.approvals ? 'configured' : 'missing',
-  updates: SLACK_WEBHOOKS.updates ? 'configured' : 'missing',
-  insights: SLACK_WEBHOOKS.insights ? 'configured' : 'missing',
-  content: SLACK_WEBHOOKS.content ? 'configured' : 'missing'
-});
+// Slack webhook URLs loaded from environment variables
 
 interface SlackMessage {
   text: string;
@@ -254,7 +248,7 @@ async function sendApprovalRequest(params: any) {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `👉 *<${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product|Review & Approve in Dashboard>*\n\nClick the link above to review, edit, and approve this changelog entry.${jiraKey ? `\n\n🎫 <https://marq.atlassian.net/browse/${jiraKey}|View JIRA Ticket>` : ''}`
+            text: `👉 *<${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval|Review & Approve in Dashboard>*\n\nClick the link above to review, edit, and approve this changelog entry.${jiraKey ? `\n\n🎫 <https://marq.atlassian.net/browse/${jiraKey}|View JIRA Ticket>` : ''}`
           }
         },
         {
@@ -269,7 +263,6 @@ async function sendApprovalRequest(params: any) {
       ]
     };
 
-    console.log('🔍 Sending approval request with webhook URL:', SLACK_WEBHOOKS.approvals ? 'valid URL' : 'missing/undefined');
     const response = await sendToSlackWebhook(SLACK_WEBHOOKS.approvals, approvalMessage);
     
     console.log('Approval request sent to Slack:', approvalMessage);

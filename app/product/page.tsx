@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Search,
   Filter,
@@ -85,6 +85,7 @@ interface EnhancedChangelogEntry {
 
 export default function ProductPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'changelog' | 'approval'>('changelog');
   const [productUpdates, setProductUpdates] = useState<ProductUpdate[]>([]);
   const [changelogEntries, setChangelogEntries] = useState<EnhancedChangelogEntry[]>([]);
@@ -283,8 +284,14 @@ export default function ProductPage() {
   ];
 
   useEffect(() => {
+    // Check for tab parameter in URL
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'approval' || tabParam === 'changelog') {
+      setActiveTab(tabParam);
+    }
+    
     fetchChangelogData();
-  }, []);
+  }, [searchParams]);
 
   const fetchChangelogData = async () => {
     setLoading(true);
