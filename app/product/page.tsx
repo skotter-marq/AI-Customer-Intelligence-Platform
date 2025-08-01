@@ -75,6 +75,10 @@ interface EnhancedChangelogEntry {
   approval_status: 'pending' | 'approved' | 'published';
   public_visibility: boolean;
   layout_template?: 'standard' | 'feature_spotlight' | 'technical_update' | 'security_notice' | 'deprecation_warning' | 'minimal';
+  // Optional media fields
+  external_link?: string;
+  video_url?: string;
+  image_url?: string;
 }
 
 export default function ProductPage() {
@@ -502,7 +506,10 @@ export default function ProductPage() {
       category: entry.category,
       breaking_changes: entry.breaking_changes,
       migration_notes: entry.migration_notes,
-      layout_template: entry.layout_template || 'standard'
+      layout_template: entry.layout_template || 'standard',
+      external_link: entry.external_link || '',
+      video_url: entry.video_url || '',
+      image_url: entry.image_url || ''
     });
   };
 
@@ -1668,110 +1675,299 @@ export default function ProductPage() {
                       .filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval)
                       .map((entry) => (
                         <div key={entry.id} className="calendly-card hover:shadow-md transition-shadow duration-200">
-                          {/* Card Header with JIRA Context */}
-                          <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
-                            <div className="flex items-center space-x-3">
-                              <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-2">
-                                  {/* JIRA Story Key */}
-                                  {(entry as any).metadata?.jira_story_key && (
-                                    <a 
-                                      href={`https://marq.atlassian.net/browse/${(entry as any).metadata.jira_story_key}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full hover:bg-blue-200 transition-colors"
-                                    >
-                                      🎫 {(entry as any).metadata.jira_story_key}
-                                    </a>
-                                  )}
-                                  
-                                  {/* Priority Badge */}
-                                  {(entry as any).metadata?.priority && (
-                                    <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getJiraPriorityColor((entry as any).metadata.priority)}`}>
-                                      {(entry as any).metadata.priority}
-                                    </span>
-                                  )}
-                                  
-                                  {/* Category Badge */}
-                                  <span className={`calendly-badge ${getCategoryColor(entry.category)}`}>
-                                    {entry.category}
-                                  </span>
+                          {editingEntryId === entry.id ? (
+                            <>
+                              {/* Edit Mode */}
+                              <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
+                                <div className="flex items-center space-x-3 flex-1">
+                                  <div className="text-2xl">{getCategoryIcon(editForm.category || entry.category)}</div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      {/* JIRA Story Key (read-only in edit mode) */}
+                                      {(entry as any).metadata?.jira_story_key && (
+                                        <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                                          🎫 {(entry as any).metadata.jira_story_key}
+                                        </span>
+                                      )}
+                                      
+                                      {/* Category Selector */}
+                                      <select
+                                        value={editForm.category || entry.category}
+                                        onChange={(e) => updateEditForm('category', e.target.value)}
+                                        className="px-2 py-1 text-xs border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                      >
+                                        <option value="Added">🆕 Added</option>
+                                        <option value="Improved">⚡ Improved</option>
+                                        <option value="Fixed">🔧 Fixed</option>
+                                        <option value="Security">🔒 Security</option>
+                                        <option value="Deprecated">⚠️ Deprecated</option>
+                                      </select>
+                                    </div>
+                                    
+                                    {/* Title Editor */}
+                                    <input
+                                      type="text"
+                                      value={editForm.customer_facing_title || entry.customer_facing_title}
+                                      onChange={(e) => updateEditForm('customer_facing_title', e.target.value)}
+                                      className="w-full text-lg font-semibold border-0 border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent"
+                                      placeholder="Customer-facing title..."
+                                    />
+                                  </div>
                                 </div>
                                 
-                                <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
-                                  {entry.customer_facing_title}
-                                </h3>
+                                <div className="flex items-center space-x-2">
+                                  <button 
+                                    className="px-3 py-1 text-green-600 hover:text-green-800 calendly-body-sm font-medium rounded-lg hover:bg-green-50 transition-colors"
+                                    onClick={handleSaveEdit}
+                                  >
+                                    Save
+                                  </button>
+                                  <button 
+                                    className="px-3 py-1 text-gray-600 hover:text-gray-800 calendly-body-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                                    onClick={handleCancelEdit}
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Description Editor */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <textarea
+                                  value={editForm.customer_facing_description || entry.customer_facing_description}
+                                  onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                                  style={{ minHeight: '80px' }}
+                                  placeholder="Describe what this update means for customers..."
+                                />
+                              </div>
+
+                              {/* Highlights Editor */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">Key Changes</h4>
+                                <div className="space-y-2">
+                                  {(editForm.highlights || entry.highlights || []).map((highlight, index) => (
+                                    <div key={index} className="flex items-center space-x-2">
+                                      <input
+                                        type="text"
+                                        value={highlight}
+                                        onChange={(e) => {
+                                          const newHighlights = [...(editForm.highlights || entry.highlights || [])];
+                                          newHighlights[index] = e.target.value;
+                                          updateEditForm('highlights', newHighlights);
+                                        }}
+                                        className="flex-1 px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                        placeholder="Highlight description..."
+                                      />
+                                      <button
+                                        onClick={() => {
+                                          const newHighlights = (editForm.highlights || entry.highlights || []).filter((_, i) => i !== index);
+                                          updateEditForm('highlights', newHighlights);
+                                        }}
+                                        className="text-red-500 hover:text-red-700 p-1"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                  ))}
+                                  <button
+                                    onClick={() => {
+                                      const newHighlights = [...(editForm.highlights || entry.highlights || []), ''];
+                                      updateEditForm('highlights', newHighlights);
+                                    }}
+                                    className="px-3 py-2 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                                  >
+                                    + Add Highlight
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Optional Media Fields */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">Optional Media</h4>
+                                <div className="space-y-3">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">External Link</label>
+                                    <input
+                                      type="url"
+                                      value={editForm.external_link || ''}
+                                      onChange={(e) => updateEditForm('external_link', e.target.value)}
+                                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      placeholder="https://example.com/feature-demo"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Video URL</label>
+                                    <input
+                                      type="url"
+                                      value={editForm.video_url || ''}
+                                      onChange={(e) => updateEditForm('video_url', e.target.value)}
+                                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      placeholder="https://youtube.com/watch?v=..."
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-700 mb-1">Image URL</label>
+                                    <input
+                                      type="url"
+                                      value={editForm.image_url || ''}
+                                      onChange={(e) => updateEditForm('image_url', e.target.value)}
+                                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      placeholder="https://example.com/screenshot.png"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Breaking Changes Toggle */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <div className="flex items-center space-x-3">
+                                  <input
+                                    type="checkbox"
+                                    id={`breaking-changes-${entry.id}`}
+                                    checked={editForm.breaking_changes || false}
+                                    onChange={(e) => updateEditForm('breaking_changes', e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                                  />
+                                  <label htmlFor={`breaking-changes-${entry.id}`} className="calendly-body-sm font-medium text-gray-900">
+                                    This update includes breaking changes
+                                  </label>
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              {/* View Mode */}
+                              <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
+                                <div className="flex items-center space-x-3">
+                                  <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
+                                  <div className="flex-1">
+                                    <div className="flex items-center space-x-2 mb-2">
+                                      {/* JIRA Story Key */}
+                                      {(entry as any).metadata?.jira_story_key && (
+                                        <a 
+                                          href={`https://marq.atlassian.net/browse/${(entry as any).metadata.jira_story_key}`}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full hover:bg-blue-200 transition-colors"
+                                        >
+                                          🎫 {(entry as any).metadata.jira_story_key}
+                                        </a>
+                                      )}
+                                      
+                                      {/* Priority Badge */}
+                                      {(entry as any).metadata?.priority && (
+                                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${getJiraPriorityColor((entry as any).metadata.priority)}`}>
+                                          {(entry as any).metadata.priority}
+                                        </span>
+                                      )}
+                                      
+                                      {/* Category Badge */}
+                                      <span className={`calendly-badge ${getCategoryColor(entry.category)}`}>
+                                        {entry.category}
+                                      </span>
+                                    </div>
+                                    
+                                    <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
+                                      {entry.customer_facing_title}
+                                    </h3>
+                                    
+                                    <p className="calendly-label-sm text-gray-500">
+                                      {(entry as any).metadata?.webhook_timestamp && (
+                                        <span>Generated {formatTimeAgo((entry as any).metadata.webhook_timestamp)} • </span>
+                                      )}
+                                      {(entry as any).metadata?.ai_provider && (
+                                        <span>AI Generated ({(entry as any).metadata.ai_provider})</span>
+                                      )}
+                                    </p>
+                                  </div>
+                                </div>
                                 
-                                <p className="calendly-label-sm text-gray-500">
-                                  {(entry as any).metadata?.webhook_timestamp && (
-                                    <span>Generated {formatTimeAgo((entry as any).metadata.webhook_timestamp)} • </span>
-                                  )}
-                                  {(entry as any).metadata?.ai_provider && (
-                                    <span>AI Generated ({(entry as any).metadata.ai_provider})</span>
-                                  )}
+                                <div className="flex items-center space-x-2">
+                                  <button 
+                                    className="px-3 py-1 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                                    onClick={() => handleEditEntry(entry)}
+                                  >
+                                    Edit
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Content */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <p className="calendly-body-sm text-gray-700" style={{ marginBottom: '12px' }}>
+                                  {entry.customer_facing_description}
                                 </p>
                               </div>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <button 
-                                className="px-3 py-1 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
-                                onClick={() => handleEditEntry(entry)}
-                              >
-                                Edit
-                              </button>
-                            </div>
-                          </div>
 
-                          {/* Content */}
-                          <div style={{ marginBottom: '16px' }}>
-                            <p className="calendly-body-sm text-gray-700" style={{ marginBottom: '12px' }}>
-                              {entry.customer_facing_description}
-                            </p>
-                          </div>
+                              {/* Key Changes Section */}
+                              {entry.highlights && entry.highlights.length > 0 && (
+                                <div style={{ marginBottom: '16px' }}>
+                                  <h4 className="text-sm font-medium text-gray-900 mb-2">Key Changes:</h4>
+                                  <ul className="space-y-1">
+                                    {entry.highlights.slice(0, 3).map((highlight, index) => (
+                                      <li key={index} className="flex items-start space-x-2">
+                                        <span className="text-green-500 mt-1">•</span>
+                                        <span className="calendly-body-sm text-gray-700">{highlight}</span>
+                                      </li>
+                                    ))}
+                                    {entry.highlights.length > 3 && (
+                                      <li className="calendly-body-sm text-gray-500 italic">
+                                        +{entry.highlights.length - 3} more changes
+                                      </li>
+                                    )}
+                                  </ul>
+                                </div>
+                              )}
 
-                          {/* Key Changes Section */}
-                          {entry.highlights && entry.highlights.length > 0 && (
-                            <div style={{ marginBottom: '16px' }}>
-                              <h4 className="text-sm font-medium text-gray-900 mb-2">Key Changes:</h4>
-                              <ul className="space-y-1">
-                                {entry.highlights.slice(0, 3).map((highlight, index) => (
-                                  <li key={index} className="flex items-start space-x-2">
-                                    <span className="text-green-500 mt-1">•</span>
-                                    <span className="calendly-body-sm text-gray-700">{highlight}</span>
-                                  </li>
-                                ))}
-                                {entry.highlights.length > 3 && (
-                                  <li className="calendly-body-sm text-gray-500 italic">
-                                    +{entry.highlights.length - 3} more changes
-                                  </li>
+                              {/* Optional Media Display */}
+                              {((entry as any).external_link || (entry as any).video_url || (entry as any).image_url) && (
+                                <div style={{ marginBottom: '16px' }}>
+                                  <h4 className="text-sm font-medium text-gray-900 mb-2">Additional Resources:</h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {(entry as any).external_link && (
+                                      <a href={(entry as any).external_link} target="_blank" rel="noopener noreferrer" 
+                                         className="inline-flex items-center space-x-1 px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-full hover:bg-blue-100 transition-colors">
+                                        <ExternalLink className="w-3 h-3" />
+                                        <span>Learn More</span>
+                                      </a>
+                                    )}
+                                    {(entry as any).video_url && (
+                                      <a href={(entry as any).video_url} target="_blank" rel="noopener noreferrer"
+                                         className="inline-flex items-center space-x-1 px-2 py-1 bg-purple-50 text-purple-700 text-xs rounded-full hover:bg-purple-100 transition-colors">
+                                        <span>📹</span>
+                                        <span>Watch Video</span>
+                                      </a>
+                                    )}
+                                    {(entry as any).image_url && (
+                                      <a href={(entry as any).image_url} target="_blank" rel="noopener noreferrer"
+                                         className="inline-flex items-center space-x-1 px-2 py-1 bg-green-50 text-green-700 text-xs rounded-full hover:bg-green-100 transition-colors">
+                                        <span>🖼️</span>
+                                        <span>View Image</span>
+                                      </a>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Key Details Row */}
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4" style={{ marginBottom: '16px' }}>
+                                {entry.breaking_changes && (
+                                  <div className="flex items-center space-x-2">
+                                    <AlertCircle className="w-4 h-4 text-red-500" />
+                                    <span className="calendly-body-sm text-red-600">Breaking Changes</span>
+                                  </div>
                                 )}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Key Details Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4" style={{ marginBottom: '16px' }}>
-                            {entry.breaking_changes && (
-                              <div className="flex items-center space-x-2">
-                                <AlertCircle className="w-4 h-4 text-red-500" />
-                                <span className="calendly-body-sm text-red-600">Breaking Changes</span>
+                                
+                                <div className="flex items-center space-x-2">
+                                  <Clock className="w-4 h-4 text-blue-500" />
+                                  <span className="calendly-body-sm">
+                                    Quality Score: {Math.round((entry.quality_score || 0.85) * 100)}%
+                                  </span>
+                                </div>
                               </div>
-                            )}
-                            
-                            <div className="flex items-center space-x-2">
-                              <Clock className="w-4 h-4 text-blue-500" />
-                              <span className="calendly-body-sm">
-                                Quality Score: {Math.round((entry.quality_score || 0.85) * 100)}%
-                              </span>
-                            </div>
-                            
-                            <div className="flex items-center space-x-2">
-                              <Users className="w-4 h-4 text-green-500" />
-                              <span className="calendly-body-sm">All Users</span>
-                            </div>
-                          </div>
+                            </>
+                          )}
 
                           {/* Action Buttons */}
                           <div className="flex items-center justify-between pt-4" style={{ borderTop: '1px solid #e5e7eb' }}>
@@ -1791,13 +1987,13 @@ export default function ProductPage() {
                             
                             <div className="flex items-center space-x-3">
                               <button 
-                                className="px-4 py-2 bg-gray-100 text-gray-700 calendly-body-sm rounded-lg hover:bg-gray-200 transition-colors font-medium"
+                                className="calendly-btn-secondary"
                                 onClick={() => handleRejectEntry(entry.id)}
                               >
                                 Reject
                               </button>
                               <button 
-                                className="px-4 py-2 bg-green-600 text-white calendly-body-sm rounded-lg hover:bg-green-700 transition-colors font-medium"
+                                className="calendly-btn-primary"
                                 onClick={() => {
                                   const checkbox = document.getElementById(`public-${entry.id}`) as HTMLInputElement;
                                   const makePublic = checkbox?.checked ?? true;
