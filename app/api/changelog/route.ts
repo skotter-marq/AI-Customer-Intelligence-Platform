@@ -491,27 +491,37 @@ export async function PUT(request: Request) {
       );
     }
 
-    // If approved, attempt to update JIRA with the TLDR (using MCP/OAuth when available)
+    // If approved, update JIRA with the TLDR using server-side MCP
     if (filteredUpdates.approval_status === 'approved' && data) {
       try {
         const sourceData = data.source_data || {};
         const jiraStoryKey = sourceData.jira_story_key;
         
         if (jiraStoryKey) {
-          console.log(`🔄 Attempting to update JIRA issue ${jiraStoryKey} with approved changelog...`);
+          console.log(`🔄 Updating JIRA issue ${jiraStoryKey} with approved changelog using server-side MCP...`);
           
-          // TODO: Replace with MCP-based JIRA update when available for server-side use
-          // For now, skip JIRA TLDR update to avoid 404 errors with basic auth
-          console.log(`⏭️ Skipping JIRA TLDR update for ${jiraStoryKey} - using MCP/OAuth approach in future`);
+          // Use the new server-side MCP client
+          const ServerMCPClient = require('../../../lib/server-mcp-client.js');
+          const mcpClient = new ServerMCPClient();
           
-          // The old approach that was causing 404 errors:
-          // const JiraIntegration = require('../../../lib/jira-integration.js');
-          // const jiraIntegration = new JiraIntegration();
-          // const tldr = filteredUpdates.customer_facing_title || filteredUpdates.content_title || data.content_title;
-          // const jiraUpdateResult = await jiraIntegration.updateTLDR(jiraStoryKey, tldr);
+          // Use the customer-facing title as TLDR
+          const tldr = filteredUpdates.customer_facing_title || filteredUpdates.content_title || data.content_title;
+          
+          const jiraUpdateResult = await mcpClient.updateTLDR(jiraStoryKey, tldr);
+          
+          if (jiraUpdateResult.success) {
+            console.log(`✅ Updated JIRA issue ${jiraStoryKey} with TLDR via server-side MCP`);
+          } else {
+            console.warn(`⚠️ Failed to update JIRA issue ${jiraStoryKey} via server-side MCP:`, jiraUpdateResult.error);
+            
+            // If it requires client-side MCP, log that for future implementation
+            if (jiraUpdateResult.requiresClientSideMCP) {
+              console.log(`ℹ️ ${jiraStoryKey} requires client-side MCP for updates`);
+            }
+          }
         }
       } catch (jiraError) {
-        console.warn('⚠️ JIRA update failed (non-blocking):', jiraError.message);
+        console.warn('⚠️ JIRA MCP update failed (non-blocking):', jiraError.message);
       }
 
       // Send Slack notification for published updates
