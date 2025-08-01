@@ -286,12 +286,30 @@ export default function ProductPage() {
   useEffect(() => {
     // Check for tab parameter in URL
     const tabParam = searchParams.get('tab');
+    console.log('🔍 URL tab parameter detected:', tabParam);
+    console.log('🔍 All search params:', searchParams.toString());
+    
     if (tabParam === 'approval' || tabParam === 'changelog') {
+      console.log('✅ Setting active tab to:', tabParam);
       setActiveTab(tabParam);
     }
     
     fetchChangelogData();
   }, [searchParams]);
+  
+  // Additional client-side URL check as fallback
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tabParam = urlParams.get('tab');
+      console.log('🌐 Client-side URL check - tab parameter:', tabParam);
+      
+      if (tabParam === 'approval' || tabParam === 'changelog') {
+        console.log('🌐 Client-side setting active tab to:', tabParam);
+        setActiveTab(tabParam);
+      }
+    }
+  }, []);
 
   const fetchChangelogData = async () => {
     setLoading(true);
