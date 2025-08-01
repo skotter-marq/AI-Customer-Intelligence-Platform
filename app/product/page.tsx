@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import Link from 'next/link';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { 
   Search,
   Filter,
@@ -85,7 +85,6 @@ interface EnhancedChangelogEntry {
 
 export default function ProductPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<'changelog' | 'approval'>('changelog');
   const [productUpdates, setProductUpdates] = useState<ProductUpdate[]>([]);
   const [changelogEntries, setChangelogEntries] = useState<EnhancedChangelogEntry[]>([]);
@@ -284,31 +283,28 @@ export default function ProductPage() {
   ];
 
   useEffect(() => {
-    // Check for tab parameter in URL
-    const tabParam = searchParams.get('tab');
-    console.log('🔍 URL tab parameter detected:', tabParam);
-    console.log('🔍 All search params:', searchParams.toString());
+    // Client-side URL parameter check
+    console.log('🔍 Component mounted, checking URL parameters...');
     
-    if (tabParam === 'approval' || tabParam === 'changelog') {
-      console.log('✅ Setting active tab to:', tabParam);
-      setActiveTab(tabParam);
-    }
-    
-    fetchChangelogData();
-  }, [searchParams]);
-  
-  // Additional client-side URL check as fallback
-  useEffect(() => {
     if (typeof window !== 'undefined') {
       const urlParams = new URLSearchParams(window.location.search);
       const tabParam = urlParams.get('tab');
-      console.log('🌐 Client-side URL check - tab parameter:', tabParam);
+      console.log('🌐 URL parameter "tab":', tabParam);
+      console.log('🌐 Full URL:', window.location.href);
       
-      if (tabParam === 'approval' || tabParam === 'changelog') {
-        console.log('🌐 Client-side setting active tab to:', tabParam);
-        setActiveTab(tabParam);
+      if (tabParam === 'approval') {
+        console.log('✅ Setting tab to APPROVAL');
+        setActiveTab('approval');
+      } else if (tabParam === 'changelog') {
+        console.log('✅ Setting tab to CHANGELOG');
+        setActiveTab('changelog');
+      } else {
+        console.log('📋 No valid tab parameter, defaulting to changelog');
       }
     }
+    
+    // Fetch data
+    fetchChangelogData();
   }, []);
 
   const fetchChangelogData = async () => {
