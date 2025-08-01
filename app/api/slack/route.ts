@@ -38,6 +38,21 @@ export async function POST(request: Request) {
   }
   
   try {
+    // Check if this is a Slack interactive component (form-encoded)
+    const contentType = request.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/x-www-form-urlencoded')) {
+      // Handle Slack interactive components (buttons, menus, etc.)
+      const formData = await request.formData();
+      const payload = formData.get('payload') as string;
+      
+      if (payload) {
+        const slackPayload = JSON.parse(payload);
+        return await handleSlackInteraction(slackPayload);
+      }
+    }
+    
+    // Handle JSON requests (our internal API calls)
     const body = await request.json();
     const { action, ...params } = body;
 
@@ -65,6 +80,38 @@ export async function POST(request: Request) {
     console.error('Slack API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+// Handle Slack interactive components (buttons, menus, etc.)
+async function handleSlackInteraction(slackPayload: any) {
+  try {
+    console.log('📋 Slack interaction received:', JSON.stringify(slackPayload, null, 2));
+    
+    // Extract the action from the Slack payload
+    const action = slackPayload.actions?.[0];
+    if (!action) {
+      return NextResponse.json({ error: 'No action found in payload' }, { status: 400 });
+    }
+
+    const { action_id, value } = action;
+    const user = slackPayload.user;
+    
+    console.log('🎯 Processing action:', { action_id, value, user: user?.username });
+    
+    // Call the existing handleInteraction function with the parsed data
+    return await handleInteraction({
+      action_id,
+      value,
+      user
+    });
+
+  } catch (error) {
+    console.error('Error handling Slack interaction:', error);
+    return NextResponse.json(
+      { error: 'Failed to process interaction' },
       { status: 500 }
     );
   }
