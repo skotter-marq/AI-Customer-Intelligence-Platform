@@ -98,14 +98,16 @@ async function handleSlackInteraction(slackPayload: any) {
 
     const { action_id, value } = action;
     const user = slackPayload.user;
+    const response_url = slackPayload.response_url;
     
-    console.log('🎯 Processing action:', { action_id, value, user: user?.username });
+    console.log('🎯 Processing action:', { action_id, value, user: user?.username, response_url });
     
     // Call the existing handleInteraction function with the parsed data
     return await handleInteraction({
       action_id,
       value,
-      user
+      user,
+      response_url
     });
 
   } catch (error) {
@@ -477,25 +479,35 @@ async function handleSlashCommand(params: SlackCommand) {
 
 async function handleInteraction(params: any) {
   try {
-    const { action_id, value, user } = params;
+    const { action_id, value, user, response_url } = params;
     
     // Handle changelog-specific actions
     if (action_id === 'approve_changelog') {
       const contentId = value.replace('approve_', '');
       await approveChangelogViaSlack(contentId, user.username);
       
-      // Replace the original message with approval confirmation
-      return NextResponse.json({
-        replace_original: true,
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `✅ *Changelog Approved & Published*\n\nApproved by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry has been published and is now live._`
+      // Update the original message using response_url
+      if (response_url) {
+        const updatedMessage = {
+          replace_original: true,
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `✅ *Changelog Approved & Published*\n\nApproved by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry has been published and is now live._`
+              }
             }
-          }
-        ]
+          ]
+        };
+        
+        await updateSlackMessage(response_url, updatedMessage);
+      }
+      
+      // Return immediate response
+      return NextResponse.json({
+        text: 'Changelog approved!',
+        response_type: 'ephemeral'
       });
     }
     
@@ -503,18 +515,57 @@ async function handleInteraction(params: any) {
       const contentId = value.replace('reject_', '');
       await rejectChangelogViaSlack(contentId, user.username);
       
-      // Replace the original message with rejection confirmation
-      return NextResponse.json({
-        replace_original: true,
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `❌ *Changelog Rejected*\n\nRejected by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry has been rejected and will not be published._`
+      // Update the original message using response_url
+      if (response_url) {
+        const updatedMessage = {
+          replace_original: true,
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `❌ *Changelog Rejected*\n\nRejected by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry has been rejected and will not be published._`
+              }
             }
-          }
-        ]
+          ]
+        };
+        
+        await updateSlackMessage(response_url, updatedMessage);
+      }
+      
+      // Return immediate response
+      return NextResponse.json({
+        text: 'Changelog rejected.',
+        response_type: 'ephemeral'
+      });
+    }
+    
+    if (action_id === 'request_changes') {
+      const contentId = value.replace('changes_', '');
+      await requestChangesViaSlack(contentId, user.username);
+      
+      // Update the original message using response_url
+      if (response_url) {
+        const updatedMessage = {
+          replace_original: true,
+          blocks: [
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `🔄 *Changes Requested*\n\nRequested by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry needs changes before it can be published. Please review and update the content._`
+              }
+            }
+          ]
+        };
+        
+        await updateSlackMessage(response_url, updatedMessage);
+      }
+      
+      // Return immediate response
+      return NextResponse.json({
+        text: 'Changes requested.',
+        response_type: 'ephemeral'
       });
     }
     
@@ -525,25 +576,6 @@ async function handleInteraction(params: any) {
       return NextResponse.json({
         text: `Content approved by ${user.username}`,
         response_type: 'in_channel'
-      });
-    }
-    
-    if (action_id === 'request_changes') {
-      const contentId = value.replace('changes_', '');
-      await requestChangesViaSlack(contentId, user.username);
-      
-      // Replace the original message with changes requested confirmation
-      return NextResponse.json({
-        replace_original: true,
-        blocks: [
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: `🔄 *Changes Requested*\n\nRequested by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry needs changes before it can be published. Please review and update the content._`
-            }
-          }
-        ]
       });
     }
     
@@ -881,6 +913,38 @@ async function rejectChangelogViaSlack(contentId: string, username: string) {
   } catch (error) {
     console.error('Error rejecting changelog via Slack:', error);
     throw error;
+  }
+}
+
+async function updateSlackMessage(responseUrl: string, message: any) {
+  try {
+    console.log('🔄 Updating Slack message via response_url...');
+    
+    const response = await fetch(responseUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(message)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Slack message update error:', {
+        status: response.status,
+        statusText: response.statusText,
+        responseText: errorText
+      });
+      throw new Error(`Slack message update failed: ${response.status} ${response.statusText}`);
+    }
+
+    console.log('✅ Slack message updated successfully');
+    return true;
+
+  } catch (error) {
+    console.error('Error updating Slack message:', error);
+    // Don't throw - message update failure shouldn't break the workflow
+    return false;
   }
 }
 
