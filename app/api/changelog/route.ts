@@ -491,28 +491,24 @@ export async function PUT(request: Request) {
       );
     }
 
-    // If approved, update JIRA with the TLDR
+    // If approved, attempt to update JIRA with the TLDR (using MCP/OAuth when available)
     if (filteredUpdates.approval_status === 'approved' && data) {
       try {
         const sourceData = data.source_data || {};
         const jiraStoryKey = sourceData.jira_story_key;
         
         if (jiraStoryKey) {
-          console.log(`🔄 Updating JIRA issue ${jiraStoryKey} with approved changelog...`);
+          console.log(`🔄 Attempting to update JIRA issue ${jiraStoryKey} with approved changelog...`);
           
-          const JiraIntegration = require('../../../lib/jira-integration.js');
-          const jiraIntegration = new JiraIntegration();
+          // TODO: Replace with MCP-based JIRA update when available for server-side use
+          // For now, skip JIRA TLDR update to avoid 404 errors with basic auth
+          console.log(`⏭️ Skipping JIRA TLDR update for ${jiraStoryKey} - using MCP/OAuth approach in future`);
           
-          // Use the customer-facing title as TLDR
-          const tldr = filteredUpdates.customer_facing_title || filteredUpdates.content_title || data.content_title;
-          
-          const jiraUpdateResult = await jiraIntegration.updateTLDR(jiraStoryKey, tldr);
-          
-          if (jiraUpdateResult.success) {
-            console.log(`✅ Updated JIRA issue ${jiraStoryKey} with TLDR`);
-          } else {
-            console.warn(`⚠️ Failed to update JIRA issue ${jiraStoryKey}:`, jiraUpdateResult.error);
-          }
+          // The old approach that was causing 404 errors:
+          // const JiraIntegration = require('../../../lib/jira-integration.js');
+          // const jiraIntegration = new JiraIntegration();
+          // const tldr = filteredUpdates.customer_facing_title || filteredUpdates.content_title || data.content_title;
+          // const jiraUpdateResult = await jiraIntegration.updateTLDR(jiraStoryKey, tldr);
         }
       } catch (jiraError) {
         console.warn('⚠️ JIRA update failed (non-blocking):', jiraError.message);
@@ -561,7 +557,10 @@ export async function PUT(request: Request) {
             mediaResources: mediaResourcesSection
           };
 
-          const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
+          const slackApiUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`;
+          console.log(`📡 Sending Slack notification to: ${slackApiUrl}`);
+          
+          const notificationResponse = await fetch(slackApiUrl, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -574,11 +573,24 @@ export async function PUT(request: Request) {
             })
           });
 
+          console.log(`📊 Slack API response status: ${notificationResponse.status} ${notificationResponse.statusText}`);
+          
           if (notificationResponse.ok) {
-            console.log('✅ Slack publication notification sent successfully');
+            const responseData = await notificationResponse.json();
+            console.log('✅ Slack publication notification sent successfully:', responseData);
           } else {
-            const errorData = await notificationResponse.json();
-            console.warn('⚠️ Slack publication notification failed:', errorData.error);
+            const responseText = await notificationResponse.text();
+            console.warn('⚠️ Slack publication notification failed:');
+            console.warn('   Status:', notificationResponse.status, notificationResponse.statusText);
+            console.warn('   Response:', responseText.substring(0, 200) + '...');
+            
+            // Try to parse as JSON if possible
+            try {
+              const errorData = JSON.parse(responseText);
+              console.warn('   Parsed error:', errorData.error);
+            } catch (parseError) {
+              console.warn('   Raw response (HTML page?):', responseText.includes('<!doctype') || responseText.includes('<html>'));
+            }
           }
         } catch (slackError) {
           console.warn('⚠️ Slack notification failed (non-blocking):', slackError.message);
