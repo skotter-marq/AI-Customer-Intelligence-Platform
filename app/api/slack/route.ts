@@ -9,6 +9,14 @@ const SLACK_WEBHOOKS = {
   content: process.env.SLACK_WEBHOOK_CONTENT
 };
 
+// Debug logging to check webhook URLs
+console.log('🔧 Slack webhook configuration:', {
+  approvals: SLACK_WEBHOOKS.approvals ? 'configured' : 'missing',
+  updates: SLACK_WEBHOOKS.updates ? 'configured' : 'missing',
+  insights: SLACK_WEBHOOKS.insights ? 'configured' : 'missing',
+  content: SLACK_WEBHOOKS.content ? 'configured' : 'missing'
+});
+
 interface SlackMessage {
   text: string;
   channel: string;
@@ -261,6 +269,7 @@ async function sendApprovalRequest(params: any) {
       ]
     };
 
+    console.log('🔍 Sending approval request with webhook URL:', SLACK_WEBHOOKS.approvals ? 'valid URL' : 'missing/undefined');
     const response = await sendToSlackWebhook(SLACK_WEBHOOKS.approvals, approvalMessage);
     
     console.log('Approval request sent to Slack:', approvalMessage);
