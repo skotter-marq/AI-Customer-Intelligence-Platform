@@ -84,8 +84,13 @@ interface EnhancedChangelogEntry {
 }
 
 export default function ProductPage() {
+  console.log('🏗️ ProductPage component rendering...');
+  
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'changelog' | 'approval'>('changelog');
+  const [activeTab, setActiveTab] = useState<'changelog' | 'approval'>(() => {
+    console.log('🎯 Initializing activeTab state...');
+    return 'changelog';
+  });
   const [productUpdates, setProductUpdates] = useState<ProductUpdate[]>([]);
   const [changelogEntries, setChangelogEntries] = useState<EnhancedChangelogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -283,28 +288,37 @@ export default function ProductPage() {
   ];
 
   useEffect(() => {
-    // Client-side URL parameter check
+    console.log('🚀 useEffect triggered!');
     console.log('🔍 Component mounted, checking URL parameters...');
     
-    if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tabParam = urlParams.get('tab');
-      console.log('🌐 URL parameter "tab":', tabParam);
-      console.log('🌐 Full URL:', window.location.href);
-      
-      if (tabParam === 'approval') {
-        console.log('✅ Setting tab to APPROVAL');
-        setActiveTab('approval');
-      } else if (tabParam === 'changelog') {
-        console.log('✅ Setting tab to CHANGELOG');
-        setActiveTab('changelog');
+    try {
+      if (typeof window !== 'undefined') {
+        console.log('🌐 Window is defined, proceeding with URL check...');
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab');
+        console.log('🌐 URL parameter "tab":', tabParam);
+        console.log('🌐 Full URL:', window.location.href);
+        console.log('🌐 Search string:', window.location.search);
+        
+        if (tabParam === 'approval') {
+          console.log('✅ Setting tab to APPROVAL');
+          setActiveTab('approval');
+        } else if (tabParam === 'changelog') {
+          console.log('✅ Setting tab to CHANGELOG');
+          setActiveTab('changelog');
+        } else {
+          console.log('📋 No valid tab parameter, defaulting to changelog');
+        }
       } else {
-        console.log('📋 No valid tab parameter, defaulting to changelog');
+        console.log('⚠️ Window is undefined (SSR)');
       }
+      
+      console.log('📊 About to fetch changelog data...');
+      // Fetch data
+      fetchChangelogData();
+    } catch (error) {
+      console.error('❌ Error in useEffect:', error);
     }
-    
-    // Fetch data
-    fetchChangelogData();
   }, []);
 
   const fetchChangelogData = async () => {
@@ -948,6 +962,7 @@ export default function ProductPage() {
 
 
           {/* Tab Navigation - Changelog First */}
+          {console.log('🔄 Rendering tabs, activeTab:', activeTab)}
           <div className="calendly-card" style={{ marginBottom: '24px', padding: 0 }}>
             <div className="flex border-b" style={{ borderColor: '#e2e8f0' }}>
               <button
