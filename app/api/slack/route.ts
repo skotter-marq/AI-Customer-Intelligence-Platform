@@ -483,22 +483,38 @@ async function handleInteraction(params: any) {
     if (action_id === 'approve_changelog') {
       const contentId = value.replace('approve_', '');
       await approveChangelogViaSlack(contentId, user.username);
+      
+      // Replace the original message with approval confirmation
       return NextResponse.json({
-        text: `✅ Changelog approved and published by ${user.username}!`,
-        response_type: 'in_channel',
-        replace_original: false,
-        delete_original: false
+        replace_original: true,
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `✅ *Changelog Approved & Published*\n\nApproved by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry has been published and is now live._`
+            }
+          }
+        ]
       });
     }
     
     if (action_id === 'reject_changelog') {
       const contentId = value.replace('reject_', '');
       await rejectChangelogViaSlack(contentId, user.username);
+      
+      // Replace the original message with rejection confirmation
       return NextResponse.json({
-        text: `❌ Changelog rejected by ${user.username}`,
-        response_type: 'in_channel',
-        replace_original: false,
-        delete_original: false
+        replace_original: true,
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `❌ *Changelog Rejected*\n\nRejected by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry has been rejected and will not be published._`
+            }
+          }
+        ]
       });
     }
     
@@ -515,11 +531,19 @@ async function handleInteraction(params: any) {
     if (action_id === 'request_changes') {
       const contentId = value.replace('changes_', '');
       await requestChangesViaSlack(contentId, user.username);
+      
+      // Replace the original message with changes requested confirmation
       return NextResponse.json({
-        text: `🔄 Changes requested by ${user.username} - please review and update`,
-        response_type: 'in_channel',
-        replace_original: false,
-        delete_original: false
+        replace_original: true,
+        blocks: [
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: `🔄 *Changes Requested*\n\nRequested by: ${user.username}\nTime: ${new Date().toLocaleString()}\n\n_This changelog entry needs changes before it can be published. Please review and update the content._`
+            }
+          }
+        ]
       });
     }
     
