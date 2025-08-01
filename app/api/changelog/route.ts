@@ -224,7 +224,7 @@ export async function GET(request: Request) {
         tldr_summary: entry.content_title, // Use title as summary for now
         tldr_bullet_points: cleanupHighlights(sourceData.highlights || sourceData.tldr_bullet_points || []),
         update_category: sourceData.category?.toLowerCase() || 'feature_update',
-        layout_template: entry.layout_template || 'standard',
+        // layout_template: entry.layout_template || 'standard', // Column doesn't exist in schema
         importance_score: entry.importance_score || 0.7,
         breaking_changes: sourceData.breaking_changes || false,
         migration_notes: sourceData.migration_notes,
@@ -332,12 +332,27 @@ export async function PUT(request: Request) {
       updated_at: new Date().toISOString()
     };
 
-    if (updates.customer_facing_title || updates.content_title) {
-      dbUpdates.content_title = updates.customer_facing_title || updates.content_title;
+    // Filter out any non-existent database columns to prevent schema errors
+    const allowedFields = [
+      'content_title', 'generated_content', 'status', 'quality_score', 
+      'source_data', 'generation_metadata', 'updated_at', 'created_by'
+    ];
+    
+    // Remove any fields that might cause schema errors
+    const filteredUpdates = Object.keys(updates).reduce((acc, key) => {
+      // Skip fields that don't exist in the database schema
+      if (!['approved_at', 'layout_template', 'is_public', 'public_changelog_visible', 'release_date'].includes(key)) {
+        acc[key] = updates[key];
+      }
+      return acc;
+    }, {} as any);
+
+    if (filteredUpdates.customer_facing_title || filteredUpdates.content_title) {
+      dbUpdates.content_title = filteredUpdates.customer_facing_title || filteredUpdates.content_title;
     }
     
-    if (updates.customer_facing_description || updates.generated_content) {
-      dbUpdates.generated_content = updates.customer_facing_description || updates.generated_content;
+    if (filteredUpdates.customer_facing_description || filteredUpdates.generated_content) {
+      dbUpdates.generated_content = filteredUpdates.customer_facing_description || filteredUpdates.generated_content;
     }
     
     // Skip category update for now to avoid schema issues
@@ -365,18 +380,26 @@ export async function PUT(request: Request) {
     //   dbUpdates.layout_template = updates.layout_template;
     // }
     
-    if (updates.approval_status) {
+    if (filteredUpdates.approval_status) {
       // Map frontend approval_status values to database status values
-      const statusMapping = {
-        'pending': 'draft',
-        'approved': 'approved', 
-        'published': 'published',
-        'draft': 'draft'
-      };
-      dbUpdates.status = statusMapping[updates.approval_status] || 'draft';
+      // If approving and making public, set status to 'published', otherwise 'approved'
+      let targetStatus = 'draft';
+      if (filteredUpdates.approval_status === 'approved') {
+        targetStatus = filteredUpdates.public_visibility ? 'published' : 'approved';
+      } else {
+        const statusMapping = {
+          'pending': 'draft',
+          'approved': 'approved', 
+          'published': 'published',
+          'draft': 'draft'
+        };
+        targetStatus = statusMapping[filteredUpdates.approval_status] || 'draft';
+      }
+      
+      dbUpdates.status = targetStatus;
       
       // If approving, store additional info in generation_metadata
-      if (updates.approval_status === 'approved') {
+      if (filteredUpdates.approval_status === 'approved') {
         // Store approval details in generation_metadata since the columns don't exist
         dbUpdates.generation_metadata = {
           auto_generated: true,
@@ -384,9 +407,10 @@ export async function PUT(request: Request) {
           approved_by: 'app_user',
           approved_at: new Date().toISOString(),
           approval_method: 'app_interface',
-          public_visibility: updates.public_visibility,
-          version: updates.version,
-          release_date: updates.release_date
+          public_visibility: filteredUpdates.public_visibility,
+          version: filteredUpdates.version,
+          release_date: filteredUpdates.release_date,
+          status_display: filteredUpdates.public_visibility ? 'Public' : 'Private'
         };
       }
     }
@@ -398,8 +422,8 @@ export async function PUT(request: Request) {
     // }
 
     // Handle related stories - update source_data JSONB field
-    if (updates.related_stories !== undefined) {
-      console.log('🔧 Updating related_stories:', JSON.stringify(updates.related_stories));
+    if (filteredUpdates.related_stories !== undefined) {
+      console.log('🔧 Updating related_stories:', JSON.stringify(filteredUpdates.related_stories));
       
       // We need to fetch the existing source_data first, then update it
       if (!supabase) {
@@ -419,7 +443,7 @@ export async function PUT(request: Request) {
             // Update the source_data with related_stories
             const updatedSourceData = {
               ...(currentEntry.source_data || {}),
-              related_stories: updates.related_stories
+              related_stories: filteredUpdates.related_stories
             };
             
             dbUpdates.source_data = updatedSourceData;
@@ -468,7 +492,7 @@ export async function PUT(request: Request) {
     }
 
     // If approved, update JIRA with the TLDR
-    if (updates.approval_status === 'approved' && data) {
+    if (filteredUpdates.approval_status === 'approved' && data) {
       try {
         const sourceData = data.source_data || {};
         const jiraStoryKey = sourceData.jira_story_key;
@@ -480,7 +504,7 @@ export async function PUT(request: Request) {
           const jiraIntegration = new JiraIntegration();
           
           // Use the customer-facing title as TLDR
-          const tldr = updates.customer_facing_title || updates.content_title || data.content_title;
+          const tldr = filteredUpdates.customer_facing_title || filteredUpdates.content_title || data.content_title;
           
           const jiraUpdateResult = await jiraIntegration.updateTLDR(jiraStoryKey, tldr);
           
@@ -492,6 +516,73 @@ export async function PUT(request: Request) {
         }
       } catch (jiraError) {
         console.warn('⚠️ JIRA update failed (non-blocking):', jiraError.message);
+      }
+
+      // Send Slack notification for published updates
+      console.log('🔍 Checking Slack notification conditions:');
+      console.log('  - public_visibility:', filteredUpdates.public_visibility);
+      console.log('  - data exists:', !!data);
+      console.log('  - approval_status:', filteredUpdates.approval_status);
+      
+      if (filteredUpdates.public_visibility && data) {
+        try {
+          console.log('📢 Sending Slack notification for published update...');
+          
+          const sourceData = data.source_data || {};
+          
+          // Build dynamic media resources section
+          const mediaResources = [];
+          if (data.external_link) {
+            mediaResources.push(`• [Learn More](${data.external_link})`);
+          }
+          if (data.video_url) {
+            mediaResources.push(`• [📹 Watch Demo](${data.video_url})`);
+          }
+          if (data.image_url) {
+            mediaResources.push(`• [📸 View Screenshots](${data.image_url})`);
+          }
+          if (sourceData.jira_story_key) {
+            mediaResources.push(`• [🎫 JIRA Ticket](https://marq.atlassian.net/browse/${sourceData.jira_story_key})`);
+          }
+          
+          // Add the changelog link as the first resource
+          mediaResources.unshift(`• [📋 View Full Update](${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product)`);
+          
+          const mediaResourcesSection = mediaResources.length > 0 
+            ? `\n\n**Resources:**\n${mediaResources.join('\n')}` 
+            : '';
+
+          const templateData = {
+            updateTitle: data.content_title || 'Product Update',
+            jiraKey: sourceData.jira_story_key || 'N/A',
+            assignee: sourceData.assignee || 'Team',  
+            updateDescription: data.generated_content || 'View the changelog for full details',
+            customerImpact: sourceData.highlights?.join(', ') || 'Improved user experience',
+            mediaResources: mediaResourcesSection
+          };
+
+          const notificationResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: 'send_notification',
+              templateId: 'product-update-notification',
+              templateData,
+              type: 'publish'
+            })
+          });
+
+          if (notificationResponse.ok) {
+            console.log('✅ Slack publication notification sent successfully');
+          } else {
+            const errorData = await notificationResponse.json();
+            console.warn('⚠️ Slack publication notification failed:', errorData.error);
+          }
+        } catch (slackError) {
+          console.warn('⚠️ Slack notification failed (non-blocking):', slackError.message);
+        }
       }
     }
 

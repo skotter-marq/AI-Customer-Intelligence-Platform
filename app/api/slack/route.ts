@@ -596,9 +596,7 @@ async function getSlackTemplate(templateId: string) {
 {updateDescription}
 
 **Customer Impact:**
-{customerImpact}
-
-[View Full Update]({changelogUrl}) | [JIRA Ticket]({jiraUrl})`
+{customerImpact}{mediaResources}`
     },
     'slack-jira-story-completed': {
       message_template: `🎉 **JIRA Story Completed - Ready for Changelog Review**
