@@ -375,22 +375,19 @@ export async function PUT(request: Request) {
       };
       dbUpdates.status = statusMapping[updates.approval_status] || 'draft';
       
-      // If approving, set additional fields and update JIRA
+      // If approving, store additional info in generation_metadata
       if (updates.approval_status === 'approved') {
-        dbUpdates.approved_at = new Date().toISOString();
-        
-        if (updates.public_visibility !== undefined) {
-          dbUpdates.is_public = updates.public_visibility;
-          dbUpdates.public_changelog_visible = updates.public_visibility;
-        }
-        
-        if (updates.version) {
-          dbUpdates.version = updates.version;
-        }
-        
-        if (updates.release_date) {
-          dbUpdates.release_date = updates.release_date;
-        }
+        // Store approval details in generation_metadata since the columns don't exist
+        dbUpdates.generation_metadata = {
+          auto_generated: true,
+          source: 'app_approval',
+          approved_by: 'app_user',
+          approved_at: new Date().toISOString(),
+          approval_method: 'app_interface',
+          public_visibility: updates.public_visibility,
+          version: updates.version,
+          release_date: updates.release_date
+        };
       }
     }
     
