@@ -320,6 +320,7 @@ export default function ProductPage() {
           approval_status: entry.approval_status,
           public_visibility: entry.is_public && entry.public_changelog_visible,
           layout_template: entry.layout_template || 'standard',
+          related_stories: entry.related_stories || [], // Add related stories from API
           metadata: entry.metadata // Preserve metadata for approval filtering
         }));
         
@@ -510,16 +511,18 @@ export default function ProductPage() {
     if (!editingEntryId) return;
     
     try {
-      console.log('🔧 Saving edit form data:', editForm);
-      console.log('🔧 Entry ID:', editingEntryId);
+      console.log('🔧 [SAVE START] Saving edit form data:', editForm);
+      console.log('🔧 [SAVE START] Entry ID:', editingEntryId);
+      console.log('🔧 [SAVE START] Timestamp:', new Date().toISOString());
       
       // Check if we can find the entry being edited
       const entryBeingEdited = changelogEntries.find(e => e.id === editingEntryId);
-      console.log('🔧 Found entry being edited:', !!entryBeingEdited);
+      console.log('🔧 [SAVE START] Found entry being edited:', !!entryBeingEdited);
       if (entryBeingEdited) {
-        console.log('🔧 Entry title:', entryBeingEdited.content_title);
+        console.log('🔧 [SAVE START] Entry title:', entryBeingEdited.content_title);
       }
       
+      console.log('🔧 [SAVE API] Making PUT request...');
       const response = await fetch(`/api/changelog?id=${editingEntryId}`, {
         method: 'PUT',
         headers: {
@@ -528,46 +531,60 @@ export default function ProductPage() {
         body: JSON.stringify(editForm),
       });
       
+      console.log('🔧 [SAVE API] Response received - Status:', response.status);
+      console.log('🔧 [SAVE API] Response OK:', response.ok);
+      console.log('🔧 [SAVE API] Response headers:', response.headers.get('content-type'));
+      
       const data = await response.json();
-      console.log('🔧 Save response:', { success: data.success, status: response.status });
+      console.log('🔧 [SAVE API] Data parsed successfully');
+      console.log('🔧 [SAVE API] Data keys:', Object.keys(data));
+      console.log('🔧 [SAVE API] data.success:', data.success, typeof data.success);
       
       if (data.success) {
-        console.log('✅ Save successful, updating state...');
+        console.log('✅ [SAVE SUCCESS] Save successful, updating state...');
         
         // Refresh the data to get the updated entry from the server
+        console.log('🔄 [REFRESH] Starting data refresh...');
         await fetchChangelogData();
-        
-        console.log('✅ Data refreshed successfully');
+        console.log('✅ [REFRESH] Data refreshed successfully');
         
         // Send Slack notification if approval status changed
         if (editForm.approval_status === 'approved') {
+          console.log('📢 [SLACK] Sending approval notification...');
           await sendSlackNotification({
-            type: 'approval',
-            message: `✅ Changelog entry approved: ${editForm.customer_facing_title || 'Untitled Entry'}`,
-            metadata: {
-              entryId: editingEntryId,
-              category: editForm.category,
-              jira_key: editForm.jira_story_key
-            }
+            action: 'approval_request',
+            contentId: editingEntryId,
+            contentTitle: editForm.customer_facing_title || 'Untitled Entry',
+            contentType: 'changelog_entry',
+            contentSummary: editForm.customer_facing_description?.substring(0, 150) + '...' || 'No description available',
+            qualityScore: 85, // You can calculate this based on your quality metrics
+            jiraKey: editForm.jira_story_key || 'N/A',
+            assignee: 'Team', // You can get this from JIRA metadata
+            category: editForm.category || 'feature_update'
           });
+          console.log('✅ [SLACK] Notification sent');
         }
         
-        console.log('Successfully saved changes for entry:', editingEntryId);
+        console.log('✅ [SAVE COMPLETE] Successfully saved changes for entry:', editingEntryId);
       } else {
-        console.error('Failed to save changes:', data.error || data);
-        console.error('Response status:', response.status);
-        console.error('Full response data:', data);
+        console.error('❌ [SAVE ERROR] Failed to save changes:', data.error || data);
+        console.error('❌ [SAVE ERROR] Response status:', response.status);
+        console.error('❌ [SAVE ERROR] Full response data:', data);
         alert(`Failed to save changes: ${data.error || 'Unknown error'}. Please try again.`);
       }
     } catch (error) {
-      console.error('Error saving changes:', error);
-      console.error('Error details:', error.message);
+      console.error('❌ [SAVE EXCEPTION] Error saving changes:', error);
+      console.error('❌ [SAVE EXCEPTION] Error name:', error.name);
+      console.error('❌ [SAVE EXCEPTION] Error message:', error.message);
+      console.error('❌ [SAVE EXCEPTION] Error stack:', error.stack);
       alert(`Failed to save changes: ${error.message}. Please try again.`);
     }
     
     // Reset editing state
+    console.log('🧹 [SAVE CLEANUP] Resetting editing state...');
     setEditingEntryId(null);
     setEditForm({});
+    console.log('🧹 [SAVE CLEANUP] State reset complete');
   };
 
   const sendSlackNotification = async (notificationData: any) => {
@@ -577,12 +594,7 @@ export default function ProductPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          action: 'send_notification',
-          message: notificationData.message,
-          type: notificationData.type,
-          metadata: notificationData.metadata
-        }),
+        body: JSON.stringify(notificationData),
       });
       
       if (response.ok) {
@@ -795,7 +807,6 @@ export default function ProductPage() {
       }
       
       // Restore button state after both success and error
-      const button = document.activeElement as HTMLButtonElement;
       if (button) {
         button.textContent = originalText;
         button.disabled = false;
@@ -806,7 +817,6 @@ export default function ProductPage() {
       alert('Failed to regenerate content. Please check your network connection and try again.');
       
       // Restore button state on network/other errors
-      const button = document.activeElement as HTMLButtonElement;
       if (button) {
         button.textContent = originalText;
         button.disabled = false;
@@ -1643,6 +1653,71 @@ export default function ProductPage() {
                     </div>
                   )}
 
+                  {/* Related Stories (Edit Mode Only) */}
+                  {editingEntryId === entry.id && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <label className="block text-sm font-medium text-gray-900 mb-2">
+                        Related JIRA Stories
+                      </label>
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        {(editForm.related_stories || []).map((story, index) => (
+                          <span 
+                            key={index}
+                            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                          >
+                            {story}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const newStories = [...(editForm.related_stories || [])];
+                                newStories.splice(index, 1);
+                                updateEditForm('related_stories', newStories);
+                              }}
+                              className="ml-1.5 -mr-1 w-3 h-3 flex items-center justify-center rounded-full hover:bg-blue-200 transition-colors"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                      <div className="flex space-x-2">
+                        <input
+                          type="text"
+                          id={`new-story-${entry.id}`}
+                          placeholder="Enter JIRA story key (e.g., PRESS-21463)"
+                          className="flex-1 px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                          style={{ background: 'white' }}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              const input = e.target as HTMLInputElement;
+                              const value = input.value.trim().toUpperCase();
+                              if (value && !editForm.related_stories?.includes(value)) {
+                                const newStories = [...(editForm.related_stories || []), value];
+                                updateEditForm('related_stories', newStories);
+                                input.value = '';
+                              }
+                            }
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById(`new-story-${entry.id}`) as HTMLInputElement;
+                            const value = input.value.trim().toUpperCase();
+                            if (value && !editForm.related_stories?.includes(value)) {
+                              const newStories = [...(editForm.related_stories || []), value];
+                              updateEditForm('related_stories', newStories);
+                              input.value = '';
+                            }
+                          }}
+                          className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Breaking Changes */}
                   {entry.breaking_changes && (
                     <div style={{ marginBottom: '16px' }}>
@@ -2053,6 +2128,24 @@ export default function ProductPage() {
                                         >
                                           {(entry as any).metadata.jira_story_key}
                                         </a>
+                                      )}
+                                      
+                                      {/* Related Stories */}
+                                      {entry.related_stories && entry.related_stories.length > 0 && (
+                                        <>
+                                          {entry.related_stories.map((storyKey, index) => (
+                                            <a 
+                                              key={index}
+                                              href={`https://marq.atlassian.net/browse/${storyKey}`}
+                                              target="_blank"
+                                              rel="noopener noreferrer"
+                                              className="inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full hover:bg-green-200 transition-colors"
+                                              title={`Related story: ${storyKey}`}
+                                            >
+                                              {storyKey}
+                                            </a>
+                                          ))}
+                                        </>
                                       )}
                                       
                                       {/* Priority Badge */}

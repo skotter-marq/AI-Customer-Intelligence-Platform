@@ -209,32 +209,43 @@ async function sendSlackNotification(params: any) {
 
 async function sendApprovalRequest(params: any) {
   try {
-    const { contentId, contentTitle, contentType, qualityScore, reviewerIds = [] } = params;
+    const { 
+      contentId, 
+      contentTitle, 
+      contentType = 'changelog_entry', 
+      contentSummary,
+      qualityScore = 85, 
+      jiraKey,
+      assignee,
+      category,
+      reviewerIds = [] 
+    } = params;
     
+    // Create the approval message with interactive buttons
     const approvalMessage = {
-      text: `New content ready for approval: ${contentTitle}`,
-      username: 'Content Pipeline Bot',
+      text: `📋 Changelog Entry Ready for Review - ${jiraKey || contentTitle}`,
+      username: 'Changelog Bot',
       icon_emoji: ':memo:',
       blocks: [
         {
           type: 'header',
           text: {
             type: 'plain_text',
-            text: '📋 Content Approval Request'
+            text: '📋 Changelog Approval Required'
           }
         },
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `*${contentTitle}*\n\nType: ${contentType}\nQuality Score: ${(qualityScore * 100).toFixed(0)}%`
+            text: `*${jiraKey || 'Story'}* has been completed and needs changelog approval.\n\n*Title:* ${contentTitle}\n*Category:* ${category || 'feature_update'}\n*Summary:* ${contentSummary || 'Review the content for details'}`
           }
         },
         {
           type: 'section',
           text: {
             type: 'mrkdwn',
-            text: `<${process.env.NEXT_PUBLIC_BASE_URL}/approval|View in Dashboard> | <${process.env.NEXT_PUBLIC_BASE_URL}/edit/${contentId}|Edit Content>`
+            text: `<${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product|📊 View Dashboard> | <${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product#entry-${contentId}|✏️ Edit Entry>${jiraKey ? ` | <https://marq.atlassian.net/browse/${jiraKey}|🎫 JIRA Ticket>` : ''}`
           }
         },
         {
@@ -244,11 +255,11 @@ async function sendApprovalRequest(params: any) {
               type: 'button',
               text: {
                 type: 'plain_text',
-                text: '✅ Approve'
+                text: '✅ Approve & Publish'
               },
               style: 'primary',
               value: `approve_${contentId}`,
-              action_id: 'approve_content'
+              action_id: 'approve_changelog'
             },
             {
               type: 'button',
@@ -256,7 +267,6 @@ async function sendApprovalRequest(params: any) {
                 type: 'plain_text',
                 text: '✏️ Request Changes'
               },
-              style: 'danger',
               value: `changes_${contentId}`,
               action_id: 'request_changes'
             },
@@ -266,8 +276,9 @@ async function sendApprovalRequest(params: any) {
                 type: 'plain_text',
                 text: '❌ Reject'
               },
+              style: 'danger',
               value: `reject_${contentId}`,
-              action_id: 'reject_content'
+              action_id: 'reject_changelog'
             }
           ]
         }
@@ -421,6 +432,26 @@ async function handleInteraction(params: any) {
   try {
     const { action_id, value, user } = params;
     
+    // Handle changelog-specific actions
+    if (action_id === 'approve_changelog') {
+      const contentId = value.replace('approve_', '');
+      await approveChangelogViaSlack(contentId, user.username);
+      return NextResponse.json({
+        text: `✅ Changelog approved and published by ${user.username}`,
+        response_type: 'in_channel'
+      });
+    }
+    
+    if (action_id === 'reject_changelog') {
+      const contentId = value.replace('reject_', '');
+      await rejectChangelogViaSlack(contentId, user.username);
+      return NextResponse.json({
+        text: `❌ Changelog rejected by ${user.username}`,
+        response_type: 'in_channel'
+      });
+    }
+    
+    // Handle legacy content actions
     if (action_id === 'approve_content') {
       const contentId = value.replace('approve_', '');
       await approveContentViaSlack(contentId, user.username);
@@ -608,6 +639,58 @@ async function rejectContentViaSlack(contentId: string, username: string) {
   }
 }
 
+async function approveChangelogViaSlack(contentId: string, username: string) {
+  try {
+    // Use the changelog API to approve and publish
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/changelog?id=${contentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        approval_status: 'approved',
+        public_visibility: true,
+        approved_by: `slack_${username}`,
+        approved_at: new Date().toISOString()
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to approve changelog');
+    }
+
+    console.log(`Changelog ${contentId} approved via Slack by ${username}`);
+
+  } catch (error) {
+    console.error('Error approving changelog via Slack:', error);
+    throw error;
+  }
+}
+
+async function rejectChangelogViaSlack(contentId: string, username: string) {
+  try {
+    // Use the changelog API to reject
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/changelog?id=${contentId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        approval_status: 'rejected',
+        public_visibility: false,
+        rejected_by: `slack_${username}`,
+        rejected_at: new Date().toISOString()
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to reject changelog');
+    }
+
+    console.log(`Changelog ${contentId} rejected via Slack by ${username}`);
+
+  } catch (error) {
+    console.error('Error rejecting changelog via Slack:', error);
+    throw error;
+  }
+}
+
 async function sendToSlackWebhook(webhookUrl: string, message: any) {
   try {
     if (!webhookUrl || webhookUrl === 'mock-webhook-url' || webhookUrl.includes('undefined')) {
@@ -706,7 +789,7 @@ async function getSlackTemplate(templateId: string) {
 [View Full Update]({changelogUrl}) | [JIRA Ticket]({jiraUrl})`
     },
     'slack-jira-story-completed': {
-      message_template: `🎉 **JIRA Story Completed - Changelog Generated**
+      message_template: `🎉 **JIRA Story Completed - Ready for Changelog Review**
 
 **Story:** {jiraKey} - {storyTitle}
 **Assignee:** {assignee}
@@ -727,6 +810,17 @@ async function getSlackTemplate(templateId: string) {
 • Make any necessary edits
 
 [View in Dashboard]({dashboardUrl}) | [JIRA Ticket]({jiraUrl}) | [Edit Entry]({editUrl})`
+    },
+    'changelog-approval-request': {
+      message_template: `📋 **Changelog Entry Ready for Review**
+
+**{jiraKey}** has been completed and needs changelog approval.
+
+**Title:** {contentTitle}
+**Category:** {category} 
+**Summary:** {contentSummary}
+
+Quick approve, request changes, or reject below:`
     },
     'daily-summary': {
       message_template: `📊 **Daily Content Pipeline Summary**

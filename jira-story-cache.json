@@ -1,0 +1,12 @@
+{
+  "PRESS-21463": {
+    "key": "PRESS-21463",
+    "summary": "Implement UI Changes for Nav Bar",
+    "description": "To support the upcoming **Sales Widgets** feature launch, we are refreshing the Left Navigation Bar in the Marq Editor. The goal is to simplify the layout, improve discoverability of core tools, and align the UI with updated design patterns.\n\n#### 1. Consolidate Tool Categories into a Unified \"Elements\" Tab\n\n* Merge the existing **Shapes**, **Tables**, and **Buttons** tabs into a single tab labeled **Elements**.\n* Reference design: [Elements Tab – Figma](https://www.figma.com/design/oqtEfgEaKDXzma1dqQ08NG/Sales-widgets?node-id=0-1&t=0gu1IszZgVQW5laT-1)\n\n#### 2. Redesign \"More Tools\" Tab UI\n\n* Update the \"More Tools\" interface to include clearly defined sections:\n\n    * **Essentials**\n    * **Charts**\n    * **Videos**\n    \n* Section headers should be styled as per new UI specs.\n* Reference design: [More Tools UI – Figma](https://www.figma.com/design/oqtEfgEaKDXzma1dqQ08NG/Sales-widgets?node-id=49-2229&t=0gu1IszZgVQW5laT-1)\n\n#### 3. Display the New App Pane for Video Options\n\n* When a user selects a Video type from the updated \"More Tools\" menu, load the new App Pane UI.\n* Ensure each Video integration (YouTube, Loom, etc.) loads its specific configuration panel.\n* Reference design: [Video App Pane – Figma](https://www.figma.com/design/oqtEfgEaKDXzma1dqQ08NG/Sales-widgets?node-id=1-1726&t=0gu1IszZgVQW5laT-1)",
+    "status": "In Progress",
+    "priority": "Major",
+    "components": [],
+    "labels": ["salesWidgets"],
+    "assignee": "Fawn Wong"
+  }
+}

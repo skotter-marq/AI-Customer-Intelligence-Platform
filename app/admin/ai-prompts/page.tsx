@@ -419,26 +419,16 @@ Guidelines:
         maxTokens: 500,
         model: 'template'
       },
-      variables: ['jiraKey', 'storyTitle', 'assignee', 'priority', 'customerTitle', 'customerDescription', 'category', 'affectedUsers'],
-      template: `🎯 **JIRA Story Completed - Changelog Generated**
+      variables: ['jiraKey', 'contentTitle', 'category', 'contentSummary', 'assignee', 'qualityScore'],
+      template: `📋 **Changelog Entry Ready for Review**
 
-**JIRA Story:** {jiraKey}
-**Title:** {storyTitle}
-**Completed by:** {assignee}
-**Priority:** {priority}
+**{jiraKey}** has been completed and needs changelog approval.
 
-**Generated Changelog Entry:**
-**Customer Title:** {customerTitle}
-**Description:** {customerDescription}
+**Title:** {contentTitle}
 **Category:** {category}
-**Estimated Impact:** {affectedUsers} users
+**Summary:** {contentSummary}
 
-**Next Steps:**
-• Review the auto-generated changelog entry
-• Approve for publication or request edits
-• Entry will appear in customer changelog upon approval
-
-[View in Dashboard]({dashboardUrl}) | [JIRA Ticket]({jiraUrl}) | [Edit Changelog]({editUrl})`
+Use the buttons below for quick approval actions.`
     },
     {
       id: 'changelog-generation',

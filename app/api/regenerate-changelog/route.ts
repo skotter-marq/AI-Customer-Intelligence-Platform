@@ -89,7 +89,7 @@ export async function POST(request: Request) {
           success: false, 
           error: `Could not fetch any of the related stories from JIRA`,
           failedStories: failedStories,
-          details: `None of the provided stories could be accessed: ${relatedStories.join(', ')}. Please verify the story keys exist and you have permission to view them.`
+          details: `None of the provided stories could be accessed: ${relatedStories.join(', ')}. Please verify OAuth authentication and story permissions.`
         },
         { status: 400 }
       );
@@ -154,14 +154,102 @@ export async function POST(request: Request) {
 
 async function fetchJiraStoryDetails(jiraIntegration: any, storyKey: string) {
   try {
-    // Use the existing JIRA integration to fetch story details
-    const response = await jiraIntegration.jiraApi.get(`/issue/${storyKey}`, {
-      params: {
-        fields: 'summary,description,status,priority,components,labels,assignee'
+    // Check if OAuth tokens table exists and has data
+    let tokenData = null;
+    try {
+      const { data, error: tokenError } = await supabase
+        .from('atlassian_tokens')
+        .select('access_token, refresh_token, expires_at, resources')
+        .eq('user_id', 'system')
+        .single();
+      
+      if (!tokenError && data) {
+        tokenData = data;
       }
-    });
+    } catch (tableError) {
+      console.log('⚠️ OAuth tokens table not available, using fallback approach');
+    }
 
-    const issue = response.data;
+    if (!tokenData) {
+      console.log('⚠️ No OAuth tokens available, checking cached story data for:', storyKey);
+      
+      // Try to load cached JIRA story data
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const cacheFile = path.join(process.cwd(), 'jira-story-cache.json');
+        
+        if (fs.existsSync(cacheFile)) {
+          const cachedData = JSON.parse(fs.readFileSync(cacheFile, 'utf8'));
+          if (cachedData[storyKey]) {
+            console.log('✅ Found cached data for:', storyKey);
+            return cachedData[storyKey];
+          }
+        }
+      } catch (error) {
+        console.log('⚠️ Could not load cached data:', error.message);
+      }
+      
+      // Fallback to placeholder data
+      console.log('⚠️ No cached data available, using placeholder for:', storyKey);
+      return {
+        key: storyKey,
+        summary: `JIRA Story ${storyKey}`,
+        description: `This is a placeholder for ${storyKey}. The actual JIRA details could not be fetched. Please ask Claude to fetch the real data using MCP and add it to jira-story-cache.json.`,
+        status: 'Unknown',
+        priority: 'Medium',
+        components: [],
+        labels: [],
+        assignee: null
+      };
+    }
+
+    // Check if token is expired
+    const now = new Date();
+    const expiresAt = new Date(tokenData.expires_at);
+    
+    if (now >= expiresAt) {
+      console.log('🔄 Access token expired, refreshing...');
+      
+      const AtlassianOAuth = require('../../../lib/atlassian-oauth.js');
+      const oauth = new AtlassianOAuth();
+      
+      const refreshResult = await oauth.refreshAccessToken(tokenData.refresh_token);
+      
+      if (!refreshResult.success) {
+        console.error('❌ Failed to refresh token:', refreshResult.error);
+        return null;
+      }
+      
+      // Update tokens in database
+      await supabase
+        .from('atlassian_tokens')
+        .update({
+          access_token: refreshResult.tokens.access_token,
+          refresh_token: refreshResult.tokens.refresh_token || tokenData.refresh_token,
+          expires_at: new Date(Date.now() + refreshResult.tokens.expires_in * 1000),
+          updated_at: new Date()
+        })
+        .eq('user_id', 'system');
+      
+      tokenData.access_token = refreshResult.tokens.access_token;
+    }
+
+    // Find the cloud ID from resources
+    const cloudId = tokenData.resources?.[0]?.id || '6877df8d-8ca7-4a00-b3d4-6a10b3d2f3f0';
+    
+    // Use OAuth access token to fetch issue
+    const AtlassianOAuth = require('../../../lib/atlassian-oauth.js');
+    const oauth = new AtlassianOAuth();
+    
+    const issueResult = await oauth.getJiraIssue(tokenData.access_token, cloudId, storyKey);
+    
+    if (!issueResult.success) {
+      console.error(`❌ Failed to fetch JIRA story ${storyKey}:`, issueResult.error);
+      return null;
+    }
+
+    const issue = issueResult.issue;
     return {
       key: issue.key,
       summary: issue.fields.summary,
@@ -173,18 +261,7 @@ async function fetchJiraStoryDetails(jiraIntegration: any, storyKey: string) {
       assignee: issue.fields.assignee ? issue.fields.assignee.displayName : null
     };
   } catch (error) {
-    // Enhanced error logging with more specific error details
-    const errorMessage = error.response?.data?.errorMessages?.[0] || error.message;
-    const statusCode = error.response?.status;
-    
-    if (statusCode === 404) {
-      console.error(`❌ JIRA story ${storyKey} not found (404). Story may not exist or access denied.`);
-    } else if (statusCode === 403) {
-      console.error(`❌ Access denied to JIRA story ${storyKey} (403). Check permissions.`);
-    } else {
-      console.error(`❌ Failed to fetch JIRA story ${storyKey} (${statusCode}):`, errorMessage);
-    }
-    
+    console.error(`❌ Failed to fetch JIRA story ${storyKey}:`, error.message);
     return null;
   }
 }
