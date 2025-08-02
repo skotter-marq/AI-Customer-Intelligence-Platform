@@ -61,6 +61,7 @@ export default function AIPromptsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
   const [isTestingPrompt, setIsTestingPrompt] = useState(false);
+  const [useRealJiraData, setUseRealJiraData] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<{[key: string]: boolean}>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -430,19 +431,21 @@ Guidelines:
         maxTokens: 500,
         model: 'template'
       },
-      variables: ['jiraKey', 'contentTitle', 'category', 'contentSummary', 'assignee', 'qualityScore'],
-      template: `**{jiraKey}** has been completed and the changelog entry is ready for review.
+      variables: ['jiraKey', 'contentTitle', 'category', 'contentSummary', 'assignee', 'qualityScore', 'dashboardUrl', 'jiraUrl'],
+      template: `📋 **Changelog Entry Ready for Review**
+
+**{jiraKey}** has been completed and the changelog entry is ready for review.
 
 **Title:** {contentTitle}
 **Category:** {category}  
 **Assignee:** {assignee}
 **Summary:** {contentSummary}
 
-👉 **Review & Approve in Dashboard**
+👉 **[Review & Approve in Dashboard]({dashboardUrl})**
 
 Click the link above to review, edit, and approve this changelog entry.
 
-🎫 View JIRA Ticket
+🎫 [View JIRA Ticket]({jiraUrl})
 
 Quality Score: {qualityScore}% | Content ID: [generated]`
     },
@@ -1125,7 +1128,8 @@ Return only the JSON response.`
         body: JSON.stringify({
           templateType,
           templateId: promptId,
-          templateData
+          templateData,
+          useRealData: useRealJiraData
         })
       });
       
@@ -1608,6 +1612,19 @@ Return only the JSON response.`
                                 </div>
                                 
                                 <div className="flex items-center space-x-3">
+                                  {/* Real Data Toggle for Slack Templates */}
+                                  {prompt.type === 'slack_template' && (
+                                    <label className="flex items-center space-x-2 text-sm text-gray-600">
+                                      <input
+                                        type="checkbox"
+                                        checked={useRealJiraData}
+                                        onChange={(e) => setUseRealJiraData(e.target.checked)}
+                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                                      />
+                                      <span>Use real JIRA data</span>
+                                    </label>
+                                  )}
+                                  
                                   <button
                                     onClick={() => handleReset(prompt.id)}
                                     disabled={!hasChanges}

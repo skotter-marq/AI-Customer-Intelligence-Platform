@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { templateType, templateId, templateData, sampleData } = await request.json();
+    const { templateType, templateId, templateData, sampleData, useRealData } = await request.json();
     
     if (!templateType || !templateData) {
       return NextResponse.json(
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     switch (templateType) {
       case 'slack_template':
-        testResult = await testSlackTemplate(templateData, sampleData);
+        testResult = await testSlackTemplate(templateData, sampleData, useRealData);
         break;
       case 'ai_analysis':
         testResult = await testAIPrompt(templateData);
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
   }
 }
 
-async function testSlackTemplate(templateData: any, sampleData?: any) {
+async function testSlackTemplate(templateData: any, sampleData?: any, useRealData?: boolean) {
   const { message_template, variables = [], channel } = templateData;
   
   // Default sample data for Slack templates - comprehensive coverage
@@ -81,9 +81,12 @@ async function testSlackTemplate(templateData: any, sampleData?: any) {
     contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`,
     dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`,
     
-    // URL variables
+    // URL variables - Fixed to include proper links
     meetingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/meetings/test-123`,
     jiraCreateUrl: 'https://marq.atlassian.net/secure/CreateIssue.jspa',
+    contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval`,
+    dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval`,
+    jiraUrl: 'https://marq.atlassian.net/browse/TEST-12345',
     
     // Quote variables
     customerQuote: 'This feature would really help streamline our workflow and save us hours each week.',
@@ -91,8 +94,20 @@ async function testSlackTemplate(templateData: any, sampleData?: any) {
     // Insight types
     insightType: 'Feature Request'
   };
+
+  // 🚀 NEW: Fetch real JIRA data if requested
+  let finalTestData = { ...defaultSampleData, ...sampleData };
   
-  const testData = { ...defaultSampleData, ...sampleData };
+  if (useRealData) {
+    try {
+      const realJiraData = await fetchSampleJiraData();
+      if (realJiraData) {
+        finalTestData = { ...finalTestData, ...realJiraData };
+      }
+    } catch (error) {
+      console.warn('Failed to fetch real JIRA data, using default test data:', error.message);
+    }
+  }
   
   try {
     // Process template variables
@@ -104,7 +119,7 @@ async function testSlackTemplate(templateData: any, sampleData?: any) {
     variables.forEach((variable: string) => {
       const placeholder = `{${variable}}`;
       if (processedMessage.includes(placeholder)) {
-        const value = testData[variable] || `[${variable}]`;
+        const value = finalTestData[variable] || `[${variable}]`;
         processedMessage = processedMessage.replace(new RegExp(placeholder, 'g'), value);
         usedVariables.push(variable);
       }
@@ -373,4 +388,84 @@ async function testSystemMessage(templateData: any, sampleData?: any) {
       error: error.message
     };
   }
+}
+
+// Function to fetch real JIRA data for testing
+async function fetchSampleJiraData() {
+  try {
+    // Check if JIRA credentials are available
+    if (!process.env.JIRA_BASE_URL || !process.env.JIRA_API_TOKEN) {
+      console.log('JIRA credentials not configured, skipping real data fetch');
+      return null;
+    }
+
+    // Fetch a recent completed story for realistic test data
+    const auth = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
+    
+    const response = await fetch(`${process.env.JIRA_BASE_URL}/rest/api/2/search?jql=status=Done AND type=Story ORDER BY updated DESC&maxResults=1`, {
+      headers: {
+        'Authorization': `Basic ${auth}`,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      console.warn('Failed to fetch JIRA data:', response.status, response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    
+    if (!data.issues || data.issues.length === 0) {
+      console.log('No JIRA issues found');
+      return null;
+    }
+
+    const issue = data.issues[0];
+    const fields = issue.fields;
+    
+    // Transform JIRA data to template variables
+    return {
+      jiraKey: issue.key,
+      contentTitle: `✨ ${fields.summary}`,
+      category: determineCategory(fields.issuetype?.name, fields.labels),
+      contentSummary: fields.description ? 
+        fields.description.substring(0, 200) + (fields.description.length > 200 ? '...' : '') :
+        `${fields.summary} - Real data from ${issue.key}`,
+      assignee: fields.assignee?.displayName || 'Unassigned',
+      qualityScore: Math.floor(Math.random() * 20 + 80).toString(), // Random score 80-100
+      updateTitle: `📋 ${fields.summary}`,
+      updateDescription: fields.description || `Completed story: ${fields.summary}`,
+      jiraUrl: `${process.env.JIRA_BASE_URL}/browse/${issue.key}`,
+      contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval&jira=${issue.key}`,
+      dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval`,
+      createdDate: new Date().toLocaleDateString(),
+      contentType: 'jira_story'
+    };
+
+  } catch (error) {
+    console.error('Error fetching JIRA data:', error);
+    return null;
+  }
+}
+
+// Helper function to determine category from JIRA issue type and labels
+function determineCategory(issueType: string, labels: any[] = []) {
+  const labelNames = labels.map(l => l.toLowerCase());
+  
+  if (labelNames.includes('bug') || issueType?.toLowerCase().includes('bug')) {
+    return 'fixed';
+  }
+  if (labelNames.includes('security') || labelNames.includes('auth')) {
+    return 'security';
+  }
+  if (issueType?.toLowerCase().includes('story') || issueType?.toLowerCase().includes('feature')) {
+    return 'added';
+  }
+  if (labelNames.includes('improvement') || labelNames.includes('enhancement')) {
+    return 'improved';
+  }
+  
+  return 'improved'; // default
 }
