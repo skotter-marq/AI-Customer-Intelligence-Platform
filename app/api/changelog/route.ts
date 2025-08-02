@@ -399,7 +399,8 @@ export async function PUT(request: Request) {
     // Remove any fields that might cause schema errors
     const filteredUpdates = Object.keys(updates).reduce((acc, key) => {
       // Skip fields that don't exist in the database schema
-      if (!['approved_at', 'layout_template', 'is_public', 'public_changelog_visible', 'release_date'].includes(key)) {
+      // Allow key approval workflow fields: approval_status, public_visibility, release_date
+      if (!['approved_at', 'layout_template'].includes(key)) {
         acc[key] = updates[key];
       }
       return acc;
@@ -468,6 +469,7 @@ export async function PUT(request: Request) {
       }
       
       dbUpdates.status = targetStatus;
+      dbUpdates.approval_status = filteredUpdates.approval_status;
       
       // If approving, store additional info in generation_metadata
       if (filteredUpdates.approval_status === 'approved') {
@@ -507,11 +509,25 @@ export async function PUT(request: Request) {
       }
     }
     
-    // Skip public_visibility update for now to avoid schema issues
-    // if (updates.public_visibility !== undefined) {
-    //   dbUpdates.is_public = updates.public_visibility;
-    //   dbUpdates.public_changelog_visible = updates.public_visibility;
-    // }
+    // Handle public visibility fields for approval workflow
+    if (filteredUpdates.public_visibility !== undefined) {
+      dbUpdates.is_public = filteredUpdates.public_visibility;
+      dbUpdates.public_changelog_visible = filteredUpdates.public_visibility;
+      console.log('📢 Setting public visibility:', {
+        entryId,
+        is_public: filteredUpdates.public_visibility,
+        public_changelog_visible: filteredUpdates.public_visibility
+      });
+    }
+
+    // Handle release date for approved entries
+    if (filteredUpdates.release_date !== undefined) {
+      dbUpdates.release_date = filteredUpdates.release_date;
+      console.log('📅 Setting release date:', {
+        entryId,
+        release_date: filteredUpdates.release_date
+      });
+    }
 
     // Handle related stories - update source_data JSONB field
     if (filteredUpdates.related_stories !== undefined) {
