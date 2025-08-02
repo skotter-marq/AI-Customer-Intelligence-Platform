@@ -553,137 +553,22 @@ async function sendToSlackWebhook(webhookUrl: string, message: any) {
 }
 
 async function getSlackTemplate(templateId: string) {
-  try {
-    // First, try to fetch custom template from database
-    const { data: customTemplate } = await supabase
-      .from('slack_templates')
-      .select('*')
-      .eq('id', templateId)
-      .eq('enabled', true)
-      .single();
-
-    if (customTemplate) {
-      return customTemplate;
-    }
-  } catch (error) {
-    console.log('No custom template found, using default:', templateId);
-  }
-
-  // Fallback to default templates
-  const defaultTemplates = {
-    'approval-request': {
-      message_template: `🔍 **New Content Ready for Review**
-
-**Title:** {contentTitle}
-**Type:** {contentType}
-**Quality Score:** {qualityScore}%
-
-**Summary:** {contentSummary}
-
-**Next Steps:**
-• Review content in dashboard
-• Approve or request changes
-• Content will auto-publish upon approval
-
-[View Content]({contentUrl}) | [Dashboard]({dashboardUrl})`
-    },
-    'product-update-notification': {
-      message_template: `📋 **CHANGELOG UPDATE**
-
-**{updateTitle}** is now live
-
-{updateDescription}{whatsNewSection}
-
-👉 *View Details*
-
-{mediaResources}`
-    },
-    'slack-jira-story-completed': {
-      message_template: `🎉 **JIRA Story Completed - Ready for Changelog Review**
-
-**Story:** {jiraKey} - {storyTitle}
-**Assignee:** {assignee}
-**Priority:** {priority}
-**Category:** {category}
-
-**Customer-Facing Title:**
-{customerTitle}
-
-**Description:**
-{customerDescription}
-
-**Affected Users:** ~{affectedUsers}
-
-**Next Steps:**
-• Review the generated changelog entry
-• Approve for publication
-• Make any necessary edits
-
-[View in Dashboard]({dashboardUrl}) | [JIRA Ticket]({jiraUrl}) | [Edit Entry]({editUrl})`
-    },
-    'changelog-approval-request': {
-      message_template: `📋 **Changelog Entry Ready for Review**
-
-**{jiraKey}** has been completed and needs changelog approval.
-
-**Title:** {contentTitle}
-**Category:** {category} 
-**Summary:** {contentSummary}
-
-Quick approve, request changes, or reject below:`
-    },
-    'daily-summary': {
-      message_template: `📊 **Daily Content Pipeline Summary**
-
-**Today's Activity:**
-• Content Generated: {totalGenerated}
-• Pending Approval: {pendingApproval}
-• Published: {published}
-• Average Quality: {avgQuality}%
-
-**JIRA Updates:**
-• New Customer Stories: {newStories}
-• Completed Features: {completedFeatures}
-
-[View Dashboard]({dashboardUrl})`
-    },
-    'customer-insight-alert': {
-      message_template: `🚨 **High-Priority Customer Insight Detected**
-
-**Customer:** {customerName}
-**Meeting:** {meetingTitle}
-**Priority Score:** {priorityScore}/10
-
-**Key Insight:**
-> {insightSummary}
-
-**Recommended Actions:**
-{actionItems}
-
-[View Full Analysis]({meetingUrl}) | [Create JIRA Ticket]({jiraCreateUrl})`
-    }
-  };
+  // Use the new PromptService for database-driven templates
+  const { promptService } = require('../../../lib/prompt-service.js');
   
-  return defaultTemplates[templateId as keyof typeof defaultTemplates] || null;
+  try {
+    const template = await promptService.getSlackTemplate(templateId);
+    return template;
+  } catch (error) {
+    console.error(`❌ Error getting Slack template ${templateId}:`, error.message);
+    return null;
+  }
 }
 
 function processTemplate(template: string, data: any): string {
-  let processed = template;
-  
-  // Replace all template variables with actual data
-  Object.entries(data).forEach(([key, value]) => {
-    const regex = new RegExp(`\\{${key}\\}`, 'g');
-    const cleanValue = value ? String(value).trim() : `[${key} not provided]`;
-    processed = processed.replace(regex, cleanValue);
-  });
-  
-  // Clean up any remaining unreplaced variables
-  processed = processed.replace(/\{[^}]+\}/g, '[missing data]');
-  
-  // Remove any excessive whitespace/newlines that might cause issues
-  processed = processed.replace(/\n\s*\n\s*\n/g, '\n\n'); // max 2 consecutive newlines
-  
-  return processed;
+  // Use the PromptService template processor for consistency
+  const { promptService } = require('../../../lib/prompt-service.js');
+  return promptService.processTemplate(template, data);
 }
 
 function getEmojiForType(type: string) {

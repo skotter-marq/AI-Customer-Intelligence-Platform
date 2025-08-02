@@ -25,7 +25,9 @@ import {
   SortAcs,
   BarChart3,
   Calendar,
-  Tag
+  Tag,
+  Plus,
+  X
 } from 'lucide-react';
 import Breadcrumb from '../../components/Breadcrumb';
 
@@ -70,7 +72,23 @@ export default function AIPromptsPage() {
     { label: 'AI Prompts & Templates', current: true }
   ];
 
-  // All prompts in one unified list
+  // State for loading from database
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createFormData, setCreateFormData] = useState({
+    name: '',
+    description: '',
+    type: 'ai_analysis' as 'ai_analysis' | 'slack_template' | 'content_generation',
+    category: '',
+    template: '',
+    systemInstructions: '',
+    channel: '#int-product-updates',
+    variables: [] as string[]
+  });
+  const [isCreating, setIsCreating] = useState(false);
+  
+  // All prompts loaded from database
   const [prompts, setPrompts] = useState<AIPrompt[]>([
     {
       id: 'meeting-analysis',
@@ -413,15 +431,20 @@ Guidelines:
         model: 'template'
       },
       variables: ['jiraKey', 'contentTitle', 'category', 'contentSummary', 'assignee', 'qualityScore'],
-      template: `📋 **Changelog Entry Ready for Review**
-
-**{jiraKey}** has been completed and needs changelog approval.
+      template: `**{jiraKey}** has been completed and the changelog entry is ready for review.
 
 **Title:** {contentTitle}
-**Category:** {category}
+**Category:** {category}  
+**Assignee:** {assignee}
 **Summary:** {contentSummary}
 
-Use the buttons below for quick approval actions.`
+👉 **Review & Approve in Dashboard**
+
+Click the link above to review, edit, and approve this changelog entry.
+
+🎫 View JIRA Ticket
+
+Quality Score: {qualityScore}% | Content ID: [generated]`
     },
     {
       id: 'changelog-generation',
@@ -751,6 +774,97 @@ Return only the JSON response.`
     }
   ]);
 
+  // Load prompts from database on component mount
+  useEffect(() => {
+    loadPromptsFromDatabase();
+  }, []);
+
+  const loadPromptsFromDatabase = async () => {
+    try {
+      setIsLoading(true);
+      setLoadError(null);
+      
+      const response = await fetch('/api/admin/prompts?type=all');
+      if (!response.ok) {
+        throw new Error(`Failed to load prompts: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to load prompts');
+      }
+      
+      // Transform database data to UI format
+      const transformedPrompts: AIPrompt[] = [];
+      
+      // Add AI prompts
+      if (result.data.ai_prompts) {
+        result.data.ai_prompts.forEach((prompt: any) => {
+          transformedPrompts.push({
+            id: prompt.id,
+            name: prompt.name,
+            description: prompt.description || '',
+            type: 'ai_analysis',
+            category: prompt.category,
+            usedIn: Array.isArray(prompt.used_in) ? prompt.used_in : [],
+            template: prompt.user_prompt_template || '',
+            systemInstructions: prompt.system_instructions || '',
+            parameters: typeof prompt.parameters === 'object' ? prompt.parameters : {
+              temperature: 0.3,
+              maxTokens: 2000,
+              model: 'claude-3-5-sonnet-20241022'
+            },
+            variables: Array.isArray(prompt.variables) ? prompt.variables : [],
+            enabled: prompt.enabled !== false,
+            version: prompt.version || '1.0',
+            lastModified: prompt.updated_at || prompt.created_at,
+            usageCount: prompt.usage_count || 0
+          });
+        });
+      }
+      
+      // Add Slack templates
+      if (result.data.slack_templates) {
+        result.data.slack_templates.forEach((template: any) => {
+          transformedPrompts.push({
+            id: template.id,
+            name: template.name,
+            description: template.description || '',
+            type: 'slack_template',
+            category: template.category,
+            usedIn: [`${template.channel} channel`, template.trigger_event || 'Manual trigger'].filter(Boolean),
+            template: template.message_template || '',
+            channel: template.channel || '',
+            triggerEvent: template.trigger_event || '',
+            parameters: {
+              temperature: 0,
+              maxTokens: 500,
+              model: 'template'
+            },
+            variables: Array.isArray(template.variables) ? template.variables : [],
+            enabled: template.enabled !== false,
+            version: '1.0',
+            lastModified: template.updated_at || template.created_at,
+            usageCount: template.usage_count || 0
+          });
+        });
+      }
+      
+      // System messages are excluded from this interface
+      // They are managed separately and don't need to be displayed here
+      
+      setPrompts(transformedPrompts);
+      console.log(`✅ Loaded ${transformedPrompts.length} prompts from database`);
+      
+    } catch (error) {
+      console.error('❌ Failed to load prompts:', error);
+      setLoadError(error instanceof Error ? error.message : 'Failed to load prompts');
+      // Keep existing hardcoded data as fallback
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const typeOptions = [
     { value: 'all', label: 'All Types', count: 0 },
     { value: 'ai_analysis', label: 'AI Analysis', count: 0 },
@@ -855,23 +969,93 @@ Return only the JSON response.`
   const handleSave = async (promptId: string) => {
     setIsSaving(true);
     try {
-      const updatedPrompts = prompts.map(prompt => 
-        prompt.id === promptId 
+      const prompt = prompts.find(p => p.id === promptId);
+      const currentData = editingData[promptId];
+      
+      if (!prompt || !currentData) {
+        throw new Error('Prompt data not found');
+      }
+      
+      // Determine which table to update based on prompt type
+      let table: string;
+      let updateData: any;
+      
+      if (prompt.type === 'ai_analysis') {
+        table = 'ai_prompts';
+        updateData = {
+          system_instructions: currentData.systemInstructions || '',
+          user_prompt_template: currentData.template || '',
+          parameters: currentData.parameters || prompt.parameters
+        };
+      } else if (prompt.type === 'slack_template') {
+        table = 'slack_templates';
+        updateData = {
+          message_template: currentData.template || '',
+          channel: currentData.channel || ''
+        };
+      } else {
+        table = 'system_messages';
+        updateData = {
+          message_template: currentData.template || ''
+        };
+      }
+      
+      // Save to database
+      const response = await fetch('/api/admin/prompts', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          table,
+          id: promptId,
+          data: updateData
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to save: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Save failed');
+      }
+      
+      // Update local state with saved data
+      const updatedPrompts = prompts.map(p => 
+        p.id === promptId 
           ? {
-              ...prompt,
-              ...editingData[promptId],
+              ...p,
+              ...currentData,
               lastModified: new Date().toISOString()
             }
-          : prompt
+          : p
       );
       
       setPrompts(updatedPrompts);
       setHasUnsavedChanges(prev => ({ ...prev, [promptId]: false }));
       
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log('Prompt saved:', promptId);
+      console.log('✅ Prompt saved successfully:', promptId);
+      
+      // Show success feedback
+      setTestResult({
+        success: true,
+        message: 'Changes saved successfully!',
+        preview: 'Your changes have been saved to the database and are now live.'
+      });
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setTestResult(null), 3000);
+      
     } catch (error) {
-      console.error('Save failed:', error);
+      console.error('❌ Save failed:', error);
+      setTestResult({
+        success: false,
+        message: 'Save failed',
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
     } finally {
       setIsSaving(false);
     }
@@ -898,16 +1082,92 @@ Return only the JSON response.`
     setTestResult(null);
     
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
       const prompt = prompts.find(p => p.id === promptId);
+      const currentData = editingData[promptId];
+      
+      if (!prompt) {
+        throw new Error('Prompt not found');
+      }
+      
+      // Prepare template data for testing
+      let templateData: any = {};
+      let templateType = '';
+      
+      if (prompt.type === 'slack_template') {
+        templateType = 'slack_template';
+        templateData = {
+          message_template: currentData?.template || prompt.template,
+          variables: prompt.variables,
+          channel: currentData?.channel || prompt.channel
+        };
+      } else if (prompt.type === 'ai_analysis') {
+        templateType = 'ai_analysis';
+        templateData = {
+          user_prompt_template: currentData?.template || prompt.template,
+          system_instructions: currentData?.systemInstructions || prompt.systemInstructions,
+          variables: prompt.variables,
+          parameters: currentData?.parameters || prompt.parameters
+        };
+      } else {
+        templateType = 'system_message';
+        templateData = {
+          message_template: currentData?.template || prompt.template,
+          variables: prompt.variables
+        };
+      }
+      
+      // Call the testing API
+      const response = await fetch('/api/admin/test-template', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          templateType,
+          templateId: promptId,
+          templateData
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Test failed: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Test failed');
+      }
+      
+      // Enhanced test result display
+      let displayMessage = result.message;
+      let displayPreview = result.preview;
+      
+      if (result.details) {
+        const details = result.details;
+        
+        if (templateType === 'slack_template') {
+          displayPreview += `\n\n📊 Test Details:\n• Channel: ${details.channel}\n• Length: ${details.messageLength} chars\n• Variables used: ${details.usedVariables?.length || 0}/${details.totalVariables || 0}`;
+          
+          if (details.warnings && details.warnings.length > 0) {
+            displayPreview += `\n\n⚠️ Warnings:\n${details.warnings.map((w: string) => `• ${w}`).join('\n')}`;
+          }
+        } else if (templateType === 'ai_analysis') {
+          displayPreview += `\n\n📊 Quality Analysis:\n• Template: ${details.validations?.templateLength} characters\n• Variables: ${details.variablesInTemplate?.length}/${details.validations?.variableCount} used\n• Est. tokens: ~${details.estimatedTokens}`;
+          
+          if (details.recommendations && details.recommendations.length > 0) {
+            displayPreview += `\n\n💡 Recommendations:\n${details.recommendations.map((r: string) => `• ${r}`).join('\n')}`;
+          }
+        }
+      }
       
       setTestResult({
         success: true,
-        message: `${prompt?.type === 'slack_template' ? 'Template' : 'Prompt'} test completed successfully!`,
-        preview: prompt?.type === 'slack_template' 
-          ? `Message would be sent to ${prompt.channel}`
-          : 'AI analysis would be generated with current prompt'
+        message: displayMessage,
+        preview: displayPreview
       });
+      
     } catch (error) {
       setTestResult({
         success: false,
@@ -916,6 +1176,123 @@ Return only the JSON response.`
       });
     } finally {
       setIsTestingPrompt(false);
+    }
+  };
+
+  const handleCreateNew = async () => {
+    setIsCreating(true);
+    try {
+      // Determine table and data structure
+      let table: string;
+      let createData: any;
+      
+      if (createFormData.type === 'ai_analysis') {
+        table = 'ai_prompts';
+        createData = {
+          id: createFormData.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          name: createFormData.name,
+          description: createFormData.description,
+          category: createFormData.category,
+          type: 'ai_analysis',
+          system_instructions: createFormData.systemInstructions,
+          user_prompt_template: createFormData.template,
+          variables: createFormData.variables,
+          parameters: {
+            temperature: 0.3,
+            maxTokens: 2000,
+            model: 'claude-3-5-sonnet-20241022'
+          },
+          used_in: ['Manual creation'],
+          version: '1.0',
+          enabled: true
+        };
+      } else if (createFormData.type === 'slack_template') {
+        table = 'slack_templates';
+        createData = {
+          id: createFormData.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          name: createFormData.name,
+          description: createFormData.description,
+          category: createFormData.category,
+          channel: createFormData.channel,
+          message_template: createFormData.template,
+          variables: createFormData.variables,
+          trigger_event: 'manual_trigger',
+          webhook_type: createFormData.channel.includes('approval') ? 'approvals' : 'updates',
+          enabled: true
+        };
+      } else {
+        table = 'system_messages';
+        createData = {
+          id: createFormData.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
+          name: createFormData.name,
+          description: createFormData.description,
+          category: createFormData.category,
+          message_template: createFormData.template,
+          variables: createFormData.variables,
+          context: 'ui_message',
+          enabled: true
+        };
+      }
+      
+      // Create in database
+      const response = await fetch('/api/admin/prompts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          table,
+          data: createData
+        })
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to create: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      if (!result.success) {
+        throw new Error(result.error || 'Create failed');
+      }
+      
+      // Reload prompts from database
+      await loadPromptsFromDatabase();
+      
+      // Reset form and close modal
+      setCreateFormData({
+        name: '',
+        description: '',
+        type: 'ai_analysis',
+        category: '',
+        template: '',
+        systemInstructions: '',
+        channel: '#int-product-updates',
+        variables: []
+      });
+      setShowCreateModal(false);
+      
+      console.log('✅ New prompt created successfully:', result.data.id);
+      
+      // Show success feedback
+      setTestResult({
+        success: true,
+        message: 'New prompt created successfully!',
+        preview: `${createFormData.name} has been created and saved to the database.`
+      });
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => setTestResult(null), 3000);
+      
+    } catch (error) {
+      console.error('❌ Create failed:', error);
+      setTestResult({
+        success: false,
+        message: 'Failed to create new prompt',
+        error: error instanceof Error ? error.message : 'Unknown error occurred'
+      });
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -960,6 +1337,13 @@ Return only the JSON response.`
                 Manage all AI prompts, content generation templates, and Slack message templates in one place.
               </p>
             </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="calendly-button calendly-button-primary flex items-center space-x-2"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Create New</span>
+            </button>
           </div>
 
           {/* Filters and Search */}
@@ -1018,8 +1402,37 @@ Return only the JSON response.`
             </p>
           </div>
 
+          {/* Loading State */}
+          {isLoading && (
+            <div className="calendly-card text-center py-12">
+              <Settings className="w-8 h-8 text-gray-400 mx-auto mb-4 animate-spin" />
+              <h3 className="calendly-h3 text-gray-600 mb-2">Loading prompts...</h3>
+              <p className="calendly-body text-gray-500">
+                Fetching prompts and templates from database...
+              </p>
+            </div>
+          )}
+          
+          {/* Error State */}
+          {loadError && (
+            <div className="calendly-card border-red-200 bg-red-50 text-center py-12">
+              <AlertCircle className="w-8 h-8 text-red-500 mx-auto mb-4" />
+              <h3 className="calendly-h3 text-red-600 mb-2">Failed to load prompts</h3>
+              <p className="calendly-body text-red-700 mb-4">
+                {loadError}
+              </p>
+              <button
+                onClick={loadPromptsFromDatabase}
+                className="calendly-button calendly-button-primary"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
           {/* Prompts List */}
-          <div className="space-y-4">
+          {!isLoading && !loadError && (
+            <div className="space-y-4">
             {filteredPrompts.map((prompt) => {
               const Icon = getTypeIcon(prompt.type);
               const isExpanded = expandedPrompt === prompt.id;
@@ -1114,72 +1527,45 @@ Return only the JSON response.`
                   {/* Expanded Editor */}
                   {isExpanded && (
                     <div className="border-t border-gray-200 mt-6 pt-6">
-                      {/* Action Buttons */}
-                      <div className="flex items-center justify-end space-x-3 mb-6">
-                        <button
-                          onClick={() => handleReset(prompt.id)}
-                          disabled={!hasChanges}
-                          className="calendly-button calendly-button-secondary flex items-center space-x-2 disabled:opacity-50"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                          <span>Reset</span>
-                        </button>
-                        <button
-                          onClick={() => handleTest(prompt.id)}
-                          disabled={isTestingPrompt}
-                          className="calendly-button calendly-button-secondary flex items-center space-x-2 disabled:opacity-50"
-                        >
-                          {isTestingPrompt ? (
-                            <Settings className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <TestTube className="w-4 h-4" />
+
+                      {/* Configuration Section - Consistent height for all card types */}
+                      <div className="mb-6">
+                        <div className="min-h-[120px] flex flex-col">
+                          {/* Channel Selection (for Slack templates) */}
+                          {prompt.type === 'slack_template' && (
+                            <>
+                              <label className="calendly-label font-medium mb-2 block">Slack Channel</label>
+                              <select
+                                value={currentEditingData.channel || prompt.channel || ''}
+                                onChange={(e) => updateEditingData(prompt.id, 'channel', e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-lg calendly-body flex-1"
+                              >
+                                <option value="#int-product-updates">#int-product-updates</option>
+                                <option value="#product-meeting-insights">#product-meeting-insights</option>
+                                <option value="#product-changelog-approvals">#product-changelog-approvals</option>
+                                <option value="#product-daily-content-updates">#product-daily-content-updates</option>
+                              </select>
+                              <p className="calendly-label-sm text-gray-500 mt-2">
+                                The Slack channel where this template will be used for notifications.
+                              </p>
+                            </>
                           )}
-                          <span>Test</span>
-                        </button>
-                        <button
-                          onClick={() => handleSave(prompt.id)}
-                          disabled={!hasChanges || isSaving}
-                          className="calendly-button calendly-button-primary flex items-center space-x-2 disabled:opacity-50"
-                        >
-                          {isSaving ? (
-                            <Settings className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Save className="w-4 h-4" />
+
+                          {/* System Instructions (for AI prompts) */}
+                          {prompt.type !== 'slack_template' && (
+                            <>
+                              <label className="calendly-label font-medium mb-2 block">System Instructions</label>
+                              <textarea
+                                value={currentEditingData.systemInstructions || prompt.systemInstructions || ''}
+                                onChange={(e) => updateEditingData(prompt.id, 'systemInstructions', e.target.value)}
+                                className="w-full p-3 border border-gray-300 rounded-lg resize-none calendly-body flex-1"
+                                style={{ minHeight: '80px' }}
+                                placeholder="System instructions that define the AI's role and behavior..."
+                              />
+                            </>
                           )}
-                          <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
-                        </button>
+                        </div>
                       </div>
-
-                      {/* Channel Selection (for Slack templates) */}
-                      {prompt.type === 'slack_template' && (
-                        <div className="mb-6">
-                          <label className="calendly-label font-medium mb-2 block">Slack Channel</label>
-                          <select
-                            value={currentEditingData.channel || prompt.channel || ''}
-                            onChange={(e) => updateEditingData(prompt.id, 'channel', e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
-                          >
-                            <option value="#int-product-updates">#int-product-updates</option>
-                            <option value="#product-meeting-insights">#product-meeting-insights</option>
-                            <option value="#product-changelog-approvals">#product-changelog-approvals</option>
-                            <option value="#product-daily-content-updates">#product-daily-content-updates</option>
-                          </select>
-                        </div>
-                      )}
-
-                      {/* System Instructions (for AI prompts) */}
-                      {prompt.type !== 'slack_template' && (
-                        <div className="mb-6">
-                          <label className="calendly-label font-medium mb-2 block">System Instructions</label>
-                          <textarea
-                            value={currentEditingData.systemInstructions || prompt.systemInstructions || ''}
-                            onChange={(e) => updateEditingData(prompt.id, 'systemInstructions', e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg resize-none calendly-body"
-                            rows={3}
-                            placeholder="System instructions that define the AI's role and behavior..."
-                          />
-                        </div>
-                      )}
 
                       {/* Template Editor */}
                       <div className="mb-6">
@@ -1193,48 +1579,74 @@ Return only the JSON response.`
                             </span>
                           </div>
                         </div>
-                        <textarea
-                          value={currentEditingData.template || prompt.template}
-                          onChange={(e) => updateEditingData(prompt.id, 'template', e.target.value)}
-                          className="w-full p-4 border border-gray-300 rounded-lg resize-none calendly-body font-mono text-sm"
-                          rows={prompt.type === 'slack_template' ? 12 : 20}
-                          placeholder={`Enter your ${prompt.type === 'slack_template' ? 'message template' : 'AI prompt'}...`}
-                        />
-                        
-                        {/* Action Buttons */}
-                        <div className="flex items-center justify-end space-x-3 mt-4">
-                          <button
-                            onClick={() => handleReset(prompt.id)}
-                            disabled={!hasChanges}
-                            className="calendly-button calendly-button-secondary flex items-center space-x-2 disabled:opacity-50"
-                          >
-                            <RotateCcw className="w-4 h-4" />
-                            <span>Reset</span>
-                          </button>
-                          <button
-                            onClick={() => handleTest(prompt.id)}
-                            disabled={isTestingPrompt}
-                            className="calendly-button calendly-button-secondary flex items-center space-x-2 disabled:opacity-50"
-                          >
-                            {isTestingPrompt ? (
-                              <Settings className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <TestTube className="w-4 h-4" />
-                            )}
-                            <span>Test</span>
-                          </button>
-                          <button
-                            onClick={() => handleSave(prompt.id)}
-                            disabled={!hasChanges || isSaving}
-                            className="calendly-button calendly-button-primary flex items-center space-x-2 disabled:opacity-50"
-                          >
-                            {isSaving ? (
-                              <Settings className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Save className="w-4 h-4" />
-                            )}
-                            <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
-                          </button>
+                        <div className="min-h-[400px] flex flex-col">
+                          <textarea
+                            value={currentEditingData.template || prompt.template}
+                            onChange={(e) => updateEditingData(prompt.id, 'template', e.target.value)}
+                            className="w-full p-4 border border-gray-300 rounded-t-lg resize-none calendly-body font-mono text-sm flex-1"
+                            style={{ minHeight: '300px' }}
+                            placeholder={`Enter your ${prompt.type === 'slack_template' ? 'message template' : 'AI prompt'}...`}
+                          />
+                          
+                          {/* Enhanced Action Buttons with button-like styling */}
+                          <div className="border border-gray-300 border-t-0 rounded-b-lg bg-white">
+                            <div className="border-t-2 border-gray-100 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center space-x-3 text-sm">
+                                  {hasChanges && (
+                                    <div className="flex items-center space-x-2 text-amber-700 bg-amber-100 px-3 py-1.5 rounded-full border border-amber-200 shadow-sm">
+                                      <div className="w-2 h-2 bg-amber-500 rounded-full animate-pulse"></div>
+                                      <span className="font-medium">Unsaved changes</span>
+                                    </div>
+                                  )}
+                                  {!hasChanges && (
+                                    <div className="flex items-center space-x-2 text-green-700 bg-green-100 px-3 py-1.5 rounded-full border border-green-200 shadow-sm">
+                                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                      <span className="font-medium">All changes saved</span>
+                                    </div>
+                                  )}
+                                </div>
+                                
+                                <div className="flex items-center space-x-3">
+                                  <button
+                                    onClick={() => handleReset(prompt.id)}
+                                    disabled={!hasChanges}
+                                    className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-gray-700 bg-white border-2 border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white disabled:hover:border-gray-300 transition-all duration-200"
+                                    title={hasChanges ? 'Reset to saved version' : 'No changes to reset'}
+                                  >
+                                    <RotateCcw className="w-4 h-4 mr-2" />
+                                    <span>Reset</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleTest(prompt.id)}
+                                    disabled={isTestingPrompt}
+                                    className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-blue-700 bg-blue-50 border-2 border-blue-300 rounded-lg shadow-sm hover:bg-blue-100 hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-50 disabled:hover:border-blue-300 transition-all duration-200"
+                                    title="Test template with sample data"
+                                  >
+                                    {isTestingPrompt ? (
+                                      <Settings className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <TestTube className="w-4 h-4 mr-2" />
+                                    )}
+                                    <span>Test</span>
+                                  </button>
+                                  <button
+                                    onClick={() => handleSave(prompt.id)}
+                                    disabled={!hasChanges || isSaving}
+                                    className="inline-flex items-center px-4 py-2.5 text-sm font-medium text-white bg-blue-600 border-2 border-blue-600 rounded-lg shadow-sm hover:bg-blue-700 hover:border-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-blue-600 disabled:hover:border-blue-600 transition-all duration-200"
+                                    title={hasChanges ? 'Save changes to database' : 'No changes to save'}
+                                  >
+                                    {isSaving ? (
+                                      <Settings className="w-4 h-4 mr-2 animate-spin" />
+                                    ) : (
+                                      <Save className="w-4 h-4 mr-2" />
+                                    )}
+                                    <span>{isSaving ? 'Saving...' : 'Save Changes'}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -1277,7 +1689,175 @@ Return only the JSON response.`
                 </p>
               </div>
             )}
-          </div>
+            </div>
+          )}
+
+          {/* Create New Modal */}
+          {showCreateModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+                <div className="p-6">
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="calendly-h2">Create New Prompt/Template</h2>
+                    <button
+                      onClick={() => setShowCreateModal(false)}
+                      className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Create Form */}
+                  <div className="space-y-6">
+                    {/* Basic Info */}
+                    <div>
+                      <label className="calendly-label font-medium mb-2 block">Name *</label>
+                      <input
+                        type="text"
+                        value={createFormData.name}
+                        onChange={(e) => setCreateFormData(prev => ({ ...prev, name: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
+                        placeholder="Enter prompt/template name..."
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="calendly-label font-medium mb-2 block">Description</label>
+                      <textarea
+                        value={createFormData.description}
+                        onChange={(e) => setCreateFormData(prev => ({ ...prev, description: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg calendly-body resize-none"
+                        rows={2}
+                        placeholder="Describe what this prompt/template does..."
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="calendly-label font-medium mb-2 block">Type *</label>
+                        <select
+                          value={createFormData.type}
+                          onChange={(e) => setCreateFormData(prev => ({ 
+                            ...prev, 
+                            type: e.target.value as 'ai_analysis' | 'slack_template' | 'content_generation'
+                          }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
+                          required
+                        >
+                          <option value="ai_analysis">AI Analysis</option>
+                          <option value="slack_template">Slack Template</option>
+                          <option value="content_generation">Content Generation</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="calendly-label font-medium mb-2 block">Category *</label>
+                        <input
+                          type="text"
+                          value={createFormData.category}
+                          onChange={(e) => setCreateFormData(prev => ({ ...prev, category: e.target.value }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
+                          placeholder="e.g., Meeting Analysis, Product Notifications..."
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Slack Channel (only for Slack templates) */}
+                    {createFormData.type === 'slack_template' && (
+                      <div>
+                        <label className="calendly-label font-medium mb-2 block">Slack Channel</label>
+                        <select
+                          value={createFormData.channel}
+                          onChange={(e) => setCreateFormData(prev => ({ ...prev, channel: e.target.value }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
+                        >
+                          <option value="#int-product-updates">#int-product-updates</option>
+                          <option value="#product-meeting-insights">#product-meeting-insights</option>
+                          <option value="#product-changelog-approvals">#product-changelog-approvals</option>
+                          <option value="#product-daily-content-updates">#product-daily-content-updates</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* System Instructions (only for AI prompts) */}
+                    {createFormData.type === 'ai_analysis' && (
+                      <div>
+                        <label className="calendly-label font-medium mb-2 block">System Instructions</label>
+                        <textarea
+                          value={createFormData.systemInstructions}
+                          onChange={(e) => setCreateFormData(prev => ({ ...prev, systemInstructions: e.target.value }))}
+                          className="w-full p-3 border border-gray-300 rounded-lg calendly-body resize-none font-mono text-sm"
+                          rows={3}
+                          placeholder="Define the AI's role and behavior..."
+                        />
+                      </div>
+                    )}
+
+                    {/* Template */}
+                    <div>
+                      <label className="calendly-label font-medium mb-2 block">
+                        {createFormData.type === 'slack_template' ? 'Message Template' : 'Prompt Template'} *
+                      </label>
+                      <textarea
+                        value={createFormData.template}
+                        onChange={(e) => setCreateFormData(prev => ({ ...prev, template: e.target.value }))}
+                        className="w-full p-3 border border-gray-300 rounded-lg calendly-body resize-none font-mono text-sm"
+                        rows={createFormData.type === 'slack_template' ? 8 : 12}
+                        placeholder={`Enter your ${createFormData.type === 'slack_template' ? 'Slack message template' : 'AI prompt template'}...`}
+                        required
+                      />
+                      <p className="calendly-label-sm text-gray-500 mt-1">
+                        Use {'{variable}'} syntax for template variables (e.g., {'{updateTitle}'}, {'{company}'})
+                      </p>
+                    </div>
+
+                    {/* Variables */}
+                    <div>
+                      <label className="calendly-label font-medium mb-2 block">Variables</label>
+                      <input
+                        type="text"
+                        placeholder="Enter variables separated by commas (e.g., updateTitle, description, date)"
+                        onChange={(e) => {
+                          const variables = e.target.value.split(',').map(v => v.trim()).filter(v => v.length > 0);
+                          setCreateFormData(prev => ({ ...prev, variables }));
+                        }}
+                        className="w-full p-3 border border-gray-300 rounded-lg calendly-body"
+                      />
+                      <p className="calendly-label-sm text-gray-500 mt-1">
+                        These variables can be used in your template with {'{variable}'} syntax
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Modal Actions */}
+                  <div className="flex items-center justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
+                    <button
+                      onClick={() => setShowCreateModal(false)}
+                      className="calendly-button calendly-button-secondary"
+                      disabled={isCreating}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreateNew}
+                      disabled={!createFormData.name || !createFormData.template || !createFormData.category || isCreating}
+                      className="calendly-button calendly-button-primary flex items-center space-x-2 disabled:opacity-50"
+                    >
+                      {isCreating ? (
+                        <Settings className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Plus className="w-4 h-4" />
+                      )}
+                      <span>{isCreating ? 'Creating...' : 'Create Prompt'}</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
