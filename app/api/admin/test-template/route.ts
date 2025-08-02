@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 
 export async function POST(request: Request) {
   try {
-    const { templateType, templateId, templateData, sampleData, useRealData } = await request.json();
+    const { templateType, templateId, templateData, sampleData } = await request.json();
     
     if (!templateType || !templateData) {
       return NextResponse.json(
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     switch (templateType) {
       case 'slack_template':
-        testResult = await testSlackTemplate(templateData, sampleData, useRealData);
+        testResult = await testSlackTemplate(templateData, sampleData);
         break;
       case 'ai_analysis':
         testResult = await testAIPrompt(templateData);
@@ -49,65 +49,58 @@ export async function POST(request: Request) {
   }
 }
 
-async function testSlackTemplate(templateData: any, sampleData?: any, useRealData?: boolean) {
+async function testSlackTemplate(templateData: any, sampleData?: any) {
   const { message_template, variables = [], channel } = templateData;
   
-  // Default sample data for Slack templates - comprehensive coverage
+  // Realistic test data that covers all common template variables
   const defaultSampleData = {
     // Product update variables
-    updateTitle: '🧪 TEST - Sample Product Update',
-    updateDescription: 'This is a test of the notification system with sample content.',
-    whatsNewSection: '\n\n**What\'s New:**\n• Enhanced user interface\n• Improved performance\n• Bug fixes and stability improvements',
-    mediaResources: '\n\n📹 [Demo Video](https://example.com/demo) • 📖 [Documentation](https://example.com/docs)',
+    updateTitle: 'Enhanced Dashboard Analytics & User Insights',
+    updateDescription: 'We\'ve rolled out major improvements to the dashboard with real-time analytics, advanced filtering, and personalized user insights to help you make data-driven decisions faster.',
+    whatsNewSection: '\n\n**What\'s New:**\n• Real-time analytics with live data updates\n• Advanced filtering and search capabilities\n• Personalized user insights and recommendations\n• Improved mobile responsiveness\n• Export functionality for reports',
+    mediaResources: '\n\n📹 [Demo Video](https://youtu.be/demo123) • 📖 [User Guide](https://docs.marq.com/dashboard-v2) • 🎯 [Feature Tutorial](https://help.marq.com/analytics)',
     
-    // JIRA and content variables
-    jiraKey: 'TEST-12345',
-    contentTitle: '🧪 TEST - Sample Changelog Entry',
-    category: 'feature_update',
-    contentSummary: 'This is a test of the changelog entry template with sample data.',
-    assignee: 'John Doe (Test)',
-    qualityScore: '92',
+    // JIRA and content variables  
+    jiraKey: 'PRESS-1847',
+    contentTitle: 'Enhanced Dashboard Analytics & User Insights',
+    category: 'improved',
+    contentSummary: 'Major dashboard overhaul introducing real-time analytics, advanced filtering capabilities, and AI-powered user insights. This update significantly improves the user experience by providing actionable data visualization and personalized recommendations based on usage patterns.',
+    assignee: 'Sarah Johnson',
+    qualityScore: '94',
     
     // Customer and meeting variables
-    customerName: 'Acme Corporation',
-    meetingTitle: 'Q4 Strategy Review',
-    priorityScore: '8',
-    insightSummary: 'Customer expressed strong interest in expanding their usage of our platform.',
-    actionItems: '• Schedule follow-up meeting\n• Prepare pricing proposal\n• Share technical documentation',
+    customerName: 'Acme Enterprise Solutions',
+    meetingTitle: 'Q1 Product Roadmap Review',
+    priorityScore: '9',
+    insightSummary: 'Customer highlighted the critical need for better analytics and reporting capabilities. They specifically mentioned that real-time data insights would help their team make faster decisions and improve overall productivity by 25-30%.',
+    actionItems: '• Schedule technical demo of new analytics features\n• Prepare custom dashboard configuration proposal\n• Share beta access for advanced user insights\n• Follow up on integration requirements',
     
-    // Additional common variables
-    contentType: 'changelog_entry',
+    // Additional comprehensive variables
+    contentType: 'feature_release',
     createdDate: new Date().toLocaleDateString(),
-    contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`,
-    dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`,
     
-    // URL variables - Fixed to include proper links
-    meetingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/meetings/test-123`,
-    jiraCreateUrl: 'https://marq.atlassian.net/secure/CreateIssue.jspa',
-    contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval`,
+    // Properly configured URLs
+    contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval&id=PRESS-1847`,
     dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval`,
-    jiraUrl: 'https://marq.atlassian.net/browse/TEST-12345',
+    meetingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/meetings/acme-q1-review`,
+    jiraUrl: 'https://marq.atlassian.net/browse/PRESS-1847',
+    jiraCreateUrl: 'https://marq.atlassian.net/secure/CreateIssue.jspa',
     
-    // Quote variables
-    customerQuote: 'This feature would really help streamline our workflow and save us hours each week.',
+    // Quote and feedback variables
+    customerQuote: 'The new analytics dashboard is exactly what we needed. The real-time insights have already helped us identify optimization opportunities we never saw before.',
     
-    // Insight types
-    insightType: 'Feature Request'
+    // Classification variables
+    insightType: 'Product Enhancement',
+    priority: 'High',
+    impact: 'High',
+    
+    // Team and process variables
+    reporter: 'Product Team',
+    reviewedBy: 'Engineering Leadership',
+    approvedBy: 'Product Manager'
   };
 
-  // 🚀 NEW: Fetch real JIRA data if requested
-  let finalTestData = { ...defaultSampleData, ...sampleData };
-  
-  if (useRealData) {
-    try {
-      const realJiraData = await fetchSampleJiraData();
-      if (realJiraData) {
-        finalTestData = { ...finalTestData, ...realJiraData };
-      }
-    } catch (error) {
-      console.warn('Failed to fetch real JIRA data, using default test data:', error.message);
-    }
-  }
+  const finalTestData = { ...defaultSampleData, ...sampleData };
   
   try {
     // Process template variables
@@ -390,82 +383,3 @@ async function testSystemMessage(templateData: any, sampleData?: any) {
   }
 }
 
-// Function to fetch real JIRA data for testing
-async function fetchSampleJiraData() {
-  try {
-    // Check if JIRA credentials are available
-    if (!process.env.JIRA_BASE_URL || !process.env.JIRA_API_TOKEN) {
-      console.log('JIRA credentials not configured, skipping real data fetch');
-      return null;
-    }
-
-    // Fetch a recent completed story for realistic test data
-    const auth = Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString('base64');
-    
-    const response = await fetch(`${process.env.JIRA_BASE_URL}/rest/api/2/search?jql=status=Done AND type=Story ORDER BY updated DESC&maxResults=1`, {
-      headers: {
-        'Authorization': `Basic ${auth}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (!response.ok) {
-      console.warn('Failed to fetch JIRA data:', response.status, response.statusText);
-      return null;
-    }
-
-    const data = await response.json();
-    
-    if (!data.issues || data.issues.length === 0) {
-      console.log('No JIRA issues found');
-      return null;
-    }
-
-    const issue = data.issues[0];
-    const fields = issue.fields;
-    
-    // Transform JIRA data to template variables
-    return {
-      jiraKey: issue.key,
-      contentTitle: `✨ ${fields.summary}`,
-      category: determineCategory(fields.issuetype?.name, fields.labels),
-      contentSummary: fields.description ? 
-        fields.description.substring(0, 200) + (fields.description.length > 200 ? '...' : '') :
-        `${fields.summary} - Real data from ${issue.key}`,
-      assignee: fields.assignee?.displayName || 'Unassigned',
-      qualityScore: Math.floor(Math.random() * 20 + 80).toString(), // Random score 80-100
-      updateTitle: `📋 ${fields.summary}`,
-      updateDescription: fields.description || `Completed story: ${fields.summary}`,
-      jiraUrl: `${process.env.JIRA_BASE_URL}/browse/${issue.key}`,
-      contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval&jira=${issue.key}`,
-      dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product?tab=approval`,
-      createdDate: new Date().toLocaleDateString(),
-      contentType: 'jira_story'
-    };
-
-  } catch (error) {
-    console.error('Error fetching JIRA data:', error);
-    return null;
-  }
-}
-
-// Helper function to determine category from JIRA issue type and labels
-function determineCategory(issueType: string, labels: any[] = []) {
-  const labelNames = labels.map(l => l.toLowerCase());
-  
-  if (labelNames.includes('bug') || issueType?.toLowerCase().includes('bug')) {
-    return 'fixed';
-  }
-  if (labelNames.includes('security') || labelNames.includes('auth')) {
-    return 'security';
-  }
-  if (issueType?.toLowerCase().includes('story') || issueType?.toLowerCase().includes('feature')) {
-    return 'added';
-  }
-  if (labelNames.includes('improvement') || labelNames.includes('enhancement')) {
-    return 'improved';
-  }
-  
-  return 'improved'; // default
-}

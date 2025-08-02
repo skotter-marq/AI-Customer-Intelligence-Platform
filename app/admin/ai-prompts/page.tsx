@@ -61,7 +61,6 @@ export default function AIPromptsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
   const [isTestingPrompt, setIsTestingPrompt] = useState(false);
-  const [useRealJiraData, setUseRealJiraData] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<{[key: string]: boolean}>({});
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -1128,8 +1127,7 @@ Return only the JSON response.`
         body: JSON.stringify({
           templateType,
           templateId: promptId,
-          templateData,
-          useRealData: useRealJiraData
+          templateData
         })
       });
       
@@ -1612,19 +1610,6 @@ Return only the JSON response.`
                                 </div>
                                 
                                 <div className="flex items-center space-x-3">
-                                  {/* Real Data Toggle for Slack Templates */}
-                                  {prompt.type === 'slack_template' && (
-                                    <label className="flex items-center space-x-2 text-sm text-gray-600">
-                                      <input
-                                        type="checkbox"
-                                        checked={useRealJiraData}
-                                        onChange={(e) => setUseRealJiraData(e.target.checked)}
-                                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                                      />
-                                      <span>Use real JIRA data</span>
-                                    </label>
-                                  )}
-                                  
                                   <button
                                     onClick={() => handleReset(prompt.id)}
                                     disabled={!hasChanges}
