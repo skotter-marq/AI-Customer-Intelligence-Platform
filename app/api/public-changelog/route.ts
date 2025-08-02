@@ -59,13 +59,15 @@ export async function GET(request: Request) {
     const format = searchParams.get('format'); // json, rss, xml
 
     // Fetch published entries from Supabase
-    // Temporarily query without public visibility columns until they're added to DB
     let query = supabase
       .from('generated_content')
       .select('*')
       .eq('content_type', 'changelog_entry')
       .eq('approval_status', 'approved')
-      .order('created_at', { ascending: false });
+      .eq('is_public', true)
+      .eq('public_changelog_visible', true)
+      .not('release_date', 'is', null)
+      .order('release_date', { ascending: false });
 
     // Apply category filter
     if (category && category !== 'all') {
@@ -216,41 +218,31 @@ export async function GET(request: Request) {
     publicEntries = filteredEntries.slice(offset, offset + limit);
     } else {
       // Transform database data to public changelog format
-      // Filter for public entries using metadata until DB columns are added
-      publicEntries = (dbEntries || [])
-        .filter((entry: any) => {
-          const generationMetadata = entry.generation_metadata || {};
-          return generationMetadata.is_public === true && generationMetadata.public_changelog_visible === true;
-        })
-        .map((entry: any) => {
-          // Extract JIRA story key from metadata
-          const metadata = typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata || {};
-          const generationMetadata = entry.generation_metadata || {};
-          const jiraStoryKey = metadata.jira_story_key || entry.jira_story_key;
-          
-          // Use release_date from metadata until DB column is added
-          const releaseDate = generationMetadata.release_date || entry.release_date || entry.created_at;
-          
-          // Generate version if not provided
-          const version = entry.version || `v${new Date(releaseDate).getFullYear()}.${(new Date(releaseDate).getMonth() + 1).toString().padStart(2, '0')}.${Math.floor(Math.random() * 100)}`;
-          
-          return {
-            id: entry.id,
-            version: version,
-            release_date: releaseDate,
-            category: capitalizeCategory(entry.update_category || 'improved'),
-            customer_facing_title: entry.content_title,
-            customer_facing_description: entry.generated_content.substring(0, 500) + (entry.generated_content.length > 500 ? '...' : ''),
-            highlights: Array.isArray(entry.tldr_bullet_points) ? entry.tldr_bullet_points : [],
-            breaking_changes: entry.breaking_changes || false,
-            migration_notes: entry.migration_notes,
-            affected_users: entry.affected_users,
-            view_count: Math.floor(Math.random() * 1000) + 100, // Random for now, implement real tracking later
-            upvotes: Math.floor(Math.random() * 50) + 10, // Random for now, implement real tracking later
-            feedback_count: Math.floor(Math.random() * 20) + 2, // Random for now, implement real tracking later
-            jira_story_key: jiraStoryKey
-          };
-        });
+      publicEntries = (dbEntries || []).map((entry: any) => {
+        // Extract JIRA story key from metadata
+        const metadata = typeof entry.metadata === 'string' ? JSON.parse(entry.metadata) : entry.metadata || {};
+        const jiraStoryKey = metadata.jira_story_key || entry.jira_story_key;
+        
+        // Generate version if not provided
+        const version = entry.version || `v${new Date(entry.release_date || entry.created_at).getFullYear()}.${(new Date(entry.release_date || entry.created_at).getMonth() + 1).toString().padStart(2, '0')}.${Math.floor(Math.random() * 100)}`;
+        
+        return {
+          id: entry.id,
+          version: version,
+          release_date: entry.release_date || entry.created_at,
+          category: capitalizeCategory(entry.update_category || 'improved'),
+          customer_facing_title: entry.content_title,
+          customer_facing_description: entry.generated_content.substring(0, 500) + (entry.generated_content.length > 500 ? '...' : ''),
+          highlights: Array.isArray(entry.tldr_bullet_points) ? entry.tldr_bullet_points : [],
+          breaking_changes: entry.breaking_changes || false,
+          migration_notes: entry.migration_notes,
+          affected_users: entry.affected_users,
+          view_count: Math.floor(Math.random() * 1000) + 100, // Random for now, implement real tracking later
+          upvotes: Math.floor(Math.random() * 50) + 10, // Random for now, implement real tracking later
+          feedback_count: Math.floor(Math.random() * 20) + 2, // Random for now, implement real tracking later
+          jira_story_key: jiraStoryKey
+        };
+      });
       
       // Apply pagination to database results
       publicEntries = publicEntries.slice(offset, offset + limit);
