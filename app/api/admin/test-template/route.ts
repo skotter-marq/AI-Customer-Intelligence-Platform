@@ -52,27 +52,44 @@ export async function POST(request: Request) {
 async function testSlackTemplate(templateData: any, sampleData?: any) {
   const { message_template, variables = [], channel } = templateData;
   
-  // Default sample data for Slack templates
+  // Default sample data for Slack templates - comprehensive coverage
   const defaultSampleData = {
+    // Product update variables
     updateTitle: '🧪 TEST - Sample Product Update',
     updateDescription: 'This is a test of the notification system with sample content.',
     whatsNewSection: '\n\n**What\'s New:**\n• Enhanced user interface\n• Improved performance\n• Bug fixes and stability improvements',
     mediaResources: '\n\n📹 [Demo Video](https://example.com/demo) • 📖 [Documentation](https://example.com/docs)',
+    
+    // JIRA and content variables
     jiraKey: 'TEST-12345',
     contentTitle: '🧪 TEST - Sample Changelog Entry',
     category: 'feature_update',
     contentSummary: 'This is a test of the changelog entry template with sample data.',
     assignee: 'John Doe (Test)',
     qualityScore: '92',
+    
+    // Customer and meeting variables
     customerName: 'Acme Corporation',
     meetingTitle: 'Q4 Strategy Review',
     priorityScore: '8',
     insightSummary: 'Customer expressed strong interest in expanding their usage of our platform.',
     actionItems: '• Schedule follow-up meeting\n• Prepare pricing proposal\n• Share technical documentation',
+    
+    // Additional common variables
     contentType: 'changelog_entry',
     createdDate: new Date().toLocaleDateString(),
     contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`,
-    dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`
+    dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`,
+    
+    // URL variables
+    meetingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/meetings/test-123`,
+    jiraCreateUrl: 'https://marq.atlassian.net/secure/CreateIssue.jspa',
+    
+    // Quote variables
+    customerQuote: 'This feature would really help streamline our workflow and save us hours each week.',
+    
+    // Insight types
+    insightType: 'Feature Request'
   };
   
   const testData = { ...defaultSampleData, ...sampleData };
@@ -114,43 +131,64 @@ async function testSlackTemplate(templateData: any, sampleData?: any) {
     let slackError = null;
     
     try {
-      // Determine webhook type based on channel
-      let webhookType = 'updates'; // default
-      if (channel && channel.includes('approval')) webhookType = 'approval';
-      if (channel && channel.includes('insight')) webhookType = 'insight';
-      if (channel && channel.includes('content')) webhookType = 'content';
+      // Determine webhook URL based on channel
+      const SLACK_WEBHOOKS = {
+        approvals: process.env.SLACK_WEBHOOK_APPROVALS,
+        updates: process.env.SLACK_WEBHOOK_UPDATES,
+        insights: process.env.SLACK_WEBHOOK_INSIGHTS,
+        content: process.env.SLACK_WEBHOOK_CONTENT
+      };
+      
+      let webhookUrl = SLACK_WEBHOOKS.updates; // default
+      if (channel && channel.includes('approval')) webhookUrl = SLACK_WEBHOOKS.approvals;
+      if (channel && channel.includes('insight')) webhookUrl = SLACK_WEBHOOKS.insights;
+      if (channel && channel.includes('content')) webhookUrl = SLACK_WEBHOOKS.content;
       
       // Add test indicator to message
       const testMessage = `🧪 **TEMPLATE TEST**\n\n${processedMessage}\n\n_This is a test message from the admin template testing system._`;
       
-      // Call the Slack API
-      const slackResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'send_notification',
-          message: testMessage,
-          type: webhookType,
-          channel: channel || '#general'
-        })
-      });
+      // Create Slack message object
+      const slackMessage = {
+        text: testMessage,
+        username: 'Template Test Bot',
+        icon_emoji: ':test_tube:'
+      };
       
-      if (slackResponse.ok) {
-        const slackData = await slackResponse.json();
+      // Send directly to webhook
+      if (webhookUrl && !webhookUrl.includes('undefined') && webhookUrl.length > 10) {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(slackMessage)
+        });
+        
+        if (response.ok) {
+          slackResult = {
+            sent: true,
+            channel: channel || '#general',
+            webhookUrl: webhookUrl.substring(0, 50) + '...',
+            mockMode: false
+          };
+        } else {
+          const errorText = await response.text();
+          slackError = `Webhook error: ${response.status} ${response.statusText} - ${errorText}`;
+        }
+      } else {
+        // Mock mode - webhook not configured
+        console.log('Mock Slack message (webhook not configured):', slackMessage);
         slackResult = {
           sent: true,
           channel: channel || '#general',
-          webhookType: webhookType,
-          mockMode: slackData.mockData ? true : false
+          webhookUrl: 'mock-mode',
+          mockMode: true
         };
-      } else {
-        const errorData = await slackResponse.json();
-        slackError = `Slack API error: ${errorData.error || slackResponse.statusText}`;
       }
+      
     } catch (error) {
       slackError = `Failed to send to Slack: ${error.message}`;
+      console.error('Slack test error:', error);
     }
     
     // Build response message
