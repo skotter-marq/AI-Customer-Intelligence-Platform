@@ -612,7 +612,8 @@ export async function PUT(request: Request) {
             updateDescription: data.generated_content || 'View the changelog for full details',
             customerImpact: sourceData.highlights?.join(', ') || 'Improved user experience',
             whatsNewSection: whatsNewSection,
-            mediaResources: mediaResourcesSection
+            mediaResources: mediaResourcesSection,
+            changelogUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product`
           };
 
           const slackApiUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`;

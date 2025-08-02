@@ -329,14 +329,14 @@ Guidelines:
         maxTokens: 500,
         model: 'template'
       },
-      variables: ['updateTitle', 'updateDescription', 'whatsNewSection', 'mediaResources'],
+      variables: ['updateTitle', 'updateDescription', 'whatsNewSection', 'mediaResources', 'changelogUrl'],
       template: `📋 **CHANGELOG UPDATE**
 
 **{updateTitle}** is now live
 
 {updateDescription}{whatsNewSection}
 
-👉 *View Details*
+👉 *[View Details]({changelogUrl})*
 
 {mediaResources}`
     },

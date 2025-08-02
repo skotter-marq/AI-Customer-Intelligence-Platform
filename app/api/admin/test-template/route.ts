@@ -85,6 +85,7 @@ async function testSlackTemplate(templateData: any, sampleData?: any) {
     meetingUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/meetings/acme-q1-review`,
     jiraUrl: 'https://marq.atlassian.net/browse/PRESS-1847',
     jiraCreateUrl: 'https://marq.atlassian.net/secure/CreateIssue.jspa',
+    changelogUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product`,
     
     // Quote and feedback variables
     customerQuote: 'The new analytics dashboard is exactly what we needed. The real-time insights have already helped us identify optimization opportunities we never saw before.',
