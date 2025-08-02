@@ -24,6 +24,7 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
+  const isPublicPage = pathname === '/public-changelog' || pathname === '/register';
 
   return (
     <html lang="en">
@@ -31,8 +32,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          {isLoginPage ? (
-            // Login page without AuthGuard or Navigation
+          {isLoginPage || isPublicPage ? (
+            // Public pages without AuthGuard or Navigation
             children
           ) : (
             // All other pages with AuthGuard and Navigation

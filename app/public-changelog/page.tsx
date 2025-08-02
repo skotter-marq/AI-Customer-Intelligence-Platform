@@ -167,9 +167,34 @@ export default function PublicChangelogPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
+      {/* Public Header with Registration Option */}
       <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Top Navigation Bar */}
+          <div className="flex items-center justify-between py-4 border-b border-gray-100">
+            <div className="flex items-center space-x-2">
+              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+                <span className="text-white font-bold text-sm">CI</span>
+              </div>
+              <h2 className="text-lg font-semibold text-gray-900">Customer Intelligence</h2>
+            </div>
+            <div className="flex items-center space-x-3">
+              <a
+                href="/register"
+                className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+              >
+                Create Account
+              </a>
+              <a
+                href="/login"
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
+              >
+                Sign In
+              </a>
+            </div>
+          </div>
+          
+          {/* Main Header */}
           <div className="py-8">
             <div className="text-center">
               <h1 className="text-4xl font-bold text-gray-900 mb-2">Product Changelog</h1>

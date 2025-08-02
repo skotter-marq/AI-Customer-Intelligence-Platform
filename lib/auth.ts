@@ -27,22 +27,24 @@ export const supabase = supabaseUrl && supabaseKey && supabaseUrl.startsWith('ht
 // User roles and permissions
 export const USER_ROLES = {
   ADMIN: 'admin',
-  CS_USER: 'cs_user'
+  CS_USER: 'cs_user',
+  VIEWER: 'viewer'
 } as const;
 
 export type UserRole = typeof USER_ROLES[keyof typeof USER_ROLES];
 
 // Page permissions mapping
 export const PAGE_PERMISSIONS = {
-  '/': { admin: 'full', cs_user: 'view' },
-  '/agents': { admin: 'full', cs_user: 'create' }, // CS can create their own agents
-  '/competitors': { admin: 'full', cs_user: 'view' },
-  '/content-pipeline': { admin: 'full', cs_user: 'view' },
-  '/meetings': { admin: 'full', cs_user: 'none' },
-  '/product': { admin: 'full', cs_user: 'view' },
-  '/workflows': { admin: 'full', cs_user: 'full' }, // Apps marketplace
-  '/changelog': { admin: 'full', cs_user: 'view' },
-  '/admin': { admin: 'full', cs_user: 'none' }
+  '/': { admin: 'full', cs_user: 'view', viewer: 'none' },
+  '/agents': { admin: 'full', cs_user: 'create', viewer: 'none' },
+  '/competitors': { admin: 'full', cs_user: 'view', viewer: 'none' },
+  '/content-pipeline': { admin: 'full', cs_user: 'view', viewer: 'none' },
+  '/meetings': { admin: 'full', cs_user: 'none', viewer: 'none' },
+  '/product': { admin: 'full', cs_user: 'view', viewer: 'none' },
+  '/workflows': { admin: 'full', cs_user: 'full', viewer: 'none' },
+  '/changelog': { admin: 'full', cs_user: 'view', viewer: 'none' },
+  '/admin': { admin: 'full', cs_user: 'none', viewer: 'none' },
+  '/public-changelog': { admin: 'full', cs_user: 'view', viewer: 'view' } // Public access for all users
 } as const;
 
 export type PermissionLevel = 'full' | 'view' | 'create' | 'none';
