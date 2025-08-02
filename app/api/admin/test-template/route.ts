@@ -54,21 +54,25 @@ async function testSlackTemplate(templateData: any, sampleData?: any) {
   
   // Default sample data for Slack templates
   const defaultSampleData = {
-    updateTitle: 'Sample Product Update',
+    updateTitle: '🧪 TEST - Sample Product Update',
     updateDescription: 'This is a test of the notification system with sample content.',
     whatsNewSection: '\n\n**What\'s New:**\n• Enhanced user interface\n• Improved performance\n• Bug fixes and stability improvements',
     mediaResources: '\n\n📹 [Demo Video](https://example.com/demo) • 📖 [Documentation](https://example.com/docs)',
-    jiraKey: 'PRESS-12345',
-    contentTitle: 'Sample Changelog Entry',
+    jiraKey: 'TEST-12345',
+    contentTitle: '🧪 TEST - Sample Changelog Entry',
     category: 'feature_update',
-    contentSummary: 'This is a sample summary of the changelog entry for testing purposes.',
-    assignee: 'John Doe',
+    contentSummary: 'This is a test of the changelog entry template with sample data.',
+    assignee: 'John Doe (Test)',
     qualityScore: '92',
     customerName: 'Acme Corporation',
     meetingTitle: 'Q4 Strategy Review',
     priorityScore: '8',
     insightSummary: 'Customer expressed strong interest in expanding their usage of our platform.',
-    actionItems: '• Schedule follow-up meeting\n• Prepare pricing proposal\n• Share technical documentation'
+    actionItems: '• Schedule follow-up meeting\n• Prepare pricing proposal\n• Share technical documentation',
+    contentType: 'changelog_entry',
+    createdDate: new Date().toLocaleDateString(),
+    contentUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`,
+    dashboardUrl: `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/admin/ai-prompts`
   };
   
   const testData = { ...defaultSampleData, ...sampleData };
@@ -105,9 +109,64 @@ async function testSlackTemplate(templateData: any, sampleData?: any) {
     const messageLength = processedMessage.length;
     const isWithinLimits = messageLength <= 4000; // Slack text limit
     
+    // 🚀 NEW: Actually send the test message to Slack!
+    let slackResult = null;
+    let slackError = null;
+    
+    try {
+      // Determine webhook type based on channel
+      let webhookType = 'updates'; // default
+      if (channel && channel.includes('approval')) webhookType = 'approval';
+      if (channel && channel.includes('insight')) webhookType = 'insight';
+      if (channel && channel.includes('content')) webhookType = 'content';
+      
+      // Add test indicator to message
+      const testMessage = `🧪 **TEMPLATE TEST**\n\n${processedMessage}\n\n_This is a test message from the admin template testing system._`;
+      
+      // Call the Slack API
+      const slackResponse = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'send_notification',
+          message: testMessage,
+          type: webhookType,
+          channel: channel || '#general'
+        })
+      });
+      
+      if (slackResponse.ok) {
+        const slackData = await slackResponse.json();
+        slackResult = {
+          sent: true,
+          channel: channel || '#general',
+          webhookType: webhookType,
+          mockMode: slackData.mockData ? true : false
+        };
+      } else {
+        const errorData = await slackResponse.json();
+        slackError = `Slack API error: ${errorData.error || slackResponse.statusText}`;
+      }
+    } catch (error) {
+      slackError = `Failed to send to Slack: ${error.message}`;
+    }
+    
+    // Build response message
+    let responseMessage = 'Slack template test completed!';
+    if (slackResult?.sent) {
+      responseMessage += ` Message sent to ${slackResult.channel}`;
+      if (slackResult.mockMode) {
+        responseMessage += ' (mock mode - webhook not configured)';
+      }
+    } else if (slackError) {
+      responseMessage += ` (Preview only - Slack send failed: ${slackError})`;
+    }
+    
     return {
       success: true,
-      message: 'Slack template test completed!',
+      message: responseMessage,
       preview: processedMessage,
       details: {
         channel: channel || '#general',
@@ -116,9 +175,12 @@ async function testSlackTemplate(templateData: any, sampleData?: any) {
         usedVariables,
         missingVariables,
         totalVariables: variables.length,
+        slackResult,
+        slackError,
         warnings: [
           ...(!isWithinLimits ? ['Message exceeds Slack character limit (4000)'] : []),
-          ...(missingVariables.length > 0 ? [`Undefined variables found: ${missingVariables.join(', ')}`] : [])
+          ...(missingVariables.length > 0 ? [`Undefined variables found: ${missingVariables.join(', ')}`] : []),
+          ...(slackError ? [`Slack delivery failed: ${slackError}`] : [])
         ]
       }
     };
