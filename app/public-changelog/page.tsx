@@ -109,12 +109,12 @@ export default function PublicChangelogPage() {
 
   const getCategoryColor = (category: string) => {
     switch (category) {
-      case 'Added': return 'bg-green-100 text-green-800 border-green-300';
-      case 'Improved': return 'bg-blue-100 text-blue-800 border-blue-300';
-      case 'Fixed': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
-      case 'Security': return 'bg-red-100 text-red-800 border-red-300';
-      case 'Deprecated': return 'bg-orange-100 text-orange-800 border-orange-300';
-      default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      case 'Added': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Improved': return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+      case 'Fixed': return 'bg-amber-50 text-amber-700 border-amber-200';
+      case 'Security': return 'bg-red-50 text-red-700 border-red-200';
+      case 'Deprecated': return 'bg-orange-50 text-orange-700 border-orange-200';
+      default: return 'bg-gray-50 text-gray-700 border-gray-200';
     }
   };
 
@@ -156,51 +156,48 @@ export default function PublicChangelogPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading product updates...</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600 font-medium">Loading Marq product updates...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Public Header with Registration Option */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-white">
+      {/* Marq Header */}
+      <div className="bg-white shadow-sm border-b border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Top Navigation Bar */}
-          <div className="flex items-center justify-between py-4 border-b border-gray-100">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">CI</span>
+          <div className="flex items-center justify-between py-6">
+            <div className="flex items-center space-x-8">
+              {/* Marq Logo */}
+              <div className="flex items-center">
+                <svg width="80" height="24" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0 4.8V19.2H4.8V12.48L8.64 19.2H14.4L9.12 11.04L14.4 4.8H8.64L4.8 10.32V4.8H0Z" fill="#6366F1"/>
+                  <path d="M16.8 4.8V19.2H21.6V16.32H26.4V12.48H21.6V8.64H28.8V4.8H16.8Z" fill="#6366F1"/>
+                  <path d="M31.2 4.8V19.2H36V15.36L38.4 19.2H43.2L39.6 13.44L43.2 4.8H38.4L36 10.08V4.8H31.2Z" fill="#6366F1"/>
+                  <path d="M52.8 4.8C49.44 4.8 46.8 7.44 46.8 12S49.44 19.2 52.8 19.2S58.8 16.56 58.8 12S56.16 4.8 52.8 4.8ZM52.8 15.36C51.84 15.36 51.6 14.4 51.6 12S51.84 8.64 52.8 8.64S54 9.6 54 12S53.76 15.36 52.8 15.36Z" fill="#6366F1"/>
+                </svg>
               </div>
-              <h2 className="text-lg font-semibold text-gray-900">Customer Intelligence</h2>
-            </div>
-            <div className="flex items-center space-x-3">
-              <a
-                href="/register"
-                className="text-gray-600 hover:text-gray-900 text-sm font-medium"
-              >
-                Create Account
-              </a>
-              <a
-                href="/login"
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium"
-              >
-                Sign In
-              </a>
+              
+              {/* Navigation Links */}
+              <nav className="hidden md:flex items-center space-x-8">
+                <a href="https://www.marq.com" className="text-gray-700 hover:text-indigo-600 text-sm font-medium transition-colors">Home</a>
+                <a href="https://www.marq.com/blog" className="text-gray-700 hover:text-indigo-600 text-sm font-medium transition-colors">Blog</a>
+                <span className="text-indigo-600 text-sm font-medium">Product Updates</span>
+              </nav>
             </div>
           </div>
           
           {/* Main Header */}
-          <div className="py-8">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Product Changelog</h1>
-              <p className="text-xl text-gray-600 mb-6">
-                Stay updated with our latest features, improvements, and fixes
-              </p>
+          <div className="py-12 text-center">
+            <h1 className="text-5xl font-bold text-gray-900 mb-4">Product Updates</h1>
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8">
+              Stay informed about the latest Marq platform enhancements, new features, and improvements that help you create better brand experiences.
+            </p>
               
               {/* Subscribe to Updates */}
               <div className="flex items-center justify-center space-x-3 max-w-md mx-auto">
@@ -208,13 +205,13 @@ export default function PublicChangelogPage() {
                   type="email"
                   value={subscribedEmail}
                   onChange={(e) => setSubscribedEmail(e.target.value)}
-                  placeholder="Enter email for updates"
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Get notified of new updates"
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
                 />
                 <button
                   onClick={handleSubscribe}
                   disabled={isSubscribing || !subscribedEmail.trim()}
-                  className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  className="bg-indigo-600 text-white px-6 py-3 rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2 text-sm font-medium"
                 >
                   <Bell className="w-4 h-4" />
                   <span>Subscribe</span>
@@ -226,128 +223,133 @@ export default function PublicChangelogPage() {
       </div>
 
       {/* Filters */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search updates..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+      <div className="bg-gray-50 border-t border-gray-100">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <div className="flex flex-col lg:flex-row gap-6">
+              {/* Search */}
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search product updates..."
+                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                  />
+                </div>
               </div>
-            </div>
-            
-            {/* Filters */}
-            <div className="flex space-x-3">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Categories</option>
-                <option value="Added">🆕 Added</option>
-                <option value="Improved">⚡ Improved</option>
-                <option value="Fixed">🔧 Fixed</option>
-                <option value="Security">🔒 Security</option>
-                <option value="Deprecated">⚠️ Deprecated</option>
-              </select>
+              
+              {/* Filters */}
+              <div className="flex space-x-4">
+                <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium min-w-[140px]"
+                >
+                  <option value="all">All Categories</option>
+                  <option value="Added">🆕 New Features</option>
+                  <option value="Improved">⚡ Improvements</option>
+                  <option value="Fixed">🔧 Bug Fixes</option>
+                  <option value="Security">🔒 Security</option>
+                  <option value="Deprecated">⚠️ Deprecated</option>
+                </select>
 
-              <select
-                value={timeFilter}
-                onChange={(e) => setTimeFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Time</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 3 months</option>
-                <option value="365d">Last year</option>
-              </select>
+                <select
+                  value={timeFilter}
+                  onChange={(e) => setTimeFilter(e.target.value)}
+                  className="px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-medium min-w-[140px]"
+                >
+                  <option value="all">All Time</option>
+                  <option value="30d">Last 30 days</option>
+                  <option value="90d">Last 3 months</option>
+                  <option value="365d">Last year</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+      
+      {/* Main Content */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Changelog Entries */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {filteredEntries.map((entry) => {
             const isExpanded = expandedEntries.has(entry.id);
             
             return (
-              <div
+              <article
                 key={entry.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-200"
               >
-                <div className="p-6">
+                <div className="p-8">
                   {/* Entry Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="text-2xl">{getCategoryIcon(entry.category)}</div>
-                      <div>
-                        <div className="flex items-center space-x-2 mb-1">
-                          <h2 className="text-xl font-semibold text-gray-900">
-                            {entry.customer_facing_title}
-                          </h2>
-                          <span className="text-sm font-medium text-gray-500">
-                            {entry.version}
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${getCategoryColor(entry.category)}`}>
+                          {getCategoryIcon(entry.category)} {entry.category}
+                        </span>
+                        <span className="text-sm font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                          {entry.version}
+                        </span>
+                      </div>
+                      <h2 className="text-2xl font-bold text-gray-900 mb-3 leading-tight">
+                        {entry.customer_facing_title}
+                      </h2>
+                      <div className="flex items-center space-x-6 text-sm text-gray-500">
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="w-4 h-4" />
+                          <span>
+                            {formatDistanceToNow(new Date(entry.release_date), { addSuffix: true })}
                           </span>
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-500">
-                          <div className="flex items-center space-x-1">
-                            <Calendar className="w-4 h-4" />
+                        {entry.affected_users && (
+                          <div className="flex items-center space-x-2">
+                            <Users className="w-4 h-4" />
                             <span>
-                              {formatDistanceToNow(new Date(entry.release_date), { addSuffix: true })}
+                              {entry.affected_users.toLocaleString()} users
                             </span>
                           </div>
-                          {entry.affected_users && (
-                            <div className="flex items-center space-x-1">
-                              <Users className="w-4 h-4" />
-                              <span>
-                                {entry.affected_users.toLocaleString()} users affected
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${getCategoryColor(entry.category)}`}>
-                        {entry.category}
-                      </span>
                     </div>
                   </div>
 
                   {/* Description */}
-                  <p className="text-gray-700 mb-4 leading-relaxed">
-                    {entry.customer_facing_description}
-                  </p>
+                  <div className="prose max-w-none mb-6">
+                    <p className="text-gray-700 text-lg leading-relaxed">
+                      {entry.customer_facing_description}
+                    </p>
+                  </div>
 
                   {/* Highlights Preview */}
-                  <div className="mb-4">
-                    <h3 className="text-sm font-medium text-gray-900 mb-2">What's New:</h3>
-                    <ul className="space-y-1">
-                      {entry.highlights.slice(0, isExpanded ? entry.highlights.length : 3).map((highlight, index) => (
-                        <li key={index} className="flex items-start space-x-2">
-                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span className="text-sm text-gray-700">{highlight}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    
-                    {entry.highlights.length > 3 && !isExpanded && (
-                      <button
-                        onClick={() => toggleExpanded(entry.id)}
-                        className="mt-2 text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-                      >
-                        <span>Show {entry.highlights.length - 3} more</span>
-                        <ChevronDown className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
+                  {entry.highlights.length > 0 && (
+                    <div className="mb-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4">Key Highlights:</h3>
+                      <ul className="space-y-3">
+                        {entry.highlights.slice(0, isExpanded ? entry.highlights.length : 3).map((highlight, index) => (
+                          <li key={index} className="flex items-start space-x-3">
+                            <div className="flex-shrink-0 w-2 h-2 bg-indigo-500 rounded-full mt-2"></div>
+                            <span className="text-gray-700 leading-relaxed">{highlight}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      
+                      {entry.highlights.length > 3 && !isExpanded && (
+                        <button
+                          onClick={() => toggleExpanded(entry.id)}
+                          className="mt-4 text-indigo-600 hover:text-indigo-800 font-medium flex items-center space-x-2 text-sm transition-colors"
+                        >
+                          <span>Show {entry.highlights.length - 3} more highlights</span>
+                          <ChevronDown className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
 
                   {/* Breaking Changes & Migration Notes */}
                   {isExpanded && entry.breaking_changes && (
@@ -369,32 +371,32 @@ export default function PublicChangelogPage() {
                   )}
 
                   {/* Footer */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <div className="flex items-center space-x-4">
-                      <div className="flex items-center space-x-1 text-sm text-gray-500">
+                  <div className="flex items-center justify-between pt-6 border-t border-gray-100">
+                    <div className="flex items-center space-x-6">
+                      <div className="flex items-center space-x-2 text-sm text-gray-500">
                         <Eye className="w-4 h-4" />
-                        <span>{entry.view_count.toLocaleString()}</span>
+                        <span>{entry.view_count.toLocaleString()} views</span>
                       </div>
                       
                       <button
                         onClick={() => handleUpvote(entry.id)}
-                        className="flex items-center space-x-1 text-sm text-gray-500 hover:text-blue-600 transition-colors"
+                        className="flex items-center space-x-2 text-sm text-gray-500 hover:text-indigo-600 transition-colors group"
                       >
-                        <ThumbsUp className="w-4 h-4" />
-                        <span>{entry.upvotes}</span>
+                        <ThumbsUp className="w-4 h-4 group-hover:text-indigo-600" />
+                        <span>{entry.upvotes} helpful</span>
                       </button>
                       
-                      <div className="flex items-center space-x-1 text-sm text-gray-500">
+                      <div className="flex items-center space-x-2 text-sm text-gray-500">
                         <MessageSquare className="w-4 h-4" />
-                        <span>{entry.feedback_count}</span>
+                        <span>{entry.feedback_count} comments</span>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-4">
                       {isExpanded && (
                         <button
                           onClick={() => toggleExpanded(entry.id)}
-                          className="text-sm text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                          className="text-sm text-gray-500 hover:text-gray-700 flex items-center space-x-2 transition-colors"
                         >
                           <span>Show less</span>
                           <ChevronUp className="w-4 h-4" />
@@ -403,7 +405,7 @@ export default function PublicChangelogPage() {
                       
                       <button
                         onClick={() => navigator.clipboard.writeText(window.location.href + '#' + entry.id)}
-                        className="text-sm text-gray-500 hover:text-gray-700 flex items-center space-x-1"
+                        className="text-sm text-gray-500 hover:text-indigo-600 flex items-center space-x-2 transition-colors"
                       >
                         <Share className="w-4 h-4" />
                         <span>Share</span>
@@ -418,30 +420,78 @@ export default function PublicChangelogPage() {
 
         {/* Empty State */}
         {filteredEntries.length === 0 && (
-          <div className="text-center py-12">
-            <div className="text-gray-400 text-6xl mb-4">📝</div>
-            <h3 className="text-xl font-medium text-gray-900 mb-2">No updates found</h3>
-            <p className="text-gray-600">
+          <div className="text-center py-16">
+            <div className="text-gray-300 text-6xl mb-6">📝</div>
+            <h3 className="text-2xl font-semibold text-gray-900 mb-3">No updates found</h3>
+            <p className="text-gray-600 text-lg">
               {searchQuery || categoryFilter !== 'all' || timeFilter !== 'all'
-                ? 'Try adjusting your search or filters'
-                : 'Check back soon for the latest product updates'}
+                ? 'Try adjusting your search or filters to find what you\'re looking for'
+                : 'Check back soon for the latest Marq platform updates'}
             </p>
           </div>
         )}
 
         {/* RSS Feed Link */}
-        <div className="text-center py-8">
+        <div className="text-center py-12 border-t border-gray-100">
           <a
             href="/api/public-changelog?format=rss"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center space-x-2 text-sm text-gray-500 hover:text-gray-700"
+            className="inline-flex items-center space-x-2 text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
           >
             <ExternalLink className="w-4 h-4" />
             <span>Subscribe to RSS Feed</span>
           </a>
         </div>
       </div>
+
+      {/* Marq Footer */}
+      <footer className="bg-gray-900 text-white">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="md:col-span-2">
+              <div className="flex items-center space-x-2 mb-4">
+                <svg width="80" height="24" viewBox="0 0 80 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M0 4.8V19.2H4.8V12.48L8.64 19.2H14.4L9.12 11.04L14.4 4.8H8.64L4.8 10.32V4.8H0Z" fill="white"/>
+                  <path d="M16.8 4.8V19.2H21.6V16.32H26.4V12.48H21.6V8.64H28.8V4.8H16.8Z" fill="white"/>
+                  <path d="M31.2 4.8V19.2H36V15.36L38.4 19.2H43.2L39.6 13.44L43.2 4.8H38.4L36 10.08V4.8H31.2Z" fill="white"/>
+                  <path d="M52.8 4.8C49.44 4.8 46.8 7.44 46.8 12S49.44 19.2 52.8 19.2S58.8 16.56 58.8 12S56.16 4.8 52.8 4.8ZM52.8 15.36C51.84 15.36 51.6 14.4 51.6 12S51.84 8.64 52.8 8.64S54 9.6 54 12S53.76 15.36 52.8 15.36Z" fill="white"/>
+                </svg>
+              </div>
+              <p className="text-gray-300 leading-relaxed">
+                Marq empowers teams to create consistent, on-brand content at scale. Stay updated with our latest platform improvements and new features.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold mb-4">Platform</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li><a href="https://www.marq.com" className="hover:text-white transition-colors">Homepage</a></li>
+                <li><a href="https://www.marq.com/blog" className="hover:text-white transition-colors">Blog</a></li>
+                <li><a href="/api/public-changelog?format=rss" className="hover:text-white transition-colors">RSS Feed</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold mb-4">Support</h3>
+              <ul className="space-y-2 text-gray-300">
+                <li><a href="https://help.marq.com" className="hover:text-white transition-colors">Help Center</a></li>
+                <li><a href="https://www.marq.com/contact" className="hover:text-white transition-colors">Contact Us</a></li>
+                <li><a href="https://status.marq.com" className="hover:text-white transition-colors">System Status</a></li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 mt-8 pt-8 flex flex-col sm:flex-row justify-between items-center">
+            <p className="text-gray-400 text-sm">
+              © {new Date().getFullYear()} Marq. All rights reserved.
+            </p>
+            <p className="text-gray-400 text-sm mt-2 sm:mt-0">
+              Built with ❤️ for our amazing users
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
