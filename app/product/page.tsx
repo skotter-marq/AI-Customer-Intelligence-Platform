@@ -1172,336 +1172,7 @@ export default function ProductPage() {
                         </div>
                       </div>
 
-                      {/* Layout Template Selector */}
-                      <div style={{ marginBottom: '16px' }}>
-                        <label className="block text-sm font-medium text-gray-900 mb-2">
-                          Changelog Layout Template
-                        </label>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          <div 
-                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                              (editForm.layout_template || 'standard') === 'standard' 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => updateEditForm('layout_template', 'standard')}
-                          >
-                            <div className="text-sm font-medium mb-1">Standard</div>
-                            <div className="text-xs text-gray-600">Title + Description + Bullet highlights</div>
-                          </div>
-                          
-                          <div 
-                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                              (editForm.layout_template || 'standard') === 'feature_spotlight' 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => updateEditForm('layout_template', 'feature_spotlight')}
-                          >
-                            <div className="text-sm font-medium mb-1">Feature Spotlight</div>
-                            <div className="text-xs text-gray-600">Hero layout with key benefits & demo</div>
-                          </div>
-                          
-                          <div 
-                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                              (editForm.layout_template || 'standard') === 'technical_update' 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => updateEditForm('layout_template', 'technical_update')}
-                          >
-                            <div className="text-sm font-medium mb-1">⚙️ Technical Update</div>
-                            <div className="text-xs text-gray-600">Structured with before/after & impact</div>
-                          </div>
-                          
-                          <div 
-                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                              (editForm.layout_template || 'standard') === 'security_notice' 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => updateEditForm('layout_template', 'security_notice')}
-                          >
-                            <div className="text-sm font-medium mb-1">Security Notice</div>
-                            <div className="text-xs text-gray-600">Prominent alert with action items</div>
-                          </div>
-                          
-                          <div 
-                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                              (editForm.layout_template || 'standard') === 'deprecation_warning' 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => updateEditForm('layout_template', 'deprecation_warning')}
-                          >
-                            <div className="text-sm font-medium mb-1">Deprecation</div>
-                            <div className="text-xs text-gray-600">Timeline + migration guide layout</div>
-                          </div>
-                          
-                          <div 
-                            className={`p-3 border-2 rounded-lg cursor-pointer transition-colors ${
-                              (editForm.layout_template || 'standard') === 'minimal' 
-                                ? 'border-blue-500 bg-blue-50' 
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
-                            onClick={() => updateEditForm('layout_template', 'minimal')}
-                          >
-                            <div className="text-sm font-medium mb-1">Minimal</div>
-                            <div className="text-xs text-gray-600">Clean, simple single-paragraph style</div>
-                          </div>
-                        </div>
-                        
-                        {/* Template Preview */}
-                        <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
-                          <div className="text-xs font-medium text-gray-700 mb-2">Preview Layout:</div>
-                          <div className="text-xs text-gray-600">
-                            {(() => {
-                              switch (editForm.layout_template || 'standard') {
-                                case 'feature_spotlight':
-                                  return 'Large title → Hero description → Key benefits grid → Call-to-action';
-                                case 'technical_update':
-                                  return 'Title → Problem/Solution sections → Technical details → Impact metrics';
-                                case 'security_notice':
-                                  return 'Alert banner → Security summary → Action required → Additional resources';
-                                case 'deprecation_warning':
-                                  return 'Warning banner → Timeline → Migration steps → Support resources';
-                                case 'minimal':
-                                  return 'Simple title → Single paragraph → Optional link';
-                                default:
-                                  return 'Standard title → Description paragraph → Bulleted highlights list';
-                              }
-                            })()}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Dynamic Fields Based on Template */}
-                      {(() => {
-                        const template = editForm.layout_template || 'standard';
-                        
-                        switch (template) {
-                          case 'feature_spotlight':
-                            return (
-                              <>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Hero Description
-                                  </label>
-                                  <textarea
-                                    value={editForm.customer_facing_description || ''}
-                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                    style={{ minHeight: '80px', background: 'white' }}
-                                    placeholder="Write a compelling description that highlights the main benefit of this feature..."
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Call-to-Action Text
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editForm.cta_text || ''}
-                                    onChange={(e) => updateEditForm('cta_text', e.target.value)}
-                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                    style={{ background: 'white' }}
-                                    placeholder="e.g., Try the new feature, Learn more, Get started"
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Call-to-Action Link
-                                  </label>
-                                  <input
-                                    type="url"
-                                    value={editForm.cta_link || ''}
-                                    onChange={(e) => updateEditForm('cta_link', e.target.value)}
-                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                    style={{ background: 'white' }}
-                                    placeholder="https://..."
-                                  />
-                                </div>
-                              </>
-                            );
-                            
-                          case 'technical_update':
-                            return (
-                              <>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Problem Statement
-                                  </label>
-                                  <textarea
-                                    value={editForm.problem_statement || ''}
-                                    onChange={(e) => updateEditForm('problem_statement', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                    style={{ minHeight: '60px', background: 'white' }}
-                                    placeholder="What issue or limitation did this update address?"
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Solution Description
-                                  </label>
-                                  <textarea
-                                    value={editForm.customer_facing_description || ''}
-                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                    style={{ minHeight: '60px', background: 'white' }}
-                                    placeholder="How does this update solve the problem?"
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Impact Metrics
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editForm.impact_metrics || ''}
-                                    onChange={(e) => updateEditForm('impact_metrics', e.target.value)}
-                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                    style={{ background: 'white' }}
-                                    placeholder="e.g., 40% faster, 99.9% uptime, Reduced by 2 clicks"
-                                  />
-                                </div>
-                              </>
-                            );
-                            
-                          case 'security_notice':
-                            return (
-                              <>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Security Summary
-                                  </label>
-                                  <textarea
-                                    value={editForm.customer_facing_description || ''}
-                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                    style={{ minHeight: '60px', background: 'white' }}
-                                    placeholder="Describe the security improvement or fix..."
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Action Required
-                                  </label>
-                                  <textarea
-                                    value={editForm.action_required || ''}
-                                    onChange={(e) => updateEditForm('action_required', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                    style={{ minHeight: '60px', background: 'white' }}
-                                    placeholder="What do users need to do? Leave empty if no action required."
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Additional Resources
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editForm.resource_links || ''}
-                                    onChange={(e) => updateEditForm('resource_links', e.target.value)}
-                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                    style={{ background: 'white' }}
-                                    placeholder="Links to documentation, guides, or support (comma-separated)"
-                                  />
-                                </div>
-                              </>
-                            );
-                            
-                          case 'deprecation_warning':
-                            return (
-                              <>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Deprecation Notice
-                                  </label>
-                                  <textarea
-                                    value={editForm.customer_facing_description || ''}
-                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                    style={{ minHeight: '60px', background: 'white' }}
-                                    placeholder="Explain what's being deprecated and why..."
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Timeline
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editForm.deprecation_timeline || ''}
-                                    onChange={(e) => updateEditForm('deprecation_timeline', e.target.value)}
-                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                    style={{ background: 'white' }}
-                                    placeholder="e.g., End of support: March 2024, Removal: June 2024"
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Recommended Alternative
-                                  </label>
-                                  <input
-                                    type="text"
-                                    value={editForm.recommended_alternative || ''}
-                                    onChange={(e) => updateEditForm('recommended_alternative', e.target.value)}
-                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                    style={{ background: 'white' }}
-                                    placeholder="What should users use instead?"
-                                  />
-                                </div>
-                              </>
-                            );
-                            
-                          case 'minimal':
-                            return (
-                              <>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Brief Description
-                                  </label>
-                                  <textarea
-                                    value={editForm.customer_facing_description || ''}
-                                    onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
-                                    className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                    style={{ minHeight: '60px', background: 'white' }}
-                                    placeholder="A concise, single-paragraph description of the change..."
-                                  />
-                                </div>
-                                <div style={{ marginBottom: '12px' }}>
-                                  <label className="block text-sm font-medium text-gray-900 mb-2">
-                                    Optional Link
-                                  </label>
-                                  <input
-                                    type="url"
-                                    value={editForm.optional_link || ''}
-                                    onChange={(e) => updateEditForm('optional_link', e.target.value)}
-                                    className="w-full px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                                    style={{ background: 'white' }}
-                                    placeholder="https://... (optional)"
-                                  />
-                                </div>
-                              </>
-                            );
-                            
-                          default: // standard
-                            return (
-                              <div style={{ marginBottom: '12px' }}>
-                                <label className="block text-sm font-medium text-gray-900 mb-2">
-                                  Customer-Facing Description
-                                </label>
-                                <textarea
-                                  value={editForm.customer_facing_description || ''}
-                                  onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
-                                  className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                                  style={{ minHeight: '80px', background: 'white' }}
-                                  placeholder="Describe what changed and how it benefits customers..."
-                                />
-                              </div>
-                            );
-                        }
-                      })()}
+                      {/* Layout templates removed - now dynamic based on content (whether optional media is included) */}
 
                     </>
                   ) : (
@@ -1788,13 +1459,13 @@ export default function ProductPage() {
                         <>
                           {/* Edit Mode Buttons */}
                           <button 
-                            className="calendly-btn-primary"
+                            className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={handleSaveEdit}
                           >
                             Save Changes
                           </button>
                           <button 
-                            className="calendly-btn-secondary"
+                            className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700"
                             onClick={handleCancelEdit}
                           >
                             Cancel
@@ -1804,14 +1475,14 @@ export default function ProductPage() {
                         <>
                           {/* View Mode Buttons */}
                           <button 
-                            className="calendly-btn-secondary"
+                            className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200"
                             onClick={() => handleEditEntry(entry)}
                           >
                             Edit Entry
                           </button>
                           {entry.public_visibility && (
                             <button 
-                              className="calendly-btn-secondary flex items-center space-x-2"
+                              className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-200 flex items-center space-x-2"
                               onClick={() => {
                                 window.open('/public-changelog', '_blank');
                               }}
@@ -1900,11 +1571,11 @@ export default function ProductPage() {
                     {changelogEntries
                       .filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval)
                       .map((entry) => (
-                        <div key={entry.id} className="calendly-card hover:shadow-md transition-shadow duration-200">
+                        <div key={entry.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                           {editingEntryId === entry.id ? (
-                            <>
+                            <div className="p-6">
                               {/* Edit Mode */}
-                              <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
+                              <div className="flex items-start justify-between mb-4">
                                 <div className="flex items-center space-x-3 flex-1">
                                   <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${
                                     (editForm.category || entry.category) === 'Added' ? 'bg-green-100 text-green-800' :
@@ -2124,7 +1795,7 @@ export default function ProductPage() {
                                   </label>
                                 </div>
                               </div>
-                            </>
+                            </div>
                           ) : (
                             <>
                               {/* View Mode */}

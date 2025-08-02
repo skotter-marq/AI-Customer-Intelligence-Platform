@@ -390,21 +390,26 @@ export async function PUT(request: Request) {
       updated_at: new Date().toISOString()
     };
 
+    // Log what we received from frontend
+    console.log('🔧 [UPDATE] Received updates from frontend:', Object.keys(updates));
+
     // Filter out any non-existent database columns to prevent schema errors
     const allowedFields = [
       'content_title', 'generated_content', 'status', 'quality_score', 
-      'source_data', 'generation_metadata', 'updated_at', 'created_by'
+      'source_data', 'generation_metadata', 'updated_at', 'created_by',
+      'external_link', 'video_url', 'image_url', 'release_date', 'is_public'
     ];
     
     // Remove any fields that might cause schema errors
     const filteredUpdates = Object.keys(updates).reduce((acc, key) => {
-      // Skip fields that don't exist in the database schema
-      // Allow key approval workflow fields: approval_status, public_visibility, release_date
+      // Skip fields that definitely don't exist in the database schema
       if (!['approved_at', 'layout_template'].includes(key)) {
         acc[key] = updates[key];
       }
       return acc;
     }, {} as any);
+
+    console.log('🔧 [UPDATE] Filtered updates:', Object.keys(filteredUpdates));
 
     if (filteredUpdates.customer_facing_title || filteredUpdates.content_title) {
       dbUpdates.content_title = filteredUpdates.customer_facing_title || filteredUpdates.content_title;
@@ -427,30 +432,57 @@ export async function PUT(request: Request) {
       dbUpdates.image_url = filteredUpdates.image_url;
     }
     
-    // Skip category update for now to avoid schema issues
-    // if (updates.category) {
-    //   dbUpdates.update_category = updates.category.toLowerCase();
-    // }
+    // Handle category, highlights and other data in source_data JSONB field
+    let sourceDataUpdates = {};
     
-    // Skip tldr_bullet_points update for now to avoid schema issues
-    // if (updates.highlights || updates.tldr_bullet_points) {
-    //   dbUpdates.tldr_bullet_points = updates.highlights || updates.tldr_bullet_points;
-    // }
+    if (filteredUpdates.category) {
+      sourceDataUpdates.category = filteredUpdates.category;
+    }
     
-    // Skip breaking_changes update for now to avoid schema issues
-    // if (updates.breaking_changes !== undefined) {
-    //   dbUpdates.breaking_changes = updates.breaking_changes;
-    // }
+    if (filteredUpdates.highlights || filteredUpdates.tldr_bullet_points) {
+      sourceDataUpdates.highlights = filteredUpdates.highlights || filteredUpdates.tldr_bullet_points;
+    }
     
-    // Skip migration_notes update for now to avoid schema issues  
-    // if (updates.migration_notes !== undefined) {
-    //   dbUpdates.migration_notes = updates.migration_notes;
-    // }
+    if (filteredUpdates.breaking_changes !== undefined) {
+      sourceDataUpdates.breaking_changes = filteredUpdates.breaking_changes;
+    }
     
-    // Skip layout_template update for now to avoid schema issues
-    // if (updates.layout_template) {
-    //   dbUpdates.layout_template = updates.layout_template;
-    // }
+    if (filteredUpdates.migration_notes !== undefined) {
+      sourceDataUpdates.migration_notes = filteredUpdates.migration_notes;
+    }
+    
+    if (filteredUpdates.tags !== undefined) {
+      sourceDataUpdates.tags = filteredUpdates.tags;
+    }
+
+    // If we have source_data updates, we need to merge with existing data
+    if (Object.keys(sourceDataUpdates).length > 0) {
+      console.log('🔧 [UPDATE] Updating source_data with:', sourceDataUpdates);
+      
+      try {
+        // Get current source_data
+        const { data: currentEntry, error: fetchError } = await supabase
+          .from('generated_content')
+          .select('source_data')
+          .eq('id', entryId)
+          .single();
+        
+        if (fetchError) {
+          console.warn('⚠️ Could not fetch current source_data for merge:', fetchError.message);
+        } else {
+          // Merge existing source_data with updates
+          dbUpdates.source_data = {
+            ...(currentEntry.source_data || {}),
+            ...sourceDataUpdates
+          };
+          console.log('✅ Merged source_data successfully');
+        }
+      } catch (mergeError) {
+        console.warn('⚠️ Error merging source_data:', mergeError.message);
+        // Still try to update with new data only
+        dbUpdates.source_data = sourceDataUpdates;
+      }
+    }
     
     if (filteredUpdates.approval_status) {
       // Map frontend approval_status values to database status values

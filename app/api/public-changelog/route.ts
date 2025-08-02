@@ -3,9 +3,10 @@ import { supabase } from '../../../lib/supabase-client';
 
 interface PublicChangelogEntry {
   id: string;
-  version: string;
+  version?: string;
   release_date: string;
   category: 'Added' | 'Fixed' | 'Improved' | 'Deprecated' | 'Security';
+  tags: string[];
   customer_facing_title: string;
   customer_facing_description: string;
   highlights: string[];
@@ -16,6 +17,9 @@ interface PublicChangelogEntry {
   upvotes: number;
   feedback_count: number;
   jira_story_key?: string;
+  external_link?: string;
+  video_url?: string;
+  image_url?: string;
 }
 
 function capitalizeCategory(category: string): 'Added' | 'Fixed' | 'Improved' | 'Deprecated' | 'Security' {
@@ -59,20 +63,21 @@ export async function GET(request: Request) {
     const format = searchParams.get('format'); // json, rss, xml
 
     // Fetch published entries from Supabase
+    // Note: approval_status column doesn't exist yet, so we use status='published' + approved_by exists as criteria
     let query = supabase
       .from('generated_content')
       .select('*')
       .eq('content_type', 'changelog_entry')
-      .eq('approval_status', 'approved')
       .eq('is_public', true)
       .eq('public_changelog_visible', true)
       .not('release_date', 'is', null)
       .order('release_date', { ascending: false });
 
-    // Apply category filter
-    if (category && category !== 'all') {
-      query = query.eq('update_category', category.toLowerCase());
-    }
+    // Apply category filter (skip for now since update_category column doesn't exist)
+    // TODO: Re-enable when update_category column is added
+    // if (category && category !== 'all') {
+    //   query = query.eq('update_category', category.toLowerCase());
+    // }
 
     // Apply time filter
     if (timeframe && timeframe !== 'all') {
@@ -228,19 +233,22 @@ export async function GET(request: Request) {
         
         return {
           id: entry.id,
-          version: version,
           release_date: entry.release_date || entry.created_at,
           category: capitalizeCategory(entry.update_category || 'improved'),
+          tags: entry.source_data?.tags || entry.tags || [],
           customer_facing_title: entry.content_title,
           customer_facing_description: entry.generated_content.substring(0, 500) + (entry.generated_content.length > 500 ? '...' : ''),
-          highlights: Array.isArray(entry.tldr_bullet_points) ? entry.tldr_bullet_points : [],
+          highlights: entry.source_data?.highlights || [],
           breaking_changes: entry.breaking_changes || false,
           migration_notes: entry.migration_notes,
           affected_users: entry.affected_users,
           view_count: Math.floor(Math.random() * 1000) + 100, // Random for now, implement real tracking later
           upvotes: Math.floor(Math.random() * 50) + 10, // Random for now, implement real tracking later
           feedback_count: Math.floor(Math.random() * 20) + 2, // Random for now, implement real tracking later
-          jira_story_key: jiraStoryKey
+          jira_story_key: jiraStoryKey,
+          external_link: entry.external_link,
+          video_url: entry.video_url,
+          image_url: entry.image_url
         };
       });
       

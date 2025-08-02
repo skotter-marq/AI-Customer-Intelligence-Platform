@@ -213,7 +213,7 @@ export default function AdminPage() {
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Links</h2>
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               <Link
                 href="/testing"
                 className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
@@ -242,6 +242,26 @@ export default function AdminPage() {
                 <div>
                   <div className="font-medium text-gray-900">Notifications</div>
                   <div className="text-sm text-gray-500">Configure system notifications</div>
+                </div>
+              </Link>
+              <Link
+                href="/admin/public-changelog"
+                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <span className="text-xl">📋</span>
+                <div>
+                  <div className="font-medium text-gray-900">Public Changelog</div>
+                  <div className="text-sm text-gray-500">Manage public changelog entries</div>
+                </div>
+              </Link>
+              <Link
+                href="/approval"
+                className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                <span className="text-xl">✅</span>
+                <div>
+                  <div className="font-medium text-gray-900">Content Approval</div>
+                  <div className="text-sm text-gray-500">Review and approve content</div>
                 </div>
               </Link>
             </div>

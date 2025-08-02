@@ -18,6 +18,8 @@ interface ApprovalContent {
   reviewer_id?: string;
   review_comments?: string;
   review_date?: string;
+  tags?: string[];
+  source_data?: any;
 }
 
 interface ApprovalStats {
@@ -44,6 +46,35 @@ export default function ApprovalPage() {
   const [reviewComments, setReviewComments] = useState('');
   const [reviewerName, setReviewerName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedTags, setSelectedTags] = useState<Set<string>>(new Set());
+
+  const getTagOptions = () => [
+    'Announcement',
+    'Bug fix', 
+    'Improvement',
+    'New feature',
+    'Developers',
+    'Convert',
+    'AI Agent',
+    'Performance',
+    'Integration',
+    'UI/UX',
+    'API',
+    'Mobile',
+    'Enterprise'
+  ];
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(tag)) {
+        newSet.delete(tag);
+      } else {
+        newSet.add(tag);
+      }
+      return newSet;
+    });
+  };
 
   // Fetch approval content
   useEffect(() => {

@@ -57,8 +57,37 @@ export default function ChangelogPage() {
     category: 'all',
     audience: 'all',
     timeRange: 'all',
-    visibility: 'all'
+    visibility: 'all',
+    tags: new Set()
   });
+
+  const getTagOptions = () => [
+    'Announcement',
+    'Bug fix', 
+    'Improvement',
+    'New feature',
+    'Developers',
+    'Convert',
+    'AI Agent',
+    'Performance',
+    'Integration',
+    'UI/UX',
+    'API',
+    'Mobile',
+    'Enterprise'
+  ];
+
+  const toggleTag = (tag: string) => {
+    setFilters(prev => {
+      const newTags = new Set(prev.tags);
+      if (newTags.has(tag)) {
+        newTags.delete(tag);
+      } else {
+        newTags.add(tag);
+      }
+      return { ...prev, tags: newTags };
+    });
+  };
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
 
   const handleEditEntry = (entryId: string) => {
