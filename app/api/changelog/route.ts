@@ -355,6 +355,19 @@ export async function PUT(request: Request) {
       dbUpdates.generated_content = filteredUpdates.customer_facing_description || filteredUpdates.generated_content;
     }
     
+    // Handle optional media fields
+    if (filteredUpdates.external_link !== undefined) {
+      dbUpdates.external_link = filteredUpdates.external_link;
+    }
+    
+    if (filteredUpdates.video_url !== undefined) {
+      dbUpdates.video_url = filteredUpdates.video_url;
+    }
+    
+    if (filteredUpdates.image_url !== undefined) {
+      dbUpdates.image_url = filteredUpdates.image_url;
+    }
+    
     // Skip category update for now to avoid schema issues
     // if (updates.category) {
     //   dbUpdates.update_category = updates.category.toLowerCase();
@@ -400,8 +413,29 @@ export async function PUT(request: Request) {
       
       // If approving, store additional info in generation_metadata
       if (filteredUpdates.approval_status === 'approved') {
-        // Store approval details in generation_metadata since the columns don't exist
+        // Get the current entry to preserve existing metadata
+        const { data: currentEntry, error: fetchError } = await supabase
+          .from('generated_content')
+          .select('source_data, generation_metadata')
+          .eq('id', entryId)
+          .single();
+
+        console.log('🔍 Current entry before approval:', {
+          entryId,
+          currentNeedsApproval: currentEntry?.source_data?.needs_approval,
+          currentStatus: currentEntry?.status || 'unknown'
+        });
+
+        // Update source_data to remove needs_approval flag
+        const updatedSourceData = {
+          ...(currentEntry?.source_data || {}),
+          needs_approval: false // Remove from approval queue
+        };
+
+        // Store approval details in generation_metadata
+        dbUpdates.source_data = updatedSourceData;
         dbUpdates.generation_metadata = {
+          ...(currentEntry?.generation_metadata || {}),
           auto_generated: true,
           source: 'app_approval',
           approved_by: 'app_user',
@@ -491,6 +525,16 @@ export async function PUT(request: Request) {
       );
     }
 
+    // Debug logging after successful update
+    if (data && filteredUpdates.approval_status === 'approved') {
+      console.log('✅ Entry updated successfully:', {
+        entryId,
+        newStatus: data.status,
+        newNeedsApproval: data.source_data?.needs_approval,
+        updateType: filteredUpdates.public_visibility ? 'published' : 'approved'
+      });
+    }
+
     // If approved, update JIRA with the TLDR using server-side MCP
     if (filteredUpdates.approval_status === 'approved' && data) {
       try {
@@ -536,26 +580,29 @@ export async function PUT(request: Request) {
           
           const sourceData = data.source_data || {};
           
-          // Build dynamic media resources section
-          const mediaResources = [];
-          if (data.external_link) {
-            mediaResources.push(`• [Learn More](${data.external_link})`);
-          }
+          // Build clean media resources section - only include if actually present
+          const optionalResources = [];
           if (data.video_url) {
-            mediaResources.push(`• [📹 Watch Demo](${data.video_url})`);
+            optionalResources.push(`📹 [Watch Demo](${data.video_url})`);
           }
           if (data.image_url) {
-            mediaResources.push(`• [📸 View Screenshots](${data.image_url})`);
+            optionalResources.push(`📸 [Screenshots](${data.image_url})`);
+          }
+          if (data.external_link) {
+            optionalResources.push(`📖 [Learn More](${data.external_link})`);
           }
           if (sourceData.jira_story_key) {
-            mediaResources.push(`• [🎫 JIRA Ticket](https://marq.atlassian.net/browse/${sourceData.jira_story_key})`);
+            optionalResources.push(`🎫 [${sourceData.jira_story_key}](https://marq.atlassian.net/browse/${sourceData.jira_story_key})`);
           }
           
-          // Add the changelog link as the first resource
-          mediaResources.unshift(`• [📋 View Full Update](${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/product)`);
-          
-          const mediaResourcesSection = mediaResources.length > 0 
-            ? `\n\n**Resources:**\n${mediaResources.join('\n')}` 
+          const mediaResourcesSection = optionalResources.length > 0 
+            ? `\n\n${optionalResources.join(' • ')}` 
+            : '';
+
+          // Build dynamic "What's New" section from highlights
+          const highlights = sourceData.highlights || [];
+          const whatsNewSection = highlights.length > 0 
+            ? `\n\n**What's New:**\n${highlights.map(h => `• ${h}`).join('\n')}` 
             : '';
 
           const templateData = {
@@ -564,6 +611,7 @@ export async function PUT(request: Request) {
             assignee: sourceData.assignee || 'Team',  
             updateDescription: data.generated_content || 'View the changelog for full details',
             customerImpact: sourceData.highlights?.join(', ') || 'Improved user experience',
+            whatsNewSection: whatsNewSection,
             mediaResources: mediaResourcesSection
           };
 
@@ -608,10 +656,30 @@ export async function PUT(request: Request) {
       }
     }
 
+    // Prepare client-side MCP bridge data if JIRA update was attempted
+    let jiraUpdateRequired = null;
+    if (filteredUpdates.approval_status === 'approved' && data) {
+      const sourceData = data.source_data || {};
+      const jiraStoryKey = sourceData.jira_story_key;
+      
+      if (jiraStoryKey) {
+        const tldr = filteredUpdates.customer_facing_title || filteredUpdates.content_title || data.content_title;
+        jiraUpdateRequired = {
+          issueKey: jiraStoryKey,
+          fields: {
+            [process.env.JIRA_TLDR_FIELD_ID || 'customfield_10087']: tldr
+          },
+          action: 'updateTLDR',
+          tldr: tldr
+        };
+      }
+    }
+
     return NextResponse.json({
       success: true,
       entry: data,
-      message: 'Entry updated successfully'
+      message: 'Entry updated successfully',
+      ...(jiraUpdateRequired && { jiraUpdateRequired })
     });
 
   } catch (error) {

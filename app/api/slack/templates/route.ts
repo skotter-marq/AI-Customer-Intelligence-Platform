@@ -195,22 +195,15 @@ function getDefaultTemplates() {
       channel: '#product-updates',
       enabled: true,
       trigger_event: 'product_update_published',
-      message_template: `🚀 **New Product Update Published**
+      message_template: `📋 **CHANGELOG UPDATE**
 
-**Feature:** {updateTitle}
-**JIRA Ticket:** {jiraKey}
-**Completed by:** {assignee}
+**{updateTitle}** is now live
 
-**What Changed:**
-{updateDescription}
+{updateDescription}{whatsNewSection}
 
-**Customer Impact:**
-{customerImpact}
+👉 *View Details*
 
-**Resources:**
-• [View Full Update]({changelogUrl})
-• [Customer Communication Template]({templateUrl})
-• [JIRA Ticket]({jiraUrl})`
+{mediaResources}`
     },
     {
       id: 'daily-summary',

@@ -53,6 +53,8 @@ export async function POST(request: Request) {
         return await sendDailySummary(params);
       case 'test_template':
         return await sendSlackNotification(params);
+      case 'send_notification':
+        return await sendSlackNotification(params);
       case 'handle_command':
         return await handleSlashCommand(params);
       default:
@@ -586,17 +588,15 @@ async function getSlackTemplate(templateId: string) {
 [View Content]({contentUrl}) | [Dashboard]({dashboardUrl})`
     },
     'product-update-notification': {
-      message_template: `🚀 **New Product Update Published**
+      message_template: `📋 **CHANGELOG UPDATE**
 
-**Feature:** {updateTitle}
-**JIRA Ticket:** {jiraKey}
-**Completed by:** {assignee}
+**{updateTitle}** is now live
 
-**What Changed:**
-{updateDescription}
+{updateDescription}{whatsNewSection}
 
-**Customer Impact:**
-{customerImpact}{mediaResources}`
+👉 *View Details*
+
+{mediaResources}`
     },
     'slack-jira-story-completed': {
       message_template: `🎉 **JIRA Story Completed - Ready for Changelog Review**

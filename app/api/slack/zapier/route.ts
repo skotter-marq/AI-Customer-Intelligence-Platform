@@ -150,19 +150,15 @@ function getDefaultTemplate(templateId: string) {
     'product-update-notification': {
       id: 'product-update-notification',
       name: 'Product Update Published',
-      message_template: `🚀 **New Product Update Published**
+      message_template: `📋 **CHANGELOG UPDATE**
 
-**Feature:** {updateTitle}
-**JIRA Ticket:** {jiraKey}
-**Completed by:** {assignee}
+**{updateTitle}** is now live
 
-**What Changed:**
-{updateDescription}
+{updateDescription}{whatsNewSection}
 
-**Customer Impact:**
-{customerImpact}
+👉 *View Details*
 
-[View Full Update]({changelogUrl}) | [JIRA Ticket]({jiraUrl})`,
+{mediaResources}`,
       channel: '#product-updates'
     },
     'approval-request': {

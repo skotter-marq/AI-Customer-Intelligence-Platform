@@ -8,5 +8,27 @@
     "components": [],
     "labels": ["salesWidgets"],
     "assignee": "Fawn Wong"
+  },
+  "PRESS-21541": {
+    "key": "PRESS-21541",
+    "id": "54892",
+    "summary": "Testing Slack Changelog Notification",
+    "description": "Testing Notification with correct messaging.",
+    "status": "Closed",
+    "priority": "Not Set",
+    "components": [],
+    "labels": [],
+    "assignee": null,
+    "fields": {
+      "summary": "Testing Slack Changelog Notification",
+      "description": "Testing Notification with correct messaging.",
+      "status": {
+        "name": "Closed"
+      },
+      "priority": {
+        "name": "Not Set"
+      },
+      "customfield_10087": null
+    }
   }
 }

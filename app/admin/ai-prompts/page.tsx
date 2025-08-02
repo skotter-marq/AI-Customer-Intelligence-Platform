@@ -311,23 +311,16 @@ Guidelines:
         maxTokens: 500,
         model: 'template'
       },
-      variables: ['updateTitle', 'jiraKey', 'assignee', 'updateDescription', 'customerImpact'],
-      template: `🚀 **New Product Update Published**
+      variables: ['updateTitle', 'updateDescription', 'whatsNewSection', 'mediaResources'],
+      template: `📋 **CHANGELOG UPDATE**
 
-**Feature:** {updateTitle}
-**JIRA Ticket:** {jiraKey}
-**Completed by:** {assignee}
+**{updateTitle}** is now live
 
-**What Changed:**
-{updateDescription}
+{updateDescription}{whatsNewSection}
 
-**Customer Impact:**
-{customerImpact}
+👉 *View Details*
 
-**Resources:**
-• [View Full Update]({changelogUrl})
-• [Customer Communication Template]({templateUrl})
-• [JIRA Ticket]({jiraUrl})`
+{mediaResources}`
     },
     {
       id: 'slack-customer-insight',

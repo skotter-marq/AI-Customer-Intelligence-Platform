@@ -691,10 +691,34 @@ export default function ProductPage() {
       const result = await response.json();
       console.log('Entry approved successfully:', result);
 
+      // Handle client-side MCP bridge for real-time JIRA updates
+      if (result.jiraUpdateRequired) {
+        try {
+          console.log('🌉 Processing real-time JIRA update via client-side MCP...');
+          
+          // Import and use client-side MCP bridge
+          const { clientMCPBridge } = await import('../../lib/client-mcp-bridge.js');
+          const jiraResult = await clientMCPBridge.handleServerJiraUpdate(result);
+          
+          if (jiraResult.success) {
+            console.log('✅ Real-time JIRA update successful:', jiraResult);
+            alert(`Changelog approved successfully! JIRA issue ${result.jiraUpdateRequired.issueKey} has been updated with the TL;DR in real-time.`);
+          } else {
+            console.warn('⚠️ Real-time JIRA update failed:', jiraResult);
+            alert(`Changelog approved successfully! However, JIRA update failed: ${jiraResult.jiraResult?.error || 'Unknown error'}. You may need to update JIRA manually.`);
+          }
+        } catch (mcpError) {
+          console.error('❌ Client-side MCP bridge error:', mcpError);
+          alert('Changelog approved successfully! However, real-time JIRA update encountered an error. The server-side update may have worked, or you may need to update JIRA manually.');
+        }
+      } else {
+        // No JIRA update required
+        alert('Changelog entry approved and published successfully!');
+      }
+
       // Refresh the changelog data
       await fetchChangelogData();
       
-      alert('Changelog entry approved and published successfully! The JIRA ticket has been updated with the TLDR.');
     } catch (error) {
       console.error('Error approving entry:', error);
       alert('Failed to approve entry. Please try again.');

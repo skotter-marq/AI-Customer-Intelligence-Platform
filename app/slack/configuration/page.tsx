@@ -81,22 +81,15 @@ export default function SlackConfigurationPage() {
       enabled: true,
       triggerEvent: 'product_update_published',
       lastModified: new Date().toISOString(),
-      messageTemplate: `🚀 **New Product Update Published**
+      messageTemplate: `📋 **CHANGELOG UPDATE**
 
-**Feature:** {updateTitle}
-**JIRA Ticket:** {jiraKey}
-**Completed by:** {assignee}
+**{updateTitle}** is now live
 
-**What Changed:**
-{updateDescription}
+{updateDescription}{whatsNewSection}
 
-**Customer Impact:**
-{customerImpact}
+👉 *View Details*
 
-**Resources:**
-• [View Full Update]({changelogUrl})
-• [Customer Communication Template]({templateUrl})
-• [JIRA Ticket]({jiraUrl})`
+{mediaResources}`
     },
     {
       id: 'daily-summary',
