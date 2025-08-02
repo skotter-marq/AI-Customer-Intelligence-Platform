@@ -16,6 +16,64 @@ function createSupabaseClient() {
 
 const supabase = createSupabaseClient();
 
+// Fallback JIRA update using REST API
+async function updateJiraWithRestAPI(issueKey: string, tldrValue: string) {
+  try {
+    if (!process.env.JIRA_BASE_URL || !process.env.JIRA_API_TOKEN) {
+      throw new Error('JIRA credentials not configured');
+    }
+
+    const jiraUrl = `${process.env.JIRA_BASE_URL}/rest/api/2/issue/${issueKey}`;
+    const fieldId = process.env.JIRA_TLDR_FIELD_ID || 'customfield_10087';
+    
+    // For Atlassian Cloud, use email + API token authentication
+    let authHeader;
+    const jiraEmail = process.env.JIRA_EMAIL || process.env.JIRA_USERNAME;
+    if (jiraEmail) {
+      const auth = Buffer.from(`${jiraEmail}:${process.env.JIRA_API_TOKEN}`).toString('base64');
+      authHeader = `Basic ${auth}`;
+    } else {
+      authHeader = `Bearer ${process.env.JIRA_API_TOKEN}`;
+    }
+
+    const response = await fetch(jiraUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': authHeader,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        fields: {
+          [fieldId]: tldrValue
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`JIRA API error: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+
+    return {
+      success: true,
+      issueKey: issueKey,
+      message: `JIRA issue ${issueKey} updated successfully with TL;DR via REST API`,
+      updatedField: fieldId,
+      tldr: tldrValue
+    };
+
+  } catch (error) {
+    console.error(`Failed to update JIRA issue ${issueKey}:`, error);
+    return {
+      success: false,
+      issueKey: issueKey,
+      error: error.message || 'Unknown JIRA REST API error',
+      requiresManualUpdate: true
+    };
+  }
+}
+
 export async function GET(request: Request) {
   try {
     // Handle missing Supabase client during build
@@ -657,22 +715,52 @@ export async function PUT(request: Request) {
       }
     }
 
-    // Prepare client-side MCP bridge data if JIRA update was attempted
-    let jiraUpdateRequired = null;
+    // Perform server-side JIRA update if approval and JIRA data exists
+    let jiraUpdateResult = null;
     if (filteredUpdates.approval_status === 'approved' && data) {
       const sourceData = data.source_data || {};
       const jiraStoryKey = sourceData.jira_story_key;
       
       if (jiraStoryKey) {
         const tldr = filteredUpdates.customer_facing_title || filteredUpdates.content_title || data.content_title;
-        jiraUpdateRequired = {
-          issueKey: jiraStoryKey,
-          fields: {
-            [process.env.JIRA_TLDR_FIELD_ID || 'customfield_10087']: tldr
-          },
-          action: 'updateTLDR',
-          tldr: tldr
-        };
+        
+        try {
+          console.log(`🎫 Attempting server-side JIRA update for ${jiraStoryKey}...`);
+          
+          // Try to use MCP JIRA integration if available
+          if (typeof mcp__atlassian__editJiraIssue === 'function') {
+            const jiraResult = await mcp__atlassian__editJiraIssue({
+              cloudId: process.env.JIRA_BASE_URL || 'https://marq.atlassian.net',
+              issueIdOrKey: jiraStoryKey,
+              fields: {
+                [process.env.JIRA_TLDR_FIELD_ID || 'customfield_10087']: tldr
+              }
+            });
+            
+            jiraUpdateResult = {
+              success: true,
+              issueKey: jiraStoryKey,
+              message: `JIRA issue ${jiraStoryKey} updated successfully with TL;DR`,
+              updatedField: process.env.JIRA_TLDR_FIELD_ID || 'customfield_10087',
+              tldr: tldr
+            };
+            
+            console.log('✅ Server-side JIRA update successful:', jiraUpdateResult);
+          } else {
+            // Fallback to REST API if MCP tools aren't available
+            const jiraResult = await updateJiraWithRestAPI(jiraStoryKey, tldr);
+            jiraUpdateResult = jiraResult;
+          }
+          
+        } catch (jiraError) {
+          console.error('❌ Server-side JIRA update failed:', jiraError);
+          jiraUpdateResult = {
+            success: false,
+            issueKey: jiraStoryKey,
+            error: jiraError.message || 'Unknown JIRA update error',
+            requiresManualUpdate: true
+          };
+        }
       }
     }
 
@@ -680,7 +768,7 @@ export async function PUT(request: Request) {
       success: true,
       entry: data,
       message: 'Entry updated successfully',
-      ...(jiraUpdateRequired && { jiraUpdateRequired })
+      ...(jiraUpdateResult && { jiraUpdateResult })
     });
 
   } catch (error) {
