@@ -510,23 +510,28 @@ export async function PUT(request: Request) {
     }
     
     // Handle public visibility fields for approval workflow
+    // Temporarily store in generation_metadata until database columns are added
     if (filteredUpdates.public_visibility !== undefined) {
-      dbUpdates.is_public = filteredUpdates.public_visibility;
-      dbUpdates.public_changelog_visible = filteredUpdates.public_visibility;
-      console.log('📢 Setting public visibility:', {
+      console.log('📢 Setting public visibility in metadata (columns not yet added):', {
         entryId,
-        is_public: filteredUpdates.public_visibility,
-        public_changelog_visible: filteredUpdates.public_visibility
+        public_visibility: filteredUpdates.public_visibility
       });
-    }
-
-    // Handle release date for approved entries
-    if (filteredUpdates.release_date !== undefined) {
-      dbUpdates.release_date = filteredUpdates.release_date;
-      console.log('📅 Setting release date:', {
-        entryId,
-        release_date: filteredUpdates.release_date
-      });
+      
+      // Get current metadata to preserve existing data
+      const { data: currentEntry, error: fetchError } = await supabase
+        .from('generated_content')
+        .select('generation_metadata')
+        .eq('id', entryId)
+        .single();
+        
+      if (!fetchError && currentEntry) {
+        dbUpdates.generation_metadata = {
+          ...(currentEntry.generation_metadata || {}),
+          is_public: filteredUpdates.public_visibility,
+          public_changelog_visible: filteredUpdates.public_visibility,
+          release_date: filteredUpdates.release_date || new Date().toISOString()
+        };
+      }
     }
 
     // Handle related stories - update source_data JSONB field
