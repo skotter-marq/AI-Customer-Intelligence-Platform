@@ -41,7 +41,7 @@ export default function UserMenu() {
     return null;
   }
 
-  const initials = userProfile.full_name
+  const initials = (userProfile.full_name || userProfile.email || 'User')
     .split(' ')
     .map(n => n[0])
     .join('')
@@ -57,7 +57,7 @@ export default function UserMenu() {
           <span className="text-white text-sm font-medium">{initials}</span>
         </div>
         <div className="hidden md:block text-left">
-          <p className="text-sm font-medium text-gray-900">{userProfile.full_name}</p>
+          <p className="text-sm font-medium text-gray-900">{userProfile.full_name || userProfile.email || 'User'}</p>
           <p className="text-xs text-gray-500 capitalize">{userProfile.role.replace('_', ' ')}</p>
         </div>
         <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -67,7 +67,7 @@ export default function UserMenu() {
         <div className="absolute right-0 bottom-full mb-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
           {/* User Info */}
           <div className="px-4 py-3 border-b border-gray-200">
-            <p className="text-sm font-medium text-gray-900">{userProfile.full_name}</p>
+            <p className="text-sm font-medium text-gray-900">{userProfile.full_name || userProfile.email || 'User'}</p>
             <p className="text-sm text-gray-500">{user.email}</p>
             <div className="flex items-center mt-1">
               <Shield className="w-3 h-3 text-gray-400 mr-1" />

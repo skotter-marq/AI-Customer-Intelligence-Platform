@@ -11,7 +11,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // Development bypass - check for bypass flag
+  const isDevelopmentBypass = process.env.NODE_ENV === 'development' && 
+    (typeof window !== 'undefined' && window.localStorage.getItem('auth_bypass') === 'true');
+
   useEffect(() => {
+    // Development bypass
+    if (isDevelopmentBypass) {
+      console.log('🔓 Development auth bypass enabled');
+      setUser({ id: 'dev-user', email: 'developer@local.dev' });
+      setUserProfile({
+        id: 'dev-profile',
+        user_id: 'dev-user',
+        email: 'developer@local.dev',
+        full_name: 'Dev User',
+        role: 'admin' as UserRole,
+        permissions: ['admin'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      setLoading(false);
+      setAuthError(null);
+      return;
+    }
+
     // Handle case where supabase is not available (build time)
     if (!supabase) {
       setLoading(false);
@@ -109,29 +132,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (authTimeout) clearTimeout(authTimeout);
     };
 
-    // Listen for auth changes with improved error handling
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('🔄 Auth state change:', event, session?.user?.email || 'no user');
-        
-        try {
-          if (session?.user) {
-            setUser(session.user);
-            const profile = await authHelpers.getUserProfile(session.user.id);
-            setUserProfile(profile);
-          } else {
-            setUser(null);
-            setUserProfile(null);
+    // Only set up auth listeners if not in bypass mode
+    if (!isDevelopmentBypass) {
+      // Listen for auth changes with improved error handling
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log('🔄 Auth state change:', event, session?.user?.email || 'no user');
+          
+          try {
+            if (session?.user) {
+              setUser(session.user);
+              const profile = await authHelpers.getUserProfile(session.user.id);
+              setUserProfile(profile);
+            } else {
+              setUser(null);
+              setUserProfile(null);
+            }
+            setLoading(false);
+          } catch (error) {
+            console.error('Error handling auth state change:', error);
+            setLoading(false);
           }
-          setLoading(false);
-        } catch (error) {
-          console.error('Error handling auth state change:', error);
-          setLoading(false);
         }
-      }
-    );
+      );
 
-    return () => subscription.unsubscribe();
+      return () => subscription.unsubscribe();
+    }
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -146,6 +172,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const hasPermission = (path: string, level: PermissionLevel = 'view'): boolean => {
+    // Allow all permissions in development bypass mode
+    if (isDevelopmentBypass) return true;
+    
     if (!userProfile) return false;
     return authHelpers.hasPermission(userProfile.role, path, level);
   };

@@ -1140,40 +1140,339 @@ export default function ProductPage() {
                             {editForm.category || entry.category}
                           </span>
                           <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              {/* JIRA Story Key (read-only in edit mode) */}
+                              {(entry as any).metadata?.jira_story_key && (
+                                <span className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-600 text-xs font-medium rounded-full">
+                                  {(entry as any).metadata.jira_story_key}
+                                </span>
+                              )}
+                              
+                              {/* Category Selector */}
+                              <select
+                                value={editForm.category || entry.category}
+                                onChange={(e) => updateEditForm('category', e.target.value)}
+                                className="px-2 py-1 text-xs border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500"
+                              >
+                                <option value="Added">Added</option>
+                                <option value="Improved">Improved</option>
+                                <option value="Fixed">Fixed</option>
+                                <option value="Security">Security</option>
+                                <option value="Deprecated">Deprecated</option>
+                              </select>
+                            </div>
+                            
+                            {/* Title Editor */}
                             <input
                               type="text"
-                              value={editForm.customer_facing_title || ''}
+                              value={editForm.customer_facing_title || entry.customer_facing_title}
                               onChange={(e) => updateEditForm('customer_facing_title', e.target.value)}
-                              className="calendly-h3 w-full border-0 border-b-2 border-blue-300 bg-transparent focus:outline-none focus:border-blue-500"
-                              style={{ marginBottom: '4px' }}
-                              placeholder="Entry title..."
+                              className="w-full text-lg font-semibold border-0 border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent"
+                              placeholder="Customer-facing title..."
                             />
-                            <p className="calendly-label-sm">
-                              {formatDistanceToNow(new Date(entry.release_date), { addSuffix: true })}
-                              {entry.jira_story_key && (
-                                <span className="ml-2 text-blue-600">• {entry.jira_story_key}</span>
-                              )}
-                            </p>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end space-y-2">
-                          <select
-                            value={editForm.category || entry.category}
-                            onChange={(e) => updateEditForm('category', e.target.value)}
-                            className="px-3 py-2 calendly-body-sm rounded-lg transition-all duration-200 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            style={{ background: 'white' }}
+                        
+                        <div className="flex items-center space-x-2">
+                          <button 
+                            className="calendly-btn-primary"
+                            onClick={handleSaveEdit}
                           >
-                            <option value="Added">Added</option>
-                            <option value="Improved">Improved</option>
-                            <option value="Fixed">Fixed</option>
-                            <option value="Security">Security</option>
-                            <option value="Deprecated">Deprecated</option>
-                          </select>
+                            Save Changes
+                          </button>
+                          <button 
+                            className="calendly-btn-secondary"
+                            onClick={handleCancelEdit}
+                          >
+                            Cancel
+                          </button>
                         </div>
                       </div>
 
-                      {/* Layout templates removed - now dynamic based on content (whether optional media is included) */}
+                      {/* Description Editor */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <textarea
+                          value={editForm.customer_facing_description || entry.customer_facing_description}
+                          onChange={(e) => updateEditForm('customer_facing_description', e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
+                          style={{ minHeight: '80px' }}
+                          placeholder="Describe what this update means for customers..."
+                        />
+                      </div>
 
+                      {/* Highlights Editor */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Key Changes</h4>
+                        <div className="space-y-2">
+                          {(editForm.highlights || entry.highlights || []).map((highlight, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                value={highlight}
+                                onChange={(e) => {
+                                  const newHighlights = [...(editForm.highlights || entry.highlights || [])];
+                                  newHighlights[index] = e.target.value;
+                                  updateEditForm('highlights', newHighlights);
+                                }}
+                                className="flex-1 px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                placeholder="Highlight description..."
+                              />
+                              <button
+                                onClick={() => {
+                                  const newHighlights = (editForm.highlights || entry.highlights || []).filter((_, i) => i !== index);
+                                  updateEditForm('highlights', newHighlights);
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          <button
+                            onClick={() => {
+                              const newHighlights = [...(editForm.highlights || entry.highlights || []), ''];
+                              updateEditForm('highlights', newHighlights);
+                            }}
+                            className="px-3 py-2 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                          >
+                            + Add Highlight
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Optional Media Fields */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Optional Media</h4>
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">External Link</label>
+                            <input
+                              type="url"
+                              value={editForm.external_link || ''}
+                              onChange={(e) => updateEditForm('external_link', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="https://example.com/feature-demo"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Video URL</label>
+                            <input
+                              type="url"
+                              value={editForm.video_url || ''}
+                              onChange={(e) => updateEditForm('video_url', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="https://youtube.com/watch?v=..."
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">Image URL</label>
+                            <input
+                              type="url"
+                              value={editForm.image_url || ''}
+                              onChange={(e) => updateEditForm('image_url', e.target.value)}
+                              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="https://example.com/screenshot.png"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Related Stories */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Related JIRA Stories</h4>
+                        <p className="text-xs text-gray-600 mb-3">
+                          Add related JIRA story keys to automatically include their context and regenerate the changelog content.
+                        </p>
+                        <div className="space-y-2">
+                          {(editForm.related_stories || []).map((storyKey, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <span className="text-xs text-gray-500 w-12">JIRA:</span>
+                              <input
+                                type="text"
+                                value={storyKey}
+                                onChange={(e) => {
+                                  const newRelatedStories = [...(editForm.related_stories || [])];
+                                  newRelatedStories[index] = e.target.value.toUpperCase();
+                                  updateEditForm('related_stories', newRelatedStories);
+                                }}
+                                className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
+                                placeholder="PRESS-12345"
+                                pattern="[A-Z]+-[0-9]+"
+                              />
+                              <button
+                                onClick={() => {
+                                  const newRelatedStories = (editForm.related_stories || []).filter((_, i) => i !== index);
+                                  updateEditForm('related_stories', newRelatedStories);
+                                }}
+                                className="text-red-500 hover:text-red-700 p-1 text-sm"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => {
+                                const newRelatedStories = [...(editForm.related_stories || []), ''];
+                                updateEditForm('related_stories', newRelatedStories);
+                              }}
+                              className="px-3 py-2 text-blue-600 hover:text-blue-800 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                            >
+                              + Add Related Story
+                            </button>
+                            {(editForm.related_stories || []).length > 0 && (
+                              <button
+                                onClick={handleRegenerateContent}
+                                className="calendly-btn-secondary"
+                              >
+                                Regenerate with Related Stories
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Tags Management */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <h4 className="text-sm font-medium text-gray-900 mb-2">Tags</h4>
+                        <div className="space-y-3">
+                          {/* Current Tags */}
+                          <div className="flex flex-wrap gap-2">
+                            {(editForm.tags || entry.tags || []).map((tag, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
+                              >
+                                {tag}
+                                <button
+                                  onClick={() => {
+                                    const newTags = (editForm.tags || entry.tags || []).filter((_, i) => i !== index);
+                                    updateEditForm('tags', newTags);
+                                  }}
+                                  className="ml-1 text-blue-600 hover:text-blue-800"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          
+                          {/* Add New Tag with Library Dropdown */}
+                          <div className="flex items-center space-x-2">
+                            <div className="flex-1 relative">
+                              <input
+                                type="text"
+                                id={`new-tag-${entry.id}`}
+                                placeholder="Add a tag or select from library..."
+                                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter') {
+                                    const input = e.target as HTMLInputElement;
+                                    const value = input.value.trim();
+                                    if (value && !(editForm.tags || entry.tags || []).includes(value)) {
+                                      const newTags = [...(editForm.tags || entry.tags || []), value];
+                                      updateEditForm('tags', newTags);
+                                      input.value = '';
+                                    }
+                                  }
+                                }}
+                              />
+                            </div>
+                            
+                            {/* Tag Library Dropdown */}
+                            <div className="relative">
+                              <select
+                                value=""
+                                onChange={(e) => {
+                                  if (e.target.value && !(editForm.tags || entry.tags || []).includes(e.target.value)) {
+                                    const newTags = [...(editForm.tags || entry.tags || []), e.target.value];
+                                    updateEditForm('tags', newTags);
+                                  }
+                                  e.target.value = ''; // Reset selection
+                                }}
+                                className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white min-w-[140px]"
+                              >
+                                <option value="">📚 Tag Library</option>
+                                <optgroup label="✨ Features">
+                                  {['Feature', 'Enhancement', 'New Release', 'Integration', 'Automation', 'Workflow'].map((tag) => (
+                                    <option 
+                                      key={tag} 
+                                      value={tag}
+                                      disabled={(editForm.tags || entry.tags || []).includes(tag)}
+                                    >
+                                      {tag} {(editForm.tags || entry.tags || []).includes(tag) ? '✓' : ''}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                                <optgroup label="🔧 Technical">
+                                  {['API', 'Performance', 'Security', 'Bug Fix', 'Infrastructure', 'Database'].map((tag) => (
+                                    <option 
+                                      key={tag} 
+                                      value={tag}
+                                      disabled={(editForm.tags || entry.tags || []).includes(tag)}
+                                    >
+                                      {tag} {(editForm.tags || entry.tags || []).includes(tag) ? '✓' : ''}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                                <optgroup label="📱 Platform">
+                                  {['Mobile', 'Web', 'Desktop', 'iOS', 'Android', 'Cross-platform'].map((tag) => (
+                                    <option 
+                                      key={tag} 
+                                      value={tag}
+                                      disabled={(editForm.tags || entry.tags || []).includes(tag)}
+                                    >
+                                      {tag} {(editForm.tags || entry.tags || []).includes(tag) ? '✓' : ''}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                                <optgroup label="🎨 Experience">
+                                  {['UI/UX', 'Dashboard', 'Analytics', 'Reporting', 'Export', 'Notifications'].map((tag) => (
+                                    <option 
+                                      key={tag} 
+                                      value={tag}
+                                      disabled={(editForm.tags || entry.tags || []).includes(tag)}
+                                    >
+                                      {tag} {(editForm.tags || entry.tags || []).includes(tag) ? '✓' : ''}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              </select>
+                            </div>
+                            
+                            <button
+                              onClick={() => {
+                                const input = document.getElementById(`new-tag-${entry.id}`) as HTMLInputElement;
+                                const value = input.value.trim();
+                                if (value && !(editForm.tags || entry.tags || []).includes(value)) {
+                                  const newTags = [...(editForm.tags || entry.tags || []), value];
+                                  updateEditForm('tags', newTags);
+                                  input.value = '';
+                                }
+                              }}
+                              className="px-3 py-2 text-blue-600 hover:text-blue-800 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Breaking Changes Toggle */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id={`breaking-changes-${entry.id}`}
+                            checked={editForm.breaking_changes || false}
+                            onChange={(e) => updateEditForm('breaking_changes', e.target.checked)}
+                            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+                          />
+                          <label htmlFor={`breaking-changes-${entry.id}`} className="calendly-body-sm font-medium text-gray-900">
+                            Breaking changes
+                          </label>
+                        </div>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -1223,198 +1522,41 @@ export default function ProductPage() {
                     </>
                   )}
 
-
-                  {/* Highlights - Conditional based on template */}
-                  {(editingEntryId !== entry.id || !['minimal', 'deprecation_warning'].includes(editForm.layout_template || 'standard')) && (
+                  {/* Tags Display (View Mode Only) */}
+                  {editingEntryId !== entry.id && entry.tags && entry.tags.length > 0 && (
                     <div style={{ marginBottom: '16px' }}>
-                      <h4 className="text-sm font-medium text-gray-900 mb-2">
-                        {(() => {
-                          const template = editingEntryId === entry.id ? (editForm.layout_template || 'standard') : 'standard';
-                          switch (template) {
-                            case 'feature_spotlight': return 'Key Benefits';
-                            case 'technical_update': return 'Technical Details';
-                            case 'security_notice': return 'Security Improvements';
-                            default: return 'What\'s New';
-                          }
-                        })()}
-                      </h4>
-                      {editingEntryId === entry.id ? (
-                      <div className="space-y-2">
-                        {/* Edit Highlights */}
-                        {(editForm.highlights || []).map((highlight, index) => (
-                          <div key={index} className="flex items-center space-x-2">
-                            <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-                            <input
-                              type="text"
-                              value={highlight}
-                              onChange={(e) => {
-                                const newHighlights = [...(editForm.highlights || [])];
-                                newHighlights[index] = e.target.value;
-                                updateEditForm('highlights', newHighlights);
-                              }}
-                              className="flex-1 px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                              style={{ background: 'white' }}
-                              placeholder="Highlight description..."
-                            />
-                            <button
-                              onClick={() => {
-                                const newHighlights = (editForm.highlights || []).filter((_, i) => i !== index);
-                                updateEditForm('highlights', newHighlights);
-                              }}
-                              className="text-red-500 hover:text-red-700 p-1"
-                            >
-                              ×
-                            </button>
-                          </div>
-                        ))}
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => {
-                              const newHighlights = [...(editForm.highlights || []), ''];
-                              updateEditForm('highlights', newHighlights);
-                            }}
-                            className="px-3 py-2 text-blue-600 hover:text-blue-800 calendly-body-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
-                          >
-                            + Add Highlight
-                          </button>
-                          <select
-                            onChange={(e) => {
-                              if (e.target.value) {
-                                const newHighlights = [...(editForm.highlights || []), e.target.value];
-                                updateEditForm('highlights', newHighlights);
-                                e.target.value = ''; // Reset selection
-                              }
-                            }}
-                            className="px-3 py-2 calendly-body-sm rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                            style={{ background: 'white' }}
-                          >
-                            <option value="">+ Add from template</option>
-                            <option value="Improved performance by [X]% faster loading times">Performance Improvement</option>
-                            <option value="Enhanced user interface with better navigation">UI Enhancement</option>
-                            <option value="Added support for [new integration/format]">New Integration</option>
-                            <option value="Streamlined workflow reduces clicks by [X]">Workflow Improvement</option>
-                            <option value="Better error handling and user feedback">Error Handling</option>
-                            <option value="Mobile-responsive design improvements">Mobile Enhancement</option>
-                            <option value="Advanced filtering and search capabilities">Search & Filter</option>
-                            <option value="Automated [process] saves time and reduces errors">Automation</option>
-                          </select>
-                        </div>
-                      </div>
-                      ) : (
-                        <ul className="space-y-1">
-                          {/* View Highlights */}
-                          {entry.highlights.map((highlight, index) => (
-                            <li key={index} className="flex items-start space-x-2">
-                              <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                              <span className="calendly-body-sm">{highlight}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Breaking Changes Toggle (Edit Mode Only) */}
-                  {editingEntryId === entry.id && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          id={`breaking-changes-${entry.id}`}
-                          checked={editForm.breaking_changes || false}
-                          onChange={(e) => updateEditForm('breaking_changes', e.target.checked)}
-                          className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                        />
-                        <label htmlFor={`breaking-changes-${entry.id}`} className="calendly-body-sm font-medium text-gray-900">
-                          Breaking changes
-                        </label>
-                      </div>
-                      
-                      {/* Migration Notes (only if breaking changes checked) */}
-                      {editForm.breaking_changes && (
-                        <div style={{ marginTop: '12px' }}>
-                          <label className="block text-sm font-medium text-gray-900 mb-2">
-                            Migration Notes
-                          </label>
-                          <textarea
-                            value={editForm.migration_notes || ''}
-                            onChange={(e) => updateEditForm('migration_notes', e.target.value)}
-                            className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 calendly-body-sm transition-all duration-200"
-                            style={{ minHeight: '60px', background: 'white' }}
-                            placeholder="Provide migration instructions for users..."
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Related Stories (Edit Mode Only) */}
-                  {editingEntryId === entry.id && (
-                    <div style={{ marginBottom: '16px' }}>
-                      <label className="block text-sm font-medium text-gray-900 mb-2">
-                        Related JIRA Stories
-                      </label>
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                        {(editForm.related_stories || []).map((story, index) => (
-                          <span 
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">Tags:</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {entry.tags.map((tag, index) => (
+                          <span
                             key={index}
-                            className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                            className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
                           >
-                            {story}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const newStories = [...(editForm.related_stories || [])];
-                                newStories.splice(index, 1);
-                                updateEditForm('related_stories', newStories);
-                              }}
-                              className="ml-1.5 -mr-1 w-3 h-3 flex items-center justify-center rounded-full hover:bg-blue-200 transition-colors"
-                            >
-                              ×
-                            </button>
+                            <Tag className="w-3 h-3 mr-1" />
+                            {tag}
                           </span>
                         ))}
                       </div>
-                      <div className="flex space-x-2">
-                        <input
-                          type="text"
-                          id={`new-story-${entry.id}`}
-                          placeholder="Enter JIRA story key (e.g., PRESS-21463)"
-                          className="flex-1 px-3 py-2 calendly-body-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200"
-                          style={{ background: 'white' }}
-                          onKeyPress={(e) => {
-                            if (e.key === 'Enter') {
-                              const input = e.target as HTMLInputElement;
-                              const value = input.value.trim().toUpperCase();
-                              if (value && !editForm.related_stories?.includes(value)) {
-                                const newStories = [...(editForm.related_stories || []), value];
-                                updateEditForm('related_stories', newStories);
-                                input.value = '';
-                              }
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const input = document.getElementById(`new-story-${entry.id}`) as HTMLInputElement;
-                            const value = input.value.trim().toUpperCase();
-                            if (value && !editForm.related_stories?.includes(value)) {
-                              const newStories = [...(editForm.related_stories || []), value];
-                              updateEditForm('related_stories', newStories);
-                              input.value = '';
-                            }
-                          }}
-                          className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200"
-                        >
-                          Add
-                        </button>
-                      </div>
                     </div>
                   )}
 
-                  {/* Breaking Changes */}
-                  {entry.breaking_changes && (
+                  {/* Highlights Display (View Mode Only) */}
+                  {editingEntryId !== entry.id && entry.highlights && entry.highlights.length > 0 && (
+                    <div style={{ marginBottom: '16px' }}>
+                      <h4 className="text-sm font-medium text-gray-900 mb-2">What's New:</h4>
+                      <ul className="space-y-1">
+                        {entry.highlights.map((highlight, index) => (
+                          <li key={index} className="flex items-start space-x-2">
+                            <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                            <span className="calendly-body-sm">{highlight}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Breaking Changes Display (View Mode Only) */}
+                  {editingEntryId !== entry.id && entry.breaking_changes && (
                     <div style={{ marginBottom: '16px' }}>
                       <h4 className="text-sm font-medium text-red-900 mb-2 flex items-center space-x-1">
                         <AlertCircle className="w-4 h-4" />
@@ -1428,8 +1570,8 @@ export default function ProductPage() {
                     </div>
                   )}
 
-                  {/* Migration Notes */}
-                  {entry.migration_notes && (
+                  {/* Migration Notes Display (View Mode Only) */}
+                  {editingEntryId !== entry.id && entry.migration_notes && (
                     <div style={{ marginBottom: '16px' }}>
                       <h4 className="text-sm font-medium text-orange-900 mb-2">Migration Notes</h4>
                       <div className="p-3 bg-orange-50 rounded-md border border-orange-200">
@@ -1571,7 +1713,18 @@ export default function ProductPage() {
                     {changelogEntries
                       .filter(entry => (entry as any).metadata?.needs_approval && !(entry as any).hidden_from_approval)
                       .map((entry) => (
-                        <div key={entry.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div 
+                          key={entry.id} 
+                          className="calendly-card transition-all duration-200"
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'translateY(-2px)';
+                            e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'translateY(0)';
+                            e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06)';
+                          }}
+                        >
                           {editingEntryId === entry.id ? (
                             <div className="p-6">
                               {/* Edit Mode */}
@@ -1780,6 +1933,132 @@ export default function ProductPage() {
                                 </div>
                               </div>
 
+                              {/* Tags Management */}
+                              <div style={{ marginBottom: '16px' }}>
+                                <h4 className="text-sm font-medium text-gray-900 mb-2">Tags</h4>
+                                <div className="space-y-3">
+                                  {/* Current Tags */}
+                                  <div className="flex flex-wrap gap-2">
+                                    {(editForm.tags || entry.tags || []).map((tag, index) => (
+                                      <span
+                                        key={index}
+                                        className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded-full"
+                                      >
+                                        {tag}
+                                        <button
+                                          onClick={() => {
+                                            const newTags = (editForm.tags || entry.tags || []).filter((_, i) => i !== index);
+                                            updateEditForm('tags', newTags);
+                                          }}
+                                          className="ml-1 text-blue-600 hover:text-blue-800"
+                                        >
+                                          ×
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+                                  
+                                  {/* Add New Tag with Library Dropdown */}
+                                  <div className="flex items-center space-x-2">
+                                    <div className="flex-1 relative">
+                                      <input
+                                        type="text"
+                                        id={`new-tag-approval-${entry.id}`}
+                                        placeholder="Add a tag or select from library..."
+                                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                        onKeyPress={(e) => {
+                                          if (e.key === 'Enter') {
+                                            const input = e.target as HTMLInputElement;
+                                            const value = input.value.trim();
+                                            if (value && !(editForm.tags || entry.tags || []).includes(value)) {
+                                              const newTags = [...(editForm.tags || entry.tags || []), value];
+                                              updateEditForm('tags', newTags);
+                                              input.value = '';
+                                            }
+                                          }
+                                        }}
+                                      />
+                                    </div>
+                                    
+                                    {/* Tag Library Dropdown */}
+                                    <div className="relative">
+                                      <select
+                                        value=""
+                                        onChange={(e) => {
+                                          if (e.target.value && !(editForm.tags || entry.tags || []).includes(e.target.value)) {
+                                            const newTags = [...(editForm.tags || entry.tags || []), e.target.value];
+                                            updateEditForm('tags', newTags);
+                                          }
+                                          e.target.value = ''; // Reset selection
+                                        }}
+                                        className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white min-w-[140px]"
+                                      >
+                                        <option value="">📚 Tag Library</option>
+                                        <optgroup label="✨ Features">
+                                          {['Feature', 'Enhancement', 'New Release', 'Integration', 'Automation', 'Workflow'].map((tag) => (
+                                            <option 
+                                              key={tag} 
+                                              value={tag}
+                                              disabled={(editForm.tags || entry.tags || []).includes(tag)}
+                                            >
+                                              {tag} {(editForm.tags || entry.tags || []).includes(tag) ? '✓' : ''}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                        <optgroup label="🔧 Technical">
+                                          {['API', 'Performance', 'Security', 'Bug Fix', 'Infrastructure', 'Database'].map((tag) => (
+                                            <option 
+                                              key={tag} 
+                                              value={tag}
+                                              disabled={(editForm.tags || entry.tags || []).includes(tag)}
+                                            >
+                                              {tag} {(editForm.tags || entry.tags || []).includes(tag) ? '✓' : ''}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                        <optgroup label="📱 Platform">
+                                          {['Mobile', 'Web', 'Desktop', 'iOS', 'Android', 'Cross-platform'].map((tag) => (
+                                            <option 
+                                              key={tag} 
+                                              value={tag}
+                                              disabled={(editForm.tags || entry.tags || []).includes(tag)}
+                                            >
+                                              {tag} {(editForm.tags || entry.tags || []).includes(tag) ? '✓' : ''}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                        <optgroup label="🎨 Experience">
+                                          {['UI/UX', 'Dashboard', 'Analytics', 'Reporting', 'Export', 'Notifications'].map((tag) => (
+                                            <option 
+                                              key={tag} 
+                                              value={tag}
+                                              disabled={(editForm.tags || entry.tags || []).includes(tag)}
+                                            >
+                                              {tag} {(editForm.tags || entry.tags || []).includes(tag) ? '✓' : ''}
+                                            </option>
+                                          ))}
+                                        </optgroup>
+                                      </select>
+                                    </div>
+                                    
+                                    <button
+                                      onClick={() => {
+                                        const input = document.getElementById(`new-tag-approval-${entry.id}`) as HTMLInputElement;
+                                        const value = input.value.trim();
+                                        if (value && !(editForm.tags || entry.tags || []).includes(value)) {
+                                          const newTags = [...(editForm.tags || entry.tags || []), value];
+                                          updateEditForm('tags', newTags);
+                                          input.value = '';
+                                        }
+                                      }}
+                                      className="px-3 py-2 text-blue-600 hover:text-blue-800 text-sm font-medium rounded-lg hover:bg-blue-50 transition-colors"
+                                    >
+                                      Add
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+
                               {/* Breaking Changes Toggle */}
                               <div style={{ marginBottom: '16px' }}>
                                 <div className="flex items-center space-x-3">
@@ -1797,7 +2076,7 @@ export default function ProductPage() {
                               </div>
                             </div>
                           ) : (
-                            <>
+                            <div className="p-6">
                               {/* View Mode */}
                               <div className="flex items-start justify-between" style={{ marginBottom: '16px' }}>
                                 <div className="flex items-center space-x-3">
@@ -1854,6 +2133,21 @@ export default function ProductPage() {
                                       <span className={`calendly-badge ${getCategoryColor(entry.category)}`}>
                                         {entry.category}
                                       </span>
+                                      
+                                      {/* Tags Display */}
+                                      {entry.tags && entry.tags.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-2">
+                                          {entry.tags.map((tag, index) => (
+                                            <span
+                                              key={index}
+                                              className="inline-flex items-center px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full"
+                                            >
+                                              <Tag className="w-3 h-3 mr-1" />
+                                              {tag}
+                                            </span>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                     
                                     <h3 className="calendly-h3" style={{ marginBottom: '4px' }}>
@@ -1952,7 +2246,7 @@ export default function ProductPage() {
                                   </span>
                                 </div>
                               </div>
-                            </>
+                            </div>
                           )}
 
                           {/* Action Buttons */}

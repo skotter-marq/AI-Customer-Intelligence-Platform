@@ -53,7 +53,7 @@ export type PermissionLevel = 'full' | 'view' | 'create' | 'none';
 export interface UserProfile {
   id: string;
   email: string;
-  full_name: string;
+  full_name?: string; // Make optional to handle cases where it's not provided
   role: UserRole;
   avatar_url?: string;
   created_at: string;
