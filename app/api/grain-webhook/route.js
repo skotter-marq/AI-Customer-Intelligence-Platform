@@ -199,31 +199,92 @@ async function analyzeMeetingWithAI(meeting) {
       meetingType: inferMeetingType(meeting.title)
     };
     
-    console.log('🧠 Analyzing meeting with AI...');
-    const analysis = await aiProvider.analyzeMeetingContent(analysisData);
+    console.log('🧠 Starting comprehensive AI analysis...');
+    
+    // Use the comprehensive meeting analysis prompt
+    const comprehensiveAnalysis = await runAIPrompt('comprehensive-meeting-analysis', {
+      customer_name: analysisData.customer,
+      meeting_type: analysisData.meetingType,
+      meeting_date: analysisData.date,
+      duration_minutes: analysisData.duration_minutes,
+      participants: JSON.stringify(analysisData.participants),
+      transcript: analysisData.transcript
+    });
+    
+    // Run specialized analyses in parallel for deeper insights
+    const [sentimentAnalysis, featureAnalysis, competitiveAnalysis] = await Promise.allSettled([
+      runAIPrompt('meeting-sentiment-analysis', {
+        customer_name: analysisData.customer,
+        meeting_type: analysisData.meetingType,
+        interaction_history: 'Previous meetings logged in system', // TODO: Get actual history
+        transcript: analysisData.transcript
+      }),
+      runAIPrompt('feature-request-prioritization', {
+        customer_name: analysisData.customer,
+        customer_segment: 'Enterprise', // TODO: Get actual segment from customer data
+        customer_arr: '$100k+', // TODO: Get actual ARR from customer data
+        meeting_type: analysisData.meetingType,
+        transcript: analysisData.transcript
+      }),
+      runAIPrompt('competitive-intelligence-analysis', {
+        customer_name: analysisData.customer,
+        meeting_type: analysisData.meetingType,
+        sales_stage: 'Discovery', // TODO: Get actual stage from CRM
+        known_competitors: 'Canva, Adobe, Figma', // TODO: Get from competitive database
+        transcript: analysisData.transcript
+      })
+    ]);
     
     // Check if Supabase client is available
     if (!supabase) {
       throw new Error('Database connection not available');
     }
 
-    // Update meeting with basic analysis (using simplified schema)
-    // Note: Current schema may not have all these columns
-    // You might want to store analysis results in a separate table
-    console.log('✅ AI Analysis completed:', {
-      sentiment: analysis.overall_analysis.sentiment_label,
-      insights: analysis.insights.length,
-      actions: analysis.action_items.length
+    // Update meeting with comprehensive analysis results
+    if (comprehensiveAnalysis?.overall_analysis) {
+      await supabase
+        .from('meetings')
+        .update({
+          sentiment_score: comprehensiveAnalysis.overall_analysis.sentiment_score,
+          sentiment_label: comprehensiveAnalysis.overall_analysis.sentiment_label,
+          confidence_score: comprehensiveAnalysis.overall_analysis.confidence_score,
+          meeting_summary: comprehensiveAnalysis.overall_analysis.meeting_summary,
+          status: 'analyzed',
+          processing_stage: 'complete',
+          analyzed_at: new Date().toISOString(),
+          metadata: {
+            ...meeting.metadata,
+            key_themes: comprehensiveAnalysis.overall_analysis.key_themes,
+            customer_health_score: comprehensiveAnalysis.overall_analysis.customer_health_score,
+            business_impact: comprehensiveAnalysis.overall_analysis.business_impact
+          }
+        })
+        .eq('id', meeting.id);
+    }
+
+    console.log('✅ Comprehensive AI Analysis completed:', {
+      sentiment: comprehensiveAnalysis?.overall_analysis?.sentiment_label,
+      insights: comprehensiveAnalysis?.insights?.length || 0,
+      actions: comprehensiveAnalysis?.action_items?.length || 0,
+      features: comprehensiveAnalysis?.feature_requests?.length || 0,
+      competitive: comprehensiveAnalysis?.competitive_intelligence?.length || 0
     });
 
-    // Save insights to database
-    await saveInsightsToDatabase(meeting.id, analysis);
+    // Save comprehensive insights to all intelligence tables
+    await saveComprehensiveInsightsToDatabase(meeting.id, {
+      comprehensive: comprehensiveAnalysis,
+      sentiment: sentimentAnalysis.status === 'fulfilled' ? sentimentAnalysis.value : null,
+      features: featureAnalysis.status === 'fulfilled' ? featureAnalysis.value : null,
+      competitive: competitiveAnalysis.status === 'fulfilled' ? competitiveAnalysis.value : null
+    });
     
-    // Create JIRA tickets for feature requests
-    await createJiraTicketsForFeatures(analysis.feature_requests, meeting);
+    // Create JIRA tickets for high-priority feature requests
+    if (comprehensiveAnalysis?.feature_requests) {
+      await createJiraTicketsForFeatures(comprehensiveAnalysis.feature_requests, meeting);
+    }
     
-    // Send Slack notification with key insights
-    await notifyMeetingAnalyzed(meeting, analysis);
+    // Send Slack notification with comprehensive insights
+    await notifyMeetingAnalyzed(meeting, comprehensiveAnalysis);
     
     console.log('✅ Meeting AI analysis completed:', meeting.id);
     
@@ -764,6 +825,15 @@ async function handleGrainZapierData(webhookData) {
         participants: enrichedData.participants,
         raw_transcript: enrichedData.raw_transcript,
         customer_id: enrichedData.customer_id,
+        recording_url: enrichedData.recording_url || mappedData.recording_url,
+        transcript_url: enrichedData.transcript_url || mappedData.transcript_url,
+        grain_share_url: enrichedData.grain_share_url || mappedData.grain_share_url,
+        meeting_summary: mappedData.data_summary,
+        intelligence_notes: mappedData.intelligence_notes,
+        status: 'recorded',
+        processing_stage: 'initial',
+        meeting_type: detectMeetingType(enrichedData.title),
+        organizer_email: extractOrganizerEmail(enrichedData.participants),
         created_at: new Date().toISOString()
       }, {
         onConflict: 'grain_id'
@@ -956,6 +1026,52 @@ function inferMeetingTypeFromSummary(summary) {
   return 'general';
 }
 
+function detectMeetingType(title) {
+  if (!title) return 'general';
+  
+  const titleLower = title.toLowerCase();
+  
+  // Common meeting type patterns
+  if (titleLower.includes('demo') || titleLower.includes('demonstration')) return 'demo';
+  if (titleLower.includes('qbr') || titleLower.includes('quarterly business review') || titleLower.includes('quarterly review')) return 'qbr';
+  if (titleLower.includes('support') || titleLower.includes('troubleshoot') || titleLower.includes('issue') || titleLower.includes('problem')) return 'support';
+  if (titleLower.includes('discovery') || titleLower.includes('consultation') || titleLower.includes('assessment')) return 'discovery';
+  if (titleLower.includes('onboarding') || titleLower.includes('kickoff') || titleLower.includes('implementation')) return 'implementation';
+  if (titleLower.includes('training') || titleLower.includes('workshop') || titleLower.includes('tutorial')) return 'training';
+  if (titleLower.includes('sales') || titleLower.includes('prospect') || titleLower.includes('pitch')) return 'sales';
+  if (titleLower.includes('check-in') || titleLower.includes('checkin') || titleLower.includes('catch up')) return 'check_in';
+  if (titleLower.includes('contract') || titleLower.includes('agreement') || titleLower.includes('negotiation')) return 'contract';
+  if (titleLower.includes('renewal') || titleLower.includes('expansion') || titleLower.includes('upsell')) return 'renewal';
+  
+  return 'general';
+}
+
+function extractOrganizerEmail(participants) {
+  if (!participants || !Array.isArray(participants)) return null;
+  
+  // Look for internal organizers (company domain patterns)
+  const internalDomains = ['marq.com', 'company.com'];
+  
+  for (const participant of participants) {
+    if (participant.email) {
+      for (const domain of internalDomains) {
+        if (participant.email.includes(domain)) {
+          return participant.email;
+        }
+      }
+    }
+  }
+  
+  // If no internal organizer found, return the first participant with an email
+  for (const participant of participants) {
+    if (participant.email) {
+      return participant.email;
+    }
+  }
+  
+  return null;
+}
+
 async function fetchTranscriptFromUrl(transcriptUrl) {
   try {
     console.log('📥 Fetching transcript from URL:', transcriptUrl);
@@ -1089,4 +1205,182 @@ export async function GET() {
       'Zapier Grain app "Recorded Added" trigger'
     ]
   });
+}
+
+// Helper function to run AI prompts using the admin prompts system
+async function runAIPrompt(promptId, variables) {
+  try {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/ai/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        promptId,
+        variables
+      })
+    });
+    
+    if (!response.ok) {
+      throw new Error(`AI prompt failed: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    return result.analysis;
+  } catch (error) {
+    console.error(`Failed to run AI prompt ${promptId}:`, error);
+    return null;
+  }
+}
+
+// Comprehensive function to save all intelligence data to database
+async function saveComprehensiveInsightsToDatabase(meetingId, analyses) {
+  try {
+    const { comprehensive, sentiment, features, competitive } = analyses;
+    
+    if (!supabase) {
+      throw new Error('Database connection not available');
+    }
+
+    // Save insights from comprehensive analysis
+    if (comprehensive?.insights && comprehensive.insights.length > 0) {
+      const insightPromises = comprehensive.insights.map(insight => 
+        supabase.from('meeting_insights').insert({
+          meeting_id: meetingId,
+          insight_type: insight.insight_type,
+          category: insight.category,
+          title: insight.title,
+          description: insight.description,
+          quote: insight.quote,
+          context: insight.context,
+          importance_score: insight.importance_score,
+          confidence_score: insight.confidence_score,
+          priority: insight.priority,
+          tags: insight.tags,
+          affected_feature: insight.affected_feature,
+          competitor_mentioned: insight.competitor_mentioned,
+          ai_model_used: 'claude-3-5-sonnet',
+          processing_version: '3.0'
+        })
+      );
+      
+      await Promise.allSettled(insightPromises);
+      console.log(`✅ Saved ${comprehensive.insights.length} insights`);
+    }
+
+    // Save action items
+    if (comprehensive?.action_items && comprehensive.action_items.length > 0) {
+      const actionPromises = comprehensive.action_items.map(action =>
+        supabase.from('meeting_action_items').insert({
+          meeting_id: meetingId,
+          description: action.description,
+          assigned_to: action.assigned_to,
+          due_date: action.due_date,
+          priority: action.priority,
+          category: action.category,
+          created_from_ai: true
+        })
+      );
+      
+      await Promise.allSettled(actionPromises);
+      console.log(`✅ Saved ${comprehensive.action_items.length} action items`);
+    }
+
+    // Save feature requests
+    if (comprehensive?.feature_requests && comprehensive.feature_requests.length > 0) {
+      const featurePromises = comprehensive.feature_requests.map(feature =>
+        supabase.from('meeting_feature_requests').insert({
+          meeting_id: meetingId,
+          feature_title: feature.feature_title,
+          feature_description: feature.feature_description,
+          business_value: feature.business_value,
+          urgency: feature.urgency,
+          customer_pain_point: feature.customer_pain_point,
+          current_workaround: feature.current_workaround,
+          estimated_impact: feature.estimated_impact,
+          customer_priority: feature.customer_priority
+        })
+      );
+      
+      await Promise.allSettled(featurePromises);
+      console.log(`✅ Saved ${comprehensive.feature_requests.length} feature requests`);
+    }
+
+    // Save competitive intelligence
+    if (comprehensive?.competitive_intelligence && comprehensive.competitive_intelligence.length > 0) {
+      const competitivePromises = comprehensive.competitive_intelligence.map(comp =>
+        supabase.from('meeting_competitive_intel').insert({
+          meeting_id: meetingId,
+          competitor_name: comp.competitor_name,
+          mention_type: comp.mention_type,
+          context: comp.context,
+          sentiment: comp.sentiment,
+          threat_level: comp.threat_level,
+          customer_intent: comp.customer_intent,
+          quote: comp.quote
+        })
+      );
+      
+      await Promise.allSettled(competitivePromises);
+      console.log(`✅ Saved ${comprehensive.competitive_intelligence.length} competitive mentions`);
+    }
+
+    // Save topics
+    if (comprehensive?.topics && comprehensive.topics.length > 0) {
+      const topicPromises = comprehensive.topics.map(topic =>
+        supabase.from('meeting_topics').insert({
+          meeting_id: meetingId,
+          topic: topic.topic,
+          topic_category: topic.topic_category,
+          mentions_count: topic.mentions_count,
+          relevance_score: topic.relevance_score,
+          sentiment_score: topic.sentiment_score,
+          keywords: topic.keywords,
+          context_snippets: topic.context_snippets
+        })
+      );
+      
+      await Promise.allSettled(topicPromises);
+      console.log(`✅ Saved ${comprehensive.topics.length} topics`);
+    }
+
+    // Save participant analysis
+    if (comprehensive?.participant_analysis && comprehensive.participant_analysis.length > 0) {
+      const participantPromises = comprehensive.participant_analysis.map(participant =>
+        supabase.from('meeting_participants').insert({
+          meeting_id: meetingId,
+          name: participant.name,
+          role: participant.role,
+          is_internal: participant.is_internal,
+          engagement_level: participant.engagement_level,
+          sentiment_score: participant.sentiment_score
+        })
+      );
+      
+      await Promise.allSettled(participantPromises);
+      console.log(`✅ Saved ${comprehensive.participant_analysis.length} participant analyses`);
+    }
+
+    // Save outcome assessment
+    if (comprehensive?.outcome_assessment) {
+      await supabase.from('meeting_outcomes').insert({
+        meeting_id: meetingId,
+        outcome_type: comprehensive.outcome_assessment.outcome_type,
+        outcome_result: comprehensive.outcome_assessment.outcome_result,
+        deal_stage_change: comprehensive.outcome_assessment.deal_stage_change,
+        next_steps: comprehensive.outcome_assessment.next_steps,
+        follow_up_required: comprehensive.outcome_assessment.follow_up_required,
+        follow_up_date: comprehensive.outcome_assessment.follow_up_date,
+        customer_satisfaction: comprehensive.outcome_assessment.customer_satisfaction,
+        churn_risk_indicator: comprehensive.outcome_assessment.churn_risk_indicator,
+        expansion_opportunity: comprehensive.outcome_assessment.expansion_opportunity
+      });
+      
+      console.log('✅ Saved outcome assessment');
+    }
+
+    console.log('✅ Comprehensive insights saved to all intelligence tables');
+    
+  } catch (error) {
+    console.error('Failed to save comprehensive insights:', error);
+    throw error;
+  }
 }

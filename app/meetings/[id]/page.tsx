@@ -39,7 +39,8 @@ import {
   X,
   Database,
   Bot,
-  ChevronRight
+  ChevronRight,
+  Plus
 } from 'lucide-react';
 
 // Helper function to safely format meeting dates
@@ -80,511 +81,191 @@ const formatDueDate = (dateValue: string | null | undefined): string => {
 
 interface MeetingDetail {
   id: string;
+  grain_id: string;
+  customer_id: string;
   title: string;
-  customer_name: string;
-  meeting_date: string;
+  date: string;
   duration_minutes: number;
-  sentiment_label: string;
-  sentiment_score: number;
-  confidence_score: number;
-  meeting_summary: string;
-  full_transcript: string;
+  participants: any[];
   raw_transcript: string;
-  status: string;
+  created_at: string;
+  // Optional fields that may come from future enhancements
+  sentiment_label?: string;
+  sentiment_score?: number;
+  confidence_score?: number;
+  meeting_summary?: string;
+  full_transcript?: string;
+  status?: string;
   recording_url?: string;
   transcript_url?: string;
   grain_share_url?: string;
-  attendees: any[];
-  participants: any[];
-  organizer_email: string;
-  meeting_type: string;
-  customer_id?: string;
-  data_source?: string;
+  customer_name?: string;
+  // Add these fields for Zapier integration
   data_summary?: string;
-  summary_points?: Array<{
-    timestamp: number;
-    text: string;
-  }>;
+  summary_points?: Array<{ text: string; timestamp: string }>;
   intelligence_notes?: string;
-  transcript_urls?: {
-    txt?: string;
-    srt?: string;
-    vtt?: string;
-    json?: string;
-  };
-  metadata: any;
 }
 
-interface MeetingInsight {
-  id: string;
-  insight_type: string;
-  category: string;
-  title: string;
-  description: string;
-  quote?: string;
-  importance_score: number;
-  confidence_score: number;
-  priority: string;
-  tags: string[];
-  affected_feature?: string;
-  competitor_mentioned?: string;
-}
-
-interface ActionItem {
-  id: string;
-  description: string;
-  assigned_to?: string;
-  priority: string;
-  category: string;
-  status: string;
-  due_date?: string;
-}
-
-interface FeatureRequest {
-  id: string;
-  feature_title: string;
-  feature_description: string;
-  business_value: string;
-  urgency: string;
-  customer_pain_point: string;
-  estimated_impact: string;
-  status: string;
-  jira_ticket_key?: string;
-}
-
-interface CompetitiveIntel {
-  id: string;
-  competitor_name: string;
-  mention_type: string;
-  context: string;
-  sentiment: string;
-  threat_level: string;
-  quote?: string;
-}
-
-interface Topic {
-  id: string;
-  topic: string;
-  topic_category: string;
-  relevance_score: number;
-  sentiment_score: number;
-  keywords: string[];
-}
-
-export default function MeetingProfilePage() {
+export default function MeetingDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const meetingId = params.id as string;
-
   const [meeting, setMeeting] = useState<MeetingDetail | null>(null);
-  const [insights, setInsights] = useState<MeetingInsight[]>([]);
-  const [actionItems, setActionItems] = useState<ActionItem[]>([]);
-  const [featureRequests, setFeatureRequests] = useState<FeatureRequest[]>([]);
-  const [competitiveIntel, setCompetitiveIntel] = useState<CompetitiveIntel[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'insights' | 'transcript' | 'actions' | 'analysis' | 'grain-intelligence'>('overview');
-  const [transcriptSearchQuery, setTranscriptSearchQuery] = useState('');
+  const [activeRightTab, setActiveRightTab] = useState<'summary' | 'transcript' | 'insights' | 'actions'>('summary');
   
-  // Coda integration state
+  // Sample data states (these would normally come from the API)
+  const [insights, setInsights] = useState([]);
+  const [actionItems, setActionItems] = useState([]);
+  const [topics, setTopics] = useState([]);
+  const [featureRequests, setFeatureRequests] = useState([]);
   const [showCodaModal, setShowCodaModal] = useState(false);
-  const [isCreatingCodaRow, setIsCreatingCodaRow] = useState(false);
+  const [transcriptSearchTerm, setTranscriptSearchTerm] = useState('');
   const [codaFormData, setCodaFormData] = useState({
     name: '',
     email: '',
     account: '',
     interviewer: '',
-    csat: '',
+    recording: '',
     status: 'Scheduled',
     role: 'End User',
-    recording: '',
-    initiative: ''
+    csat: '',
+    initiative: '',
+    jtbd1: '',
+    jtbd2: '',
+    jtbd3: '',
+    jtbd4: '',
+    keyTakeaways: ''
   });
-  const [initiatives, setInitiatives] = useState<Array<{id: string, name: string}>>([]);
-  const [aiAnalysisConfig, setAiAnalysisConfig] = useState({
-    enabled: true,
-    jtbdQuestions: [
-      { description: "", keywords: "" },
-      { description: "", keywords: "" },
-      { description: "", keywords: "" },
-      { description: "", keywords: "" }
-    ]
-  });
+  const [selectedAIPrompts, setSelectedAIPrompts] = useState([]);
+  const [availablePrompts, setAvailablePrompts] = useState([]);
 
   useEffect(() => {
-    if (meetingId) {
-      fetchMeetingDetails();
+    async function fetchMeeting() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/meetings/${params.id}`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch meeting');
+        }
+        
+        const data = await response.json();
+        setMeeting(data.meeting);
+
+        // Fetch related data
+        const [insightsRes, actionsRes, topicsRes, featuresRes] = await Promise.all([
+          fetch(`/api/meetings/${params.id}/insights`),
+          fetch(`/api/meetings/${params.id}/actions`),
+          fetch(`/api/meetings/${params.id}/topics`),
+          fetch(`/api/meetings/${params.id}/features`)
+        ]);
+
+        if (insightsRes.ok) {
+          const insightsData = await insightsRes.json();
+          setInsights(insightsData.insights || []);
+        }
+
+        if (actionsRes.ok) {
+          const actionsData = await actionsRes.json();
+          setActionItems(actionsData.actions || []);
+        }
+
+        if (topicsRes.ok) {
+          const topicsData = await topicsRes.json();
+          setTopics(topicsData.topics || []);
+        }
+
+        if (featuresRes.ok) {
+          const featuresData = await featuresRes.json();
+          setFeatureRequests(featuresData.features || []);
+        }
+
+      } catch (error) {
+        console.error('Error fetching meeting:', error);
+      } finally {
+        setLoading(false);
+      }
     }
-  }, [meetingId]);
 
-  // Auto-populate form when showing Coda modal
+    if (params.id) {
+      fetchMeeting();
+    }
+  }, [params.id]);
+
+  // Load available AI prompts for Coda integration
   useEffect(() => {
-    if (showCodaModal && meeting) {
+    async function loadAvailablePrompts() {
+      try {
+        const response = await fetch('/api/admin/prompts?type=ai_prompts');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data.ai_prompts) {
+            setAvailablePrompts(result.data.ai_prompts);
+            // Pre-select useful prompts for Coda analysis
+            setSelectedAIPrompts(['comprehensive-meeting-analysis', 'feature-request-prioritization']);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load AI prompts:', error);
+      }
+    }
+    
+    if (showCodaModal) {
+      loadAvailablePrompts();
+      // Pre-fill form with meeting data
       setCodaFormData(prev => ({
         ...prev,
-        name: meeting.customer_name || '',
-        account: meeting.customer_name || '',
-        // Try to extract email from attendees if available
-        email: meeting.attendees?.find((a: any) => a.email && !a.email.includes('@company.com'))?.email || '',
-        // Auto-populate recording URL if available
-        recording: meeting.recording_url || meeting.grain_share_url || ''
+        account: meeting?.customer_name || '',
+        recording: meeting?.grain_share_url || meeting?.recording_url || meeting?.title || '',
+        name: meeting?.participants?.[0]?.name || '',
+        email: meeting?.participants?.[0]?.email || ''
       }));
-      
-      // Fetch initiatives from Coda
-      fetchInitiatives();
     }
   }, [showCodaModal, meeting]);
 
-  const fetchInitiatives = async () => {
-    try {
-      const response = await fetch('/api/coda', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'get_initiatives',
-          docId: 'qMDWed38ry',
-          tableId: 'grid-Wh9_yGcu3U' // Real initiatives table ID
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        setInitiatives(data.initiatives || []);
-      }
-    } catch (error) {
-      console.error('Failed to fetch initiatives:', error);
-      setInitiatives([]);
-    }
+  // Helper functions
+  const getSentimentColor = (score: number | undefined): string => {
+    if (!score) return '#f3f4f6';
+    if (score > 0.5) return '#dcfce7';
+    if (score > 0) return '#fef3c7';
+    return '#fee2e2';
   };
 
-  const fetchMeetingDetails = async () => {
-    setLoading(true);
-    try {
-      // Fetch meeting details
-      const meetingResponse = await fetch(`/api/meetings/${meetingId}`);
-      const meetingData = await meetingResponse.json();
-      
-      if (meetingData.success) {
-        setMeeting(meetingData.meeting);
-        setInsights(meetingData.insights || []);
-        setActionItems(meetingData.action_items || []);
-        setFeatureRequests(meetingData.feature_requests || []);
-        setCompetitiveIntel(meetingData.competitive_intel || []);
-        setTopics(meetingData.topics || []);
-      } else {
-        console.error('Failed to fetch meeting details:', meetingData.error);
-        setError(`Failed to load meeting: ${meetingData.error}`);
-      }
-    } catch (error) {
-      console.error('Error fetching meeting details:', error);
-      setError('Failed to connect to the server. Please check your connection and try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-
-  const getSentimentIcon = (sentiment: string, score?: number) => {
+  const getSentimentIcon = (sentiment: string | undefined) => {
     switch (sentiment) {
-      case 'positive':
-        return <ThumbsUp className="w-5 h-5 text-green-500" />;
-      case 'negative':
-        return <ThumbsDown className="w-5 h-5 text-red-500" />;
-      default:
-        return <Minus className="w-5 h-5 text-gray-500" />;
-    }
-  };
-
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment) {
-      case 'positive': return 'calendly-badge-success';
-      case 'negative': return 'calendly-badge-danger';
-      default: return 'calendly-badge-info';
+      case 'positive': return <ThumbsUp className="w-6 h-6 text-green-600" />;
+      case 'negative': return <ThumbsDown className="w-6 h-6 text-red-600" />;
+      default: return <Minus className="w-6 h-6 text-gray-600" />;
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'high': case 'critical': return 'calendly-badge-danger';
-      case 'medium': return 'calendly-badge-warning';
+      case 'critical': return 'calendly-badge-error';
+      case 'high': return 'calendly-badge-warning';
+      case 'medium': return 'calendly-badge-info';
       case 'low': return 'calendly-badge-success';
       default: return 'calendly-badge-info';
     }
   };
 
-  const highlightTranscriptSearch = (text: string, query: string) => {
-    if (!query.trim()) return text;
-    
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark style="background-color: #fef08a; padding: 1px 2px;">$1</mark>');
-  };
-
-  // Helper functions for Grain intelligence parsing
-  const extractKeyTakeaways = (intelligenceNotes: string) => {
-    if (!intelligenceNotes) return [];
-    
-    const takeawaysMatch = intelligenceNotes.match(/\*\*Key Takeaways\*\*\s*(.*?)(?:\*\*|$)/s);
-    if (takeawaysMatch) {
-      const takeawaysText = takeawaysMatch[1];
-      const takeaways = takeawaysText.match(/\[(.*?)\]\(.*?\)\s*-\s*(.*?)(?=\n|$)/g);
-      return takeaways ? takeaways.map(item => item.replace(/\[.*?\]\(.*?\)\s*-\s*/, '').trim()) : [];
-    }
-    
-    return [];
-  };
-
-  const extractActionItems = (intelligenceNotes: string) => {
-    if (!intelligenceNotes) return [];
-    
-    const actionItemsMatch = intelligenceNotes.match(/\*\*Action Items\*\*\s*(.*?)(?:\*\*|$)/s);
-    if (actionItemsMatch) {
-      const actionItemsText = actionItemsMatch[1];
-      const actions = actionItemsText.match(/\[(.*?)\]\(.*?\)\s*-\s*(.*?)(?=\n|$)/g);
-      return actions ? actions.map(item => item.replace(/\[.*?\]\(.*?\)\s*-\s*/, '').trim()) : [];
-    }
-    
-    return [];
-  };
-
-  const calculateDataCompleteness = () => {
-    if (!meeting) return { fields: [], completeness: 0, presentCount: 0, totalCount: 0 };
-    
-    const fields = [
-      { key: 'title', label: 'Title', present: !!meeting.title },
-      { key: 'duration', label: 'Duration', present: !!meeting.duration_minutes },
-      { key: 'participants', label: 'Participants', present: (meeting.attendees?.length || meeting.participants?.length || 0) > 0 },
-      { key: 'transcript', label: 'Transcript', present: !!(meeting.raw_transcript || meeting.full_transcript) },
-      { key: 'summary', label: 'AI Summary', present: !!meeting.data_summary },
-      { key: 'intelligence', label: 'Intelligence Notes', present: !!meeting.intelligence_notes },
-      { key: 'customer', label: 'Customer ID', present: !!meeting.customer_id },
-      { key: 'recording', label: 'Recording URL', present: !!(meeting.recording_url || meeting.grain_share_url) }
-    ];
-    
-    const presentCount = fields.filter(f => f.present).length;
-    const completeness = Math.round((presentCount / fields.length) * 100);
-    
-    return { fields, completeness, presentCount, totalCount: fields.length };
-  };
-
-  const formatTimestamp = (timestamp: number) => {
-    const minutes = Math.floor(timestamp / 60000);
-    const seconds = Math.floor((timestamp % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
-  const createJiraTicketsFromMeeting = async () => {
-    if (!meeting) return;
-    
-    try {
-      const response = await fetch('/api/meeting-insights-workflow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_jira_tickets',
-          meetingId: meeting.id
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        console.log(`✅ Created ${data.tickets.length} JIRA tickets`);
-        // Refresh meeting data to show updated ticket keys
-        fetchMeetingDetails();
-      } else {
-        console.error('Failed to create JIRA tickets:', data.error);
-      }
-    } catch (error) {
-      console.error('Error creating JIRA tickets:', error);
-    }
-  };
-
-  const createSingleJiraTicket = async (featureRequestId: string) => {
-    try {
-      const response = await fetch('/api/meeting-insights-workflow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_jira_tickets',
-          featureRequestId
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        console.log(`✅ Created JIRA ticket for feature request`);
-        // Refresh meeting data to show updated ticket key
-        fetchMeetingDetails();
-      } else {
-        console.error('Failed to create JIRA ticket:', data.error);
-      }
-    } catch (error) {
-      console.error('Error creating JIRA ticket:', error);
-    }
-  };
-
-  const createJiraTicketsFromBugs = async () => {
-    if (!meeting) return;
-    
-    try {
-      const response = await fetch('/api/meeting-insights-workflow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_bug_tickets',
-          meetingId: meeting.id
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        console.log(`✅ Created ${data.tickets?.length || 0} bug tickets`);
-        // Refresh meeting data to show updated ticket keys
-        fetchMeetingDetails();
-      } else {
-        console.error('Failed to create bug tickets:', data.error);
-      }
-    } catch (error) {
-      console.error('Error creating bug tickets:', error);
-    }
-  };
-
-  const createBugTicket = async (insightId: string) => {
-    try {
-      const response = await fetch('/api/meeting-insights-workflow', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_bug_ticket',
-          insightId
-        })
-      });
-      
-      const data = await response.json();
-      if (data.success) {
-        console.log(`✅ Created bug ticket`);
-        // Refresh meeting data to show updated ticket key
-        fetchMeetingDetails();
-      } else {
-        console.error('Failed to create bug ticket:', data.error);
-      }
-    } catch (error) {
-      console.error('Error creating bug ticket:', error);
-    }
-  };
-
-  // Coda integration handlers
-  const handleCodaCancel = () => {
-    setShowCodaModal(false);
-    setCodaFormData({
-      name: '',
-      email: '',
-      account: '',
-      interviewer: '',
-      csat: '',
-      status: 'Scheduled',
-      role: 'End User',
-      recording: '',
-      initiative: ''
-    });
-    setAiAnalysisConfig({
-      enabled: true,
-      jtbdQuestions: [
-        { description: "", keywords: "" },
-        { description: "", keywords: "" },
-        { description: "", keywords: "" },
-        { description: "", keywords: "" }
-      ]
-    });
-  };
-
-  const handleCodaSubmit = async () => {
-    if (!meeting || !codaFormData.name || !codaFormData.account) {
-      alert('Please fill in required fields (Name and Account)');
-      return;
-    }
-
-    setIsCreatingCodaRow(true);
-    try {
-      const response = await fetch('/api/coda', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'create_research_initiative',
-          meetingId: meeting.id,
-          docId: 'qMDWed38ry',
-          tableId: 'grid-ii5pzK6H7w',
-          formData: codaFormData,
-          aiAnalysisConfig: aiAnalysisConfig
-        })
-      });
-
-      const data = await response.json();
-      if (data.success) {
-        alert('✅ Research initiative created successfully in Coda!');
-        setShowCodaModal(false);
-        handleCodaCancel();
-        // Refresh meeting data to show updated integration status
-        fetchMeetingDetails();
-      } else {
-        throw new Error(data.error || 'Failed to create research initiative');
-      }
-    } catch (error) {
-      console.error('Error creating Coda row:', error);
-      alert('❌ Failed to create research initiative: ' + (error as Error).message);
-    } finally {
-      setIsCreatingCodaRow(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'completed': return 'calendly-badge-success';
+      case 'in_progress': return 'calendly-badge-warning';
+      case 'open': return 'calendly-badge-info';
+      default: return 'calendly-badge-info';
     }
   };
 
   if (loading) {
     return (
       <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
-        <div className="p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-center min-h-96">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 mx-auto" style={{ borderColor: '#4285f4' }}></div>
-                <p className="calendly-body mt-4">Loading meeting details...</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
-        <div className="p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="flex items-center justify-center min-h-96">
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                  <AlertCircle className="w-8 h-8 text-red-600" />
-                </div>
-                <h2 className="calendly-h2 mb-2">Unable to Load Meeting</h2>
-                <p className="calendly-body text-gray-600 mb-4 max-w-md">{error}</p>
-                <div className="space-x-3">
-                  <button
-                    onClick={() => {
-                      setError(null);
-                      fetchMeetingDetails();
-                    }}
-                    className="calendly-btn-primary"
-                  >
-                    Try Again
-                  </button>
-                  <button
-                    onClick={() => router.push('/meetings')}
-                    className="calendly-btn-secondary"
-                  >
-                    Back to Meetings
-                  </button>
-                </div>
-              </div>
-            </div>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-200 border-t-blue-600 mx-auto mb-4"></div>
+            <h3 className="calendly-h3 mb-2">Loading meeting details...</h3>
+            <p className="calendly-body">Please wait while we fetch the meeting information.</p>
           </div>
         </div>
       </div>
@@ -594,19 +275,17 @@ export default function MeetingProfilePage() {
   if (!meeting) {
     return (
       <div className="min-h-screen pt-6" style={{ background: '#f8fafc' }}>
-        <div className="p-6">
-          <div className="max-w-7xl mx-auto">
-            <div className="text-center py-12">
-              <MessageSquare className="w-16 h-16 mx-auto mb-4" style={{ color: '#a0aec0' }} />
-              <h3 className="calendly-h3 mb-2">Meeting not found</h3>
-              <p className="calendly-body mb-6">The requested meeting could not be found.</p>
-              <button 
-                onClick={() => router.push('/meetings')}
-                className="calendly-btn-primary"
-              >
-                Back to Meetings
-              </button>
-            </div>
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center py-12">
+            <MessageSquare className="w-16 h-16 mx-auto mb-4" style={{ color: '#a0aec0' }} />
+            <h3 className="calendly-h3 mb-2">Meeting not found</h3>
+            <p className="calendly-body mb-6">The requested meeting could not be found.</p>
+            <button 
+              onClick={() => router.push('/meetings')}
+              className="calendly-btn-primary"
+            >
+              Back to Meetings
+            </button>
           </div>
         </div>
       </div>
@@ -649,1377 +328,706 @@ export default function MeetingProfilePage() {
                 Meetings
               </button>
               <span style={{ color: '#a0aec0' }}>›</span>
-              <span className="calendly-body-sm font-medium" style={{ color: '#1a1a1a' }}>{meeting.title}</span>
+              <span className="calendly-body-sm" style={{ color: '#2d3748' }}>
+                {meeting.title}
+              </span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-6">
-        <div className="max-w-7xl mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center space-x-4">
-              <div>
-                <h1 className="calendly-h1">{meeting.title}</h1>
-                <p className="calendly-body text-gray-600">
-                  {meeting.customer_name} • {formatMeetingDate(meeting.meeting_date)} • {meeting.duration_minutes} min
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-3">
-              {meeting.recording_url && (
-                <button 
-                  onClick={() => window.open(meeting.recording_url, '_blank')}
-                  className="calendly-btn-secondary flex items-center space-x-2"
-                >
-                  <Play className="w-4 h-4" />
-                  <span>Watch Recording</span>
-                </button>
-              )}
-              {meeting.grain_share_url && (
-                <button 
-                  onClick={() => window.open(meeting.grain_share_url, '_blank')}
-                  className="calendly-btn-secondary flex items-center space-x-2"
-                >
-                  <Share2 className="w-4 h-4" />
-                  <span>Share</span>
-                </button>
-              )}
-              {/* Transcript Dropdown */}
-              {meeting.transcript_urls && (
-                <div className="relative group">
-                  <button className="calendly-btn-secondary flex items-center space-x-2">
-                    <Download className="w-4 h-4" />
-                    <span>Transcript</span>
-                    <ChevronRight className="w-3 h-3 transform group-hover:rotate-90 transition-transform" />
+      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        {/* Meeting Title */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">{meeting.title}</h1>
+          <p className="text-gray-600">
+            {formatMeetingDate(meeting.date)} • {meeting.duration_minutes} minutes • {meeting.customer_name || 'Unknown Customer'}
+          </p>
+        </div>
+
+        {/* Grain-Inspired Split Layout */}
+        <div className="flex gap-6 h-[calc(100vh-160px)]">
+          {/* Left Panel - Main Content with Tabs */}
+          <div className="flex-1 space-y-4 flex flex-col">
+            {/* Tabbed Content Area */}
+            <div className="calendly-card p-0 flex flex-col flex-1">
+              {/* Tab Headers */}
+              <div className="flex border-b border-gray-200 px-6">
+                {[
+                  { id: 'summary', label: 'Summary', icon: FileText },
+                  { id: 'transcript', label: 'Transcript', icon: MessageSquare },
+                  { id: 'insights', label: 'Insights', icon: Lightbulb },
+                  { id: 'actions', label: 'Actions', icon: CheckCircle }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveRightTab(tab.id as any)}
+                    className={`flex items-center space-x-2 px-4 py-3 font-medium text-sm transition-colors ${
+                      activeRightTab === tab.id
+                        ? 'border-b-2 text-blue-600 border-blue-600'
+                        : 'text-gray-600 hover:text-blue-600'
+                    }`}
+                  >
+                    <tab.icon className="w-4 h-4" />
+                    <span>{tab.label}</span>
                   </button>
-                  <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-                    {meeting.transcript_urls.txt && (
-                      <a
-                        href={meeting.transcript_urls.txt}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 first:rounded-t-lg"
+                ))}
+              </div>
+
+              {/* Tab Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                
+              {activeRightTab === 'transcript' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-900">Meeting Transcript</h3>
+                    <div className="flex items-center space-x-2">
+                      <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <Download className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  
+                  {/* Search Box */}
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Search className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Search transcript..."
+                      value={transcriptSearchTerm}
+                      onChange={(e) => setTranscriptSearchTerm(e.target.value)}
+                      className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                    {transcriptSearchTerm && (
+                      <button
+                        onClick={() => setTranscriptSearchTerm('')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
                       >
-                        <FileText className="w-4 h-4" />
-                        <span>Plain Text (.txt)</span>
-                      </a>
+                        <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                      </button>
                     )}
-                    {meeting.transcript_urls.srt && (
-                      <a
-                        href={meeting.transcript_urls.srt}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
-                      >
-                        <Video className="w-4 h-4" />
-                        <span>Subtitles (.srt)</span>
-                      </a>
-                    )}
-                    {meeting.transcript_urls.vtt && (
-                      <a
-                        href={meeting.transcript_urls.vtt}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 last:rounded-b-lg"
-                      >
-                        <BookOpen className="w-4 h-4" />
-                        <span>WebVTT (.vtt)</span>
-                      </a>
+                  </div>
+                  
+                  <div className="bg-white border border-gray-200 rounded-lg max-h-[600px] overflow-y-auto">
+                    {meeting.raw_transcript ? (
+                      <div className="p-6 space-y-4">
+                        {meeting.raw_transcript.split('\n\n').map((paragraph, index) => {
+                          const searchRegex = transcriptSearchTerm ? new RegExp(`(${transcriptSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi') : null;
+                          const shouldShow = !transcriptSearchTerm || (searchRegex && searchRegex.test(paragraph));
+                          
+                          if (!shouldShow) return null;
+                          
+                          const highlightedText = searchRegex 
+                            ? paragraph.replace(searchRegex, '<mark class="bg-yellow-200 px-1">$1</mark>')
+                            : paragraph;
+                          
+                          return (
+                            <div key={index} className="flex items-start space-x-3">
+                              <div className="flex-shrink-0 w-12 h-8 bg-gray-100 rounded flex items-center justify-center">
+                                <span className="text-xs font-medium text-gray-600">
+                                  {Math.floor((index + 1) * 2)}:00
+                                </span>
+                              </div>
+                              <div className="flex-1">
+                                <p 
+                                  className="text-gray-800 leading-relaxed"
+                                  dangerouslySetInnerHTML={{ __html: highlightedText }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        }).filter(Boolean)}
+                        {transcriptSearchTerm && meeting.raw_transcript.split('\n\n').every(paragraph => {
+                          const searchRegex = new RegExp(`(${transcriptSearchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                          return !searchRegex.test(paragraph);
+                        }) && (
+                          <div className="p-12 text-center">
+                            <Search className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                            <h3 className="text-lg font-medium text-gray-900 mb-2">No Results Found</h3>
+                            <p className="text-gray-600">No matches found for "{transcriptSearchTerm}". Try different keywords.</p>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="p-12 text-center">
+                        <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Transcript Available</h3>
+                        <p className="text-gray-600">The transcript for this meeting is not yet available or still being processed.</p>
+                      </div>
                     )}
                   </div>
                 </div>
               )}
-              {!meeting.coda_integrated ? (
-                <button 
-                  onClick={() => setShowCodaModal(!showCodaModal)}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                >
-                  <Database className="w-4 h-4" />
-                  <span>{showCodaModal ? 'Cancel' : 'Add to Coda'}</span>
-                </button>
-              ) : (
-                <div className="flex items-center space-x-2 px-4 py-2 bg-green-50 text-green-700 rounded-md border border-green-200">
-                  <Database className="w-4 h-4" />
-                  <span>Added to Coda</span>
+              
+              {activeRightTab === 'insights' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Key Insights</h3>
+                  <div className="space-y-4">
+                    {insights.map((insight: any) => (
+                      <div key={insight.id} className="border-l-4 border-blue-400 bg-blue-50 p-4 rounded-r-lg">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2 mb-2">
+                              <h4 className="font-medium text-blue-800">{insight.title}</h4>
+                              <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(insight.priority)}`}>
+                                {insight.priority}
+                              </span>
+                            </div>
+                            <p className="text-blue-700 mb-2">{insight.description}</p>
+                            {insight.quote && (
+                              <blockquote className="text-blue-600 italic text-sm border-l-2 border-blue-300 pl-3 mt-2">
+                                "{insight.quote}"
+                              </blockquote>
+                            )}
+                            <div className="flex items-center space-x-4 mt-3 text-xs text-blue-600">
+                              <span>Type: {insight.insight_type}</span>
+                              <span>Confidence: {(insight.confidence_score * 100).toFixed(0)}%</span>
+                              <span>Importance: {(insight.importance_score * 100).toFixed(0)}%</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {insights.length === 0 && (
+                      <div className="text-center py-12">
+                        <Lightbulb className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Insights Available</h3>
+                        <p className="text-gray-600">Insights are still being processed or none were detected in this meeting.</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
+              
+              {activeRightTab === 'summary' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-semibold text-gray-900">Meeting Summary</h3>
+                  
+                  {/* Meeting Overview */}
+                  <div className="space-y-4">
+                    {meeting.meeting_summary ? (
+                      <div className="prose prose-gray max-w-none">
+                        <p className="text-gray-700 leading-relaxed">{meeting.meeting_summary}</p>
+                      </div>
+                    ) : (
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+                        <Bot className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">Summary Not Available</h3>
+                        <p className="text-gray-600">The AI-generated summary for this meeting is still being processed or is not available.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Key Statistics */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                          <TrendingUp className="w-5 h-5 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">Sentiment</p>
+                          <div className="flex items-center space-x-2">
+                            {getSentimentIcon(meeting.sentiment_label)}
+                            <span className="text-lg font-semibold capitalize text-gray-900">
+                              {meeting.sentiment_label || 'Neutral'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white border border-gray-200 rounded-lg p-4">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                          <Target className="w-5 h-5 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">AI Confidence</p>
+                          <span className="text-lg font-semibold text-gray-900">
+                            {meeting.confidence_score ? `${(meeting.confidence_score * 100).toFixed(0)}%` : 'N/A'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeRightTab === 'actions' && (
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Action Items</h3>
+                  <div className="space-y-3">
+                    {actionItems.map((item: any) => (
+                      <div key={item.id} className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className="font-medium text-gray-900">{item.description}</p>
+                            <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                              {item.assigned_to && (
+                                <div className="flex items-center space-x-1">
+                                  <User className="w-4 h-4" />
+                                  <span>{item.assigned_to}</span>
+                                </div>
+                              )}
+                              {item.due_date && (
+                                <div className="flex items-center space-x-1">
+                                  <Calendar className="w-4 h-4" />
+                                  <span>{formatDueDate(item.due_date)}</span>
+                                </div>
+                              )}
+                              <div className="flex items-center space-x-1">
+                                <Tag className="w-4 h-4" />
+                                <span className="capitalize">{item.category}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="ml-4 flex items-center space-x-2">
+                            <span className={`px-2 py-1 text-xs rounded-full ${getPriorityColor(item.priority)}`}>
+                              {item.priority}
+                            </span>
+                            <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(item.status)}`}>
+                              {item.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {actionItems.length === 0 && (
+                      <div className="text-center py-12">
+                        <CheckCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                        <h3 className="text-lg font-medium text-gray-900 mb-2">No Action Items</h3>
+                        <p className="text-gray-600">No action items have been identified in this meeting yet.</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              </div>
             </div>
           </div>
 
-          {/* Inline Coda Integration Form */}
-          {showCodaModal && !meeting.coda_integrated && (
-            <div className="calendly-card mb-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
-                    <Database className="w-6 h-6 text-blue-600" />
-                  </div>
+          {/* Right Panel - Context Cards */}
+          <div className="w-80 space-y-4 flex-shrink-0">
+            {/* Meeting Info Card */}
+            <div className="calendly-card">
+              <h3 className="font-semibold text-gray-900 mb-4">Meeting Overview</h3>
+              <div className="space-y-3">
+                <div className="flex items-center space-x-3">
+                  <Calendar className="w-4 h-4 text-gray-600" />
                   <div>
-                    <h2 className="text-xl font-bold text-gray-900">Add to Coda Research</h2>
-                    <p className="text-sm text-gray-600">Create a research initiative with AI-powered JTBD analysis</p>
+                    <p className="text-sm text-gray-600">Date</p>
+                    <p className="font-medium text-gray-900">{formatMeetingDate(meeting.date)}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowCodaModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                
+                <div className="flex items-center space-x-3">
+                  <Clock className="w-4 h-4 text-gray-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Duration</p>
+                    <p className="font-medium text-gray-900">{meeting.duration_minutes} minutes</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Building className="w-4 h-4 text-gray-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Customer</p>
+                    <p className="font-medium text-gray-900">{meeting.customer_name || 'Unknown Customer'}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-3">
+                  <Users className="w-4 h-4 text-gray-600" />
+                  <div>
+                    <p className="text-sm text-gray-600">Participants</p>
+                    <p className="font-medium text-gray-900">{meeting.participants?.length || 0} attendees</p>
+                  </div>
+                </div>
               </div>
+            </div>
 
-              <div className="space-y-6">
-                {/* Connection Status */}
-                <div className="calendly-card bg-green-50 border-green-200">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
+            {/* Quick Stats Card */}
+            <div className="calendly-card">
+              <h3 className="font-semibold text-gray-900 mb-4">Quick Stats</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Insights</span>
+                  <span className="font-medium text-gray-900">{insights.length}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Action Items</span>
+                  <span className="font-medium text-gray-900">{actionItems.length}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Topics</span>
+                  <span className="font-medium text-gray-900">{topics.length}</span>
+                </div>
+                
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-gray-600">Feature Requests</span>
+                  <span className="font-medium text-gray-900">{featureRequests.length}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Participant Details Card */}
+            <div className="calendly-card">
+              <h3 className="font-semibold text-gray-900 mb-4">Participants</h3>
+              <div className="space-y-3">
+                {meeting.participants?.slice(0, 5).map((participant: any, index: number) => (
+                  <div key={index} className="flex items-center space-x-3">
+                    <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                      <User className="w-4 h-4 text-gray-600" />
                     </div>
-                    <div>
-                      <h3 className="font-medium text-green-900">Connected to Coda</h3>
-                      <p className="text-sm text-green-800">
-                        Ready to create row in <strong>Product Roadmap</strong> → <strong>Interviewed customers</strong>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {participant.name || participant.email || 'Unknown'}
+                      </p>
+                      <p className="text-xs text-gray-600 truncate">
+                        {participant.company || participant.role || 'No details'}
                       </p>
                     </div>
                   </div>
-                </div>
+                ))}
+                {(meeting.participants?.length || 0) > 5 && (
+                  <p className="text-xs text-gray-500 text-center">
+                    +{(meeting.participants?.length || 0) - 5} more participants
+                  </p>
+                )}
+                {(!meeting.participants || meeting.participants.length === 0) && (
+                  <p className="text-sm text-gray-500 text-center py-4">
+                    No participant details available
+                  </p>
+                )}
+              </div>
+            </div>
 
-                {/* Interview Details Form */}
-                <div className="space-y-6">
-                  <h3 className="text-lg font-semibold text-gray-900">Interview Details</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Initiatives | Master List</label>
-                        <select
-                          value={codaFormData.initiative}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, initiative: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select initiative</option>
-                          {initiatives.map((initiative) => (
-                            <option key={initiative.id} value={initiative.name}>
-                              {initiative.name}
-                            </option>
-                          ))}
-                        </select>
+            {/* Add to Coda Card */}
+            <div className="calendly-card">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-semibold text-gray-900">Research Export</h3>
+                <Database className="w-4 h-4 text-gray-600" />
+              </div>
+              <p className="text-sm text-gray-600 mb-4">
+                Export this meeting to Coda for research analysis and tracking.
+              </p>
+              <button
+                onClick={() => setShowCodaModal(true)}
+                className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add to Coda</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Coda Export Modal */}
+        {showCodaModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex">
+              {/* Left Panel - Form Fields */}
+              <div className="flex-1 overflow-y-auto">
+                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-bold text-gray-900">Export to Coda Research</h2>
+                    <button
+                      onClick={() => setShowCodaModal(false)}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                    >
+                      <X className="w-5 h-5 text-gray-500" />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="p-6 space-y-6">
+                  {/* Meeting Context */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3">Meeting Context</h3>
+                    <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Meeting:</span>
+                        <span className="font-medium text-gray-900">{meeting.title}</span>
                       </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Date:</span>
+                        <span className="font-medium text-gray-900">{formatMeetingDate(meeting.date)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Duration:</span>
+                        <span className="font-medium text-gray-900">{meeting.duration_minutes} min</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Research Details Form */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3">Research Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Name *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                         <input
                           type="text"
                           value={codaFormData.name}
                           onChange={(e) => setCodaFormData(prev => ({ ...prev, name: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Customer name"
-                          required
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Customer contact name"
                         />
                       </div>
+                      
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Email Address</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                         <input
                           type="email"
                           value={codaFormData.email}
                           onChange={(e) => setCodaFormData(prev => ({ ...prev, email: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="customer@company.com"
                         />
                       </div>
+                      
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Account *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Account *</label>
                         <input
                           type="text"
                           value={codaFormData.account}
                           onChange={(e) => setCodaFormData(prev => ({ ...prev, account: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                           placeholder="Company name"
-                          required
                         />
                       </div>
+                      
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Interviewer</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Interviewer</label>
                         <input
                           type="text"
                           value={codaFormData.interviewer}
                           onChange={(e) => setCodaFormData(prev => ({ ...prev, interviewer: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Your name"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          placeholder="Internal team member"
                         />
                       </div>
+                      
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
                         <select
                           value={codaFormData.status}
                           onChange={(e) => setCodaFormData(prev => ({ ...prev, status: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                         >
                           <option value="Scheduled">Scheduled</option>
                           <option value="Completed">Completed</option>
-                          <option value="No show">No show</option>
+                          <option value="Cancelled">Cancelled</option>
+                          <option value="No Show">No Show</option>
                         </select>
                       </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
                         <select
                           value={codaFormData.role}
                           onChange={(e) => setCodaFormData(prev => ({ ...prev, role: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                         >
-                          <option value="Account Owner">Account Owner</option>
-                          <option value="Template Admin">Template Admin</option>
                           <option value="End User">End User</option>
-                          <option value="Team Admin">Team Admin</option>
+                          <option value="Admin">Admin</option>
+                          <option value="Decision Maker">Decision Maker</option>
+                          <option value="Champion">Champion</option>
+                          <option value="Influencer">Influencer</option>
                         </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Recording</label>
-                        <input
-                          type="url"
-                          value={codaFormData.recording}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, recording: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                          placeholder="Link to recording"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">CSAT Rating</label>
-                        <select
-                          value={codaFormData.csat}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, csat: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                          <option value="">Select rating</option>
-                          <option value="5">5 - Very Satisfied</option>
-                          <option value="4">4 - Satisfied</option>
-                          <option value="3">3 - Neutral</option>
-                          <option value="2">2 - Dissatisfied</option>
-                          <option value="1">1 - Very Dissatisfied</option>
-                        </select>
-                      </div>
-                  </div>
-
-                  {/* AI Analysis Configuration */}
-                  <div className="space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                        <Bot className="w-4 h-4 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="font-medium text-blue-900">AI Analysis Configuration</h3>
-                        <p className="text-sm text-blue-800">Configure JTBD questions for AI analysis</p>
                       </div>
                     </div>
-                    
-                    <div className="space-y-4">
-                      {aiAnalysisConfig.jtbdQuestions.map((jtbd, index) => (
-                        <div key={index} className="space-y-2">
-                          <label className="block text-sm font-medium text-blue-800">JTBD {index + 1}:</label>
-                          <textarea
-                            value={jtbd.description}
-                            onChange={(e) => {
-                              const updated = [...aiAnalysisConfig.jtbdQuestions];
-                              updated[index].description = e.target.value;
-                              setAiAnalysisConfig(prev => ({ ...prev, jtbdQuestions: updated }));
-                            }}
-                            placeholder={`e.g., "I need to ${index === 0 ? 'access content effectively' : index === 1 ? 'manage images efficiently' : index === 2 ? 'incorporate data accurately' : 'optimize my workflow'} so I can..."`}
-                            className="w-full px-3 py-2 text-sm border border-blue-200 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            rows={2}
-                          />
+                  </div>
+
+                  {/* JTBD Fields */}
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-3">Jobs to Be Done Analysis</h3>
+                    <div className="space-y-3">
+                      {[1, 2, 3, 4].map(num => (
+                        <div key={num}>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">JTBD {num}</label>
                           <input
                             type="text"
-                            value={jtbd.keywords}
-                            onChange={(e) => {
-                              const updated = [...aiAnalysisConfig.jtbdQuestions];
-                              updated[index].keywords = e.target.value;
-                              setAiAnalysisConfig(prev => ({ ...prev, jtbdQuestions: updated }));
-                            }}
-                            placeholder="Keywords to look for (comma-separated)"
-                            className="w-full px-3 py-1 text-xs border border-blue-200 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            value={codaFormData[`jtbd${num}` as keyof typeof codaFormData]}
+                            onChange={(e) => setCodaFormData(prev => ({ ...prev, [`jtbd${num}`]: e.target.value }))}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder={`Job to be done ${num}`}
                           />
                         </div>
                       ))}
                     </div>
                   </div>
-                </div>
 
-                {/* Form Actions */}
-                <div className="flex items-center justify-end space-x-3 pt-6 border-t">
-                  <button
-                    onClick={() => setShowCodaModal(false)}
-                    disabled={isCreatingCodaRow}
-                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleCodaSubmit}
-                    disabled={isCreatingCodaRow || !codaFormData.name || !codaFormData.account}
-                    className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
-                  >
-                    {isCreatingCodaRow ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        <span>Creating...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Database className="w-4 h-4" />
-                        <span>Create Research Initiative</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Data Completeness Widget */}
-          {(() => {
-            const { fields, completeness, presentCount, totalCount } = calculateDataCompleteness();
-            return (
-              <div className="calendly-card mb-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                      completeness >= 80 ? 'bg-green-100' : 
-                      completeness >= 60 ? 'bg-yellow-100' : 'bg-red-100'
-                    }`}>
-                      <Database className={`w-5 h-5 ${
-                        completeness >= 80 ? 'text-green-600' : 
-                        completeness >= 60 ? 'text-yellow-600' : 'text-red-600'
-                      }`} />
-                    </div>
-                    <div>
-                      <h3 className="font-medium text-gray-900">Data Completeness</h3>
-                      <p className="text-sm text-gray-600">{presentCount} of {totalCount} fields populated</p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className={`text-2xl font-bold ${
-                      completeness >= 80 ? 'text-green-600' : 
-                      completeness >= 60 ? 'text-yellow-600' : 'text-red-600'
-                    }`}>
-                      {completeness}%
-                    </div>
-                    <div className="w-20 bg-gray-200 rounded-full h-2 mt-1">
-                      <div 
-                        className={`h-2 rounded-full transition-all duration-300 ${
-                          completeness >= 80 ? 'bg-green-500' : 
-                          completeness >= 60 ? 'bg-yellow-500' : 'bg-red-500'
-                        }`}
-                        style={{ width: `${completeness}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Field Breakdown */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {fields.map((field) => (
-                    <div key={field.key} className="flex items-center space-x-2">
-                      <div className={`w-3 h-3 rounded-full ${
-                        field.present ? 'bg-green-500' : 'bg-gray-300'
-                      }`} />
-                      <span className={`text-xs ${
-                        field.present ? 'text-gray-900' : 'text-gray-500'
-                      }`}>
-                        {field.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Enhancement Suggestions */}
-                {completeness < 100 && (
-                  <div className="mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                    <div className="flex items-start space-x-2">
-                      <Lightbulb className="w-4 h-4 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-sm font-medium text-blue-800">Enhance this meeting:</p>
-                        <ul className="text-xs text-blue-700 mt-1 space-y-1">
-                          {!(meeting.raw_transcript || meeting.full_transcript) && (
-                            <li>• Fetch transcript from Grain for AI analysis</li>
-                          )}
-                          {!meeting.customer_id && (
-                            <li>• Link to customer record for better tracking</li>
-                          )}
-                          {!meeting.intelligence_notes && (
-                            <li>• Enable Grain AI for detailed insights</li>
-                          )}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Enhanced Overview Cards with Grain Intelligence */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            {/* Enhanced Duration Card */}
-            <div className="calendly-card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="calendly-label mb-1">Duration</p>
-                  <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-blue-500" />
-                    <span className="calendly-h3">{meeting.duration_minutes}m</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {meeting.summary_points?.length || 0} key points
-                  </p>
-                </div>
-                <span className="calendly-badge calendly-badge-success">
-                  {meeting.duration_minutes > 45 ? 'Detailed' : 'Focused'}
-                </span>
-              </div>
-            </div>
-
-            {/* Enhanced Participants Card */}
-            <div className="calendly-card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="calendly-label mb-1">Participants</p>
-                  <div className="flex items-center space-x-2">
-                    <Users className="w-4 h-4 text-green-500" />
-                    <span className="calendly-h3">{meeting.attendees?.length || 0}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {meeting.attendees?.filter((a: any) => a.scope === 'external').length || 0} external,{' '}
-                    {meeting.attendees?.filter((a: any) => a.scope === 'internal').length || 0} internal
-                  </p>
-                </div>
-                <div className="text-right">
-                  <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                    <Building className="w-4 h-4 text-green-600" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* NEW: Grain Intelligence Card */}
-            <div className="calendly-card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="calendly-label mb-1">AI Insights</p>
-                  <div className="flex items-center space-x-2">
-                    <Bot className="w-4 h-4 text-purple-500" />
-                    <span className="calendly-h3">{meeting.intelligence_notes ? 'Rich' : 'Basic'}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {meeting.intelligence_notes ? 'Action items detected' : 'Processing...'}
-                  </p>
-                </div>
-                <span className={`calendly-badge ${meeting.intelligence_notes ? 'calendly-badge-success' : 'calendly-badge-warning'}`}>
-                  {meeting.intelligence_notes ? 'Complete' : 'Pending'}
-                </span>
-              </div>
-            </div>
-
-            {/* Enhanced Customer Card */}
-            <div className="calendly-card">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="calendly-label mb-1">Customer</p>
-                  <div className="flex items-center space-x-2">
-                    <Building className="w-4 h-4 text-orange-500" />
-                    <span className="calendly-h3 text-sm">{meeting.customer_name || 'Unknown'}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {meeting.attendees?.filter((a: any) => a.scope === 'external')[0]?.email?.split('@')[1] || 'N/A'}
-                  </p>
-                </div>
-                <span className={`calendly-badge ${meeting.customer_id ? 'calendly-badge-success' : 'calendly-badge-info'}`}>
-                  {meeting.customer_id ? 'Linked' : 'Detected'}
-                </span>
-              </div>
-            </div>
-          </div>
-
-
-          {/* Navigation Tabs */}
-          <div className="calendly-card mb-6" style={{ padding: '0' }}>
-            <div className="flex border-b border-gray-200">
-              {[
-                { id: 'overview', label: 'Overview', icon: Eye },
-                { id: 'grain-intelligence', label: 'Grain Intelligence', icon: Bot },
-                { id: 'insights', label: 'Insights', icon: Lightbulb },
-                { id: 'transcript', label: 'Transcript', icon: FileText },
-                { id: 'actions', label: 'Actions', icon: CheckCircle },
-                { id: 'analysis', label: 'Analysis', icon: TrendingUp }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center space-x-2 px-6 py-4 font-medium transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-b-2 text-blue-600'
-                      : 'text-gray-600 hover:text-blue-600'
-                  }`}
-                  style={activeTab === tab.id ? { borderBottomColor: '#4285f4' } : {}}
-                >
-                  <tab.icon className="w-4 h-4" />
-                  <span>{tab.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Tab Content */}
-          {activeTab === 'overview' && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Meeting Summary */}
-              <div className="lg:col-span-2">
-                <div className="calendly-card mb-6">
-                  <h3 className="calendly-h3 mb-4">Meeting Summary</h3>
-                  <p className="calendly-body">{meeting.meeting_summary}</p>
-                </div>
-
-                {/* Topics Discussed */}
-                <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">Topics Discussed</h3>
-                  <div className="space-y-3">
-                    {topics.map((topic) => (
-                      <div key={topic.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">{topic.topic}</p>
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {topic.keywords.map((keyword, idx) => (
-                              <span key={idx} className="bg-blue-100 text-blue-800 px-2 py-1 text-xs rounded">
-                                {keyword}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-sm text-gray-600">Relevance</p>
-                          <p className="font-medium">{Math.round(topic.relevance_score * 100)}%</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Meeting Details Sidebar */}
-              <div>
-                <div className="calendly-card mb-6">
-                  <h3 className="calendly-h3 mb-4">Meeting Details</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center space-x-3">
-                      <Calendar className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-600">Date</p>
-                        <p className="font-medium">{formatMeetingDate(meeting.meeting_date)}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Clock className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-600">Duration</p>
-                        <p className="font-medium">{meeting.duration_minutes} minutes</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Building className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-600">Type</p>
-                        <p className="font-medium capitalize">{meeting.meeting_type}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                      <Target className="w-4 h-4 text-gray-500" />
-                      <div>
-                        <p className="text-sm text-gray-600">Status</p>
-                        <span className="calendly-badge calendly-badge-success">
-                          {meeting.status}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Enhanced Attendees Section with Rich Participant Data */}
-                <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">
-                    Participants ({meeting.attendees?.length || 0})
-                  </h3>
-                  
-                  {/* Participant Summary */}
-                  <div className="grid grid-cols-2 gap-4 mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">Internal Team</p>
-                      <p className="text-xl font-bold text-blue-600">
-                        {meeting.attendees?.filter((a: any) => a.scope === 'internal').length || 0}
-                      </p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">External Stakeholders</p>
-                      <p className="text-xl font-bold text-green-600">
-                        {meeting.attendees?.filter((a: any) => a.scope === 'external').length || 0}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Participant List */}
-                  <div className="space-y-3">
-                    {meeting.attendees?.map((attendee: any, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between p-3 rounded-lg border">
-                        <div className="flex items-center space-x-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            attendee.scope === 'internal' 
-                              ? 'bg-blue-100 text-blue-600' 
-                              : 'bg-green-100 text-green-600'
-                          }`}>
-                            {attendee.scope === 'internal' ? (
-                              <User className="w-5 h-5" />
-                            ) : (
-                              <Building className="w-5 h-5" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-medium text-gray-900">{attendee.name}</p>
-                            <p className="text-sm text-gray-600">{attendee.email}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          {/* Attendance Status */}
-                          {attendee.confirmed_attendee && (
-                            <div className="w-3 h-3 bg-green-500 rounded-full" title="Confirmed Attendee" />
-                          )}
-                          
-                          {/* Role Badge */}
-                          <span className={`calendly-badge text-xs ${
-                            attendee.scope === 'internal' 
-                              ? 'calendly-badge-info' 
-                              : 'calendly-badge-success'
-                          }`}>
-                            {attendee.scope === 'internal' ? 'Team' : 'Customer'}
-                          </span>
-                          
-                          {/* Primary Contact Indicator */}
-                          {attendee.role === 'host' && (
-                            <span className="calendly-badge calendly-badge-warning text-xs">
-                              Host
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Customer Contact Actions */}
-                  {meeting.attendees?.filter((a: any) => a.scope === 'external').length > 0 && (
-                    <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2">
-                          <Mail className="w-4 h-4 text-green-600" />
-                          <span className="text-sm font-medium text-green-800">Customer Contacts</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <button 
-                            onClick={() => {
-                              const emails = meeting.attendees
-                                ?.filter((a: any) => a.scope === 'external')
-                                .map((a: any) => a.email)
-                                .join(';');
-                              window.open(`mailto:${emails}?subject=Follow-up: ${meeting.title}`);
-                            }}
-                            className="text-xs text-green-600 hover:text-green-800 flex items-center space-x-1"
-                          >
-                            <Mail className="w-3 h-3" />
-                            <span>Email All</span>
-                          </button>
-                          <button className="text-xs text-green-600 hover:text-green-800 flex items-center space-x-1">
-                            <User className="w-3 h-3" />
-                            <span>Add to CRM</span>
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'insights' && (
-            <div className="space-y-6">
-              {/* High Priority Insights */}
-              <div className="calendly-card">
-                <h3 className="calendly-h3 mb-4">Key Insights</h3>
-                <div className="space-y-4">
-                  {insights.filter(i => i.priority === 'high' || i.priority === 'critical').map((insight) => (
-                    <div key={insight.id} className="border-l-4 border-blue-400 bg-blue-50 p-4 rounded-r-lg">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center space-x-2 mb-2">
-                            <h4 className="font-medium text-blue-800">{insight.title}</h4>
-                            <span className={`calendly-badge ${getPriorityColor(insight.priority)} text-xs`}>
-                              {insight.priority}
-                            </span>
-                            <span className="calendly-badge calendly-badge-info text-xs">
-                              {insight.category}
-                            </span>
-                          </div>
-                          <p className="text-blue-700 mb-2">{insight.description}</p>
-                          {insight.quote && (
-                            <blockquote className="italic text-blue-600 border-l-2 border-blue-300 pl-3 mt-2">
-                              "{insight.quote}"
-                            </blockquote>
-                          )}
-                          <div className="flex items-center space-x-4 mt-3 text-sm">
-                            <span className="text-blue-600">
-                              Importance: {Math.round(insight.importance_score * 100)}%
-                            </span>
-                            <span className="text-blue-600">
-                              Confidence: {Math.round(insight.confidence_score * 100)}%
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* All Insights */}
-              <div className="calendly-card">
-                <h3 className="calendly-h3 mb-4">All Insights</h3>
-                <div className="space-y-4">
-                  {insights.map((insight) => (
-                    <div key={insight.id} className="p-4 border border-gray-200 rounded-lg">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-medium">{insight.title}</h4>
-                        <div className="flex items-center space-x-2">
-                          <span className={`calendly-badge ${getPriorityColor(insight.priority)} text-xs`}>
-                            {insight.priority}
-                          </span>
-                          <span className="calendly-badge calendly-badge-info text-xs">
-                            {insight.insight_type.replace('_', ' ')}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="text-gray-700 mb-2">{insight.description}</p>
-                      {insight.quote && (
-                        <blockquote className="italic text-gray-600 border-l-2 border-gray-300 pl-3 mt-2">
-                          "{insight.quote}"
-                        </blockquote>
-                      )}
-                      {insight.tags && insight.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-3">
-                          {insight.tags.map((tag, idx) => (
-                            <span key={idx} className="bg-gray-100 text-gray-700 px-2 py-1 text-xs rounded">
-                              #{tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Feature Requests & Bug Reports */}
-              {(featureRequests.length > 0 || insights.filter(i => i.insight_type === 'bug_report').length > 0) && (
-                <div className="space-y-6">
-                  {/* Feature Requests */}
-                  {featureRequests.length > 0 && (
-                    <div className="calendly-card">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="calendly-h3">Feature Requests</h3>
-                        <button 
-                          onClick={() => createJiraTicketsFromMeeting()}
-                          className="calendly-btn-secondary text-sm flex items-center space-x-2"
-                          disabled={featureRequests.filter(r => !r.jira_ticket_key).length === 0}
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          <span>Create JIRA Tickets</span>
-                        </button>
-                      </div>
-                      <div className="space-y-4">
-                        {featureRequests.map((request) => (
-                          <div key={request.id} className="border-l-4 border-purple-400 bg-purple-50 p-4 rounded-r-lg">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center space-x-2">
-                                <Star className="w-4 h-4 text-purple-600" />
-                                <h4 className="font-medium text-purple-800">{request.feature_title}</h4>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <span className={`calendly-badge ${getPriorityColor(request.urgency)} text-xs`}>
-                                  {request.urgency}
-                                </span>
-                                {request.jira_ticket_key ? (
-                                  <div className="flex items-center space-x-2">
-                                    <CheckCircle className="w-4 h-4 text-green-600" />
-                                    <button
-                                      onClick={() => window.open(`https://yourcompany.atlassian.net/browse/${request.jira_ticket_key}`, '_blank')}
-                                      className="calendly-badge calendly-badge-success text-xs hover:bg-green-200 cursor-pointer transition-colors flex items-center space-x-1"
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                      <span>{request.jira_ticket_key}</span>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => createSingleJiraTicket(request.id)}
-                                    className="calendly-btn-primary text-xs px-3 py-1"
-                                  >
-                                    Create Ticket
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            <p className="text-purple-700 mb-3">{request.feature_description}</p>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                              <div>
-                                <p className="font-medium text-purple-800">Business Value:</p>
-                                <p className="text-purple-700">{request.business_value}</p>
-                              </div>
-                              <div>
-                                <p className="font-medium text-purple-800">Customer Pain Point:</p>
-                                <p className="text-purple-700">{request.customer_pain_point}</p>
-                              </div>
-                            </div>
-
-                            <div className="mt-3 p-2 bg-purple-100 rounded text-sm">
-                              <div className="flex items-center justify-between">
-                                <span className="font-medium text-purple-800">Estimated Impact:</span>
-                                <span className="text-purple-700">{request.estimated_impact}</span>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Bug Reports */}
-                  {insights.filter(i => i.insight_type === 'bug_report').length > 0 && (
-                    <div className="calendly-card">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="calendly-h3">Bug Reports</h3>
-                        <button 
-                          onClick={() => createJiraTicketsFromBugs()}
-                          className="calendly-btn-secondary text-sm flex items-center space-x-2"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                          <span>Create Bug Tickets</span>
-                        </button>
-                      </div>
-                      <div className="space-y-4">
-                        {insights.filter(i => i.insight_type === 'bug_report').map((bug) => (
-                          <div key={bug.id} className="border-l-4 border-orange-400 bg-orange-50 p-4 rounded-r-lg">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex items-center space-x-2">
-                                <AlertCircle className="w-4 h-4 text-orange-600" />
-                                <h4 className="font-medium text-orange-800">{bug.title}</h4>
-                              </div>
-                              <div className="flex items-center space-x-2">
-                                <span className={`calendly-badge ${getPriorityColor(bug.priority)} text-xs`}>
-                                  {bug.priority}
-                                </span>
-                                {bug.affected_feature && (
-                                  <span className="calendly-badge calendly-badge-info text-xs">
-                                    {bug.affected_feature}
-                                  </span>
-                                )}
-                                {/* Mock jira_ticket_key for bugs - in real app this would come from database */}
-                                {Math.random() > 0.5 ? (
-                                  <div className="flex items-center space-x-2">
-                                    <CheckCircle className="w-4 h-4 text-green-600" />
-                                    <button
-                                      onClick={() => window.open(`https://yourcompany.atlassian.net/browse/BUG-${Math.floor(Math.random() * 1000)}`, '_blank')}
-                                      className="calendly-badge calendly-badge-success text-xs hover:bg-green-200 cursor-pointer transition-colors flex items-center space-x-1"
-                                    >
-                                      <ExternalLink className="w-3 h-3" />
-                                      <span>BUG-{Math.floor(Math.random() * 1000)}</span>
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    onClick={() => createBugTicket(bug.id)}
-                                    className="calendly-btn-primary text-xs px-3 py-1"
-                                  >
-                                    Create Ticket
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                            <p className="text-orange-700 mb-2">{bug.description}</p>
-                            {bug.quote && (
-                              <blockquote className="italic text-orange-600 border-l-2 border-orange-300 pl-3 mt-2 text-sm">
-                                "{bug.quote}"
-                              </blockquote>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Competitive Intelligence */}
-              {competitiveIntel.length > 0 && (
-                <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">Competitive Intelligence</h3>
-                  <div className="space-y-4">
-                    {competitiveIntel.map((intel) => (
-                      <div key={intel.id} className="border-l-4 border-orange-400 bg-orange-50 p-4 rounded-r-lg">
-                        <div className="flex items-start justify-between mb-2">
-                          <h4 className="font-medium text-orange-800">{intel.competitor_name}</h4>
-                          <div className="flex items-center space-x-2">
-                            <span className={`calendly-badge ${getPriorityColor(intel.threat_level)} text-xs`}>
-                              {intel.threat_level} threat
-                            </span>
-                            <span className="calendly-badge calendly-badge-info text-xs">
-                              {intel.mention_type}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-orange-700 mb-2">{intel.context}</p>
-                        {intel.quote && (
-                          <blockquote className="italic text-orange-600 border-l-2 border-orange-300 pl-3">
-                            "{intel.quote}"
-                          </blockquote>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activeTab === 'transcript' && (
-            <div className="calendly-card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="calendly-h3">Meeting Transcript</h3>
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-500" />
-                    <input
-                      type="text"
-                      placeholder="Search in transcript..."
-                      value={transcriptSearchQuery}
-                      onChange={(e) => setTranscriptSearchQuery(e.target.value)}
-                      className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm"
+                  {/* Key Takeaways */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Key Takeaways</label>
+                    <textarea
+                      value={codaFormData.keyTakeaways}
+                      onChange={(e) => setCodaFormData(prev => ({ ...prev, keyTakeaways: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      rows={4}
+                      placeholder="Main insights and takeaways from the meeting..."
                     />
                   </div>
-                  {meeting.transcript_url && (
-                    <button 
-                      onClick={() => window.open(meeting.transcript_url, '_blank')}
-                      className="calendly-btn-secondary text-sm"
+                </div>
+              </div>
+
+              {/* Right Panel - AI Analysis Options */}
+              <div className="w-80 bg-gray-50 border-l border-gray-200 flex flex-col">
+                <div className="p-4 border-b border-gray-200">
+                  <h3 className="font-semibold text-gray-900">AI Analysis</h3>
+                  <p className="text-sm text-gray-600 mt-1">Select AI prompts to run analysis and auto-populate fields</p>
+                </div>
+                
+                <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-2">Available Prompts</h4>
+                    <div className="space-y-2">
+                      {availablePrompts.map((prompt) => (
+                        <label key={prompt.id} className="flex items-start space-x-2">
+                          <input
+                            type="checkbox"
+                            checked={selectedAIPrompts.includes(prompt.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedAIPrompts(prev => [...prev, prompt.id]);
+                              } else {
+                                setSelectedAIPrompts(prev => prev.filter(id => id !== prompt.id));
+                              }
+                            }}
+                            className="mt-1 rounded border-gray-300"
+                          />
+                          <div>
+                            <span className="text-sm font-medium text-gray-900">{prompt.name}</span>
+                            <p className="text-xs text-gray-600">{prompt.description}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {selectedAIPrompts.length > 0 && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          // Run AI analysis on selected prompts
+                          const analysisPromises = selectedAIPrompts.map(promptId =>
+                            fetch('/api/ai/analyze', {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({
+                                promptId,
+                                variables: {
+                                  customer_name: meeting.customer_name,
+                                  meeting_type: meeting.meeting_type || 'general',
+                                  meeting_date: meeting.date,
+                                  duration_minutes: meeting.duration_minutes,
+                                  participants: JSON.stringify(meeting.participants || []),
+                                  transcript: meeting.raw_transcript || ''
+                                }
+                              })
+                            }).then(res => res.json())
+                          );
+                          
+                          const results = await Promise.allSettled(analysisPromises);
+                          
+                          // Auto-populate form with AI results
+                          results.forEach((result, index) => {
+                            if (result.status === 'fulfilled' && result.value.success) {
+                              const analysis = result.value.analysis;
+                              const promptId = selectedAIPrompts[index];
+                              
+                              // Auto-populate based on prompt type
+                              if (promptId === 'comprehensive-meeting-analysis' && analysis.overall_analysis) {
+                                setCodaFormData(prev => ({
+                                  ...prev,
+                                  keyTakeaways: prev.keyTakeaways || analysis.overall_analysis.meeting_summary || ''
+                                }));
+                              }
+                              
+                              if (promptId === 'feature-request-prioritization' && analysis.feature_requests) {
+                                const topFeatures = analysis.feature_requests
+                                  .filter(f => f.customer_priority === 'must_have')
+                                  .map(f => f.feature_title)
+                                  .slice(0, 4);
+                                
+                                topFeatures.forEach((feature, idx) => {
+                                  setCodaFormData(prev => ({
+                                    ...prev,
+                                    [`jtbd${idx + 1}`]: prev[`jtbd${idx + 1}` as keyof typeof prev] || feature
+                                  }));
+                                });
+                              }
+                            }
+                          });
+                          
+                          alert('AI analysis complete! Form fields have been auto-populated.');
+                        } catch (error) {
+                          console.error('AI analysis failed:', error);
+                          alert('AI analysis failed. Please try again.');
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
                     >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download
+                      Run AI Analysis ({selectedAIPrompts.length} prompts)
                     </button>
                   )}
                 </div>
-              </div>
-              
-              <div className="bg-gray-50 p-6 rounded-lg max-h-96 overflow-y-auto">
-                <div 
-                  className="whitespace-pre-wrap text-sm leading-relaxed"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightTranscriptSearch(meeting.full_transcript, transcriptSearchQuery)
-                  }}
-                />
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'actions' && (
-            <div className="space-y-6">
-              {/* Action Items */}
-              <div className="calendly-card">
-                <h3 className="calendly-h3 mb-4">Action Items</h3>
-                <div className="space-y-4">
-                  {actionItems.map((item) => (
-                    <div key={item.id} className="flex items-start space-x-4 p-4 border border-gray-200 rounded-lg">
-                      <div className={`w-4 h-4 rounded-full mt-1 ${
-                        item.status === 'completed' ? 'bg-green-500' : 'bg-gray-300'
-                      }`} />
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <p className="font-medium">{item.description}</p>
-                          <span className={`calendly-badge ${getPriorityColor(item.priority)} text-xs`}>
-                            {item.priority}
-                          </span>
-                        </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          {item.assigned_to && (
-                            <span>Assigned to: {item.assigned_to}</span>
-                          )}
-                          <span>Category: {item.category}</span>
-                          <span>Status: {item.status}</span>
-                          {item.due_date && (
-                            <span>Due: {formatDueDate(item.due_date)}</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                
+                {/* Action Buttons */}
+                <div className="p-4 border-t border-gray-200 space-y-3">
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('/api/coda', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            action: 'create_research_initiative',
+                            meetingId: meeting.id,
+                            docId: process.env.NEXT_PUBLIC_CODA_DOC_ID || 'defaultDocId',
+                            tableId: process.env.NEXT_PUBLIC_CODA_TABLE_ID || 'defaultTableId',
+                            formData: codaFormData,
+                            aiAnalysisConfig: {
+                              selectedPrompts: selectedAIPrompts
+                            }
+                          })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (result.success) {
+                          alert('Successfully exported to Coda with AI insights!');
+                          setShowCodaModal(false);
+                        } else {
+                          throw new Error(result.error || 'Export failed');
+                        }
+                      } catch (error) {
+                        console.error('Coda export error:', error);
+                        alert('Failed to export to Coda. Please try again.');
+                      }
+                    }}
+                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                  >
+                    Export to Coda
+                  </button>
+                  
+                  <button
+                    onClick={() => setShowCodaModal(false)}
+                    className="w-full px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
                 </div>
               </div>
             </div>
-          )}
-
-          {activeTab === 'analysis' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Sentiment Analysis */}
-                <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">Sentiment Analysis</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span>Overall Sentiment</span>
-                      <div className="flex items-center space-x-2">
-                        {getSentimentIcon(meeting.sentiment_label)}
-                        <span className="font-medium">{Math.round(meeting.sentiment_score * 100)}%</span>
-                      </div>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Confidence Level</span>
-                      <span className="font-medium">{Math.round(meeting.confidence_score * 100)}%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${meeting.confidence_score * 100}%` }}
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Meeting Metrics */}
-                <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">Meeting Metrics</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span>Duration</span>
-                      <span className="font-medium">{meeting.duration_minutes} min</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Participants</span>
-                      <span className="font-medium">{meeting.attendees.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Topics Covered</span>
-                      <span className="font-medium">{topics.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Engagement Score</span>
-                      <span className="font-medium">
-                        {Math.round((insights.length + topics.length) / meeting.duration_minutes * 60 * 10)}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Participant Analysis */}
-              <div className="calendly-card">
-                <h3 className="calendly-h3 mb-4">Participant Analysis</h3>
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  {/* Participant Distribution */}
-                  <div>
-                    <h4 className="font-medium mb-3">Distribution</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Internal</span>
-                        <span className="font-medium">
-                          {meeting.attendees.filter((a: any) => a.is_internal).length}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">External</span>
-                        <span className="font-medium">
-                          {meeting.attendees.filter((a: any) => !a.is_internal).length}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Total</span>
-                        <span className="font-medium">{meeting.attendees.length}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Engagement Levels */}
-                  <div>
-                    <h4 className="font-medium mb-3">Engagement</h4>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">High</span>
-                        <span className="font-medium">
-                          {Math.round(meeting.attendees.length * 0.3)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Medium</span>
-                        <span className="font-medium">
-                          {Math.round(meeting.attendees.length * 0.5)}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-sm">Low</span>
-                        <span className="font-medium">
-                          {Math.round(meeting.attendees.length * 0.2)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Speaking Time */}
-                  <div>
-                    <h4 className="font-medium mb-3">Speaking Distribution</h4>
-                    <div className="space-y-2">
-                      {meeting.attendees.slice(0, 3).map((attendee: any, idx: number) => (
-                        <div key={idx} className="flex items-center justify-between">
-                          <span className="text-sm truncate mr-2">{attendee.name}</span>
-                          <span className="font-medium text-xs">
-                            {Math.round(100 / meeting.attendees.length)}%
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Content Analysis */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">Content Breakdown</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Lightbulb className="w-4 h-4 text-yellow-500" />
-                        <span>Insights Generated</span>
-                      </div>
-                      <span className="font-medium">{insights.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <CheckCircle className="w-4 h-4 text-blue-500" />
-                        <span>Action Items</span>
-                      </div>
-                      <span className="font-medium">{actionItems.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Star className="w-4 h-4 text-purple-500" />
-                        <span>Feature Requests</span>
-                      </div>
-                      <span className="font-medium">{featureRequests.length}</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Building className="w-4 h-4 text-orange-500" />
-                        <span>Competitive Mentions</span>
-                      </div>
-                      <span className="font-medium">{competitiveIntel.length}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">Business Impact</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span>High Priority Items</span>
-                      <span className="font-medium">
-                        {[...insights, ...actionItems, ...featureRequests].filter(
-                          (item: any) => item.priority === 'high' || item.urgency === 'high'
-                        ).length}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Revenue Impact</span>
-                      <span className="font-medium text-green-600">Medium</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Follow-up Required</span>
-                      <span className="font-medium text-orange-600">Yes</span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span>Overall Score</span>
-                      <span className="font-medium">
-                        {Math.round((insights.length + actionItems.length + featureRequests.length * 2) / 3 * 10)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* New Grain Intelligence Tab Content */}
-          {activeTab === 'grain-intelligence' && (
-            <div className="space-y-6">
-              {/* Grain Summary */}
-              {meeting.data_summary && (
-                <div className="calendly-card">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                      <Bot className="w-5 h-5 text-blue-600" />
-                    </div>
-                    <div>
-                      <h3 className="calendly-h3">AI-Generated Summary</h3>
-                      <p className="text-sm text-gray-600">Powered by Grain Intelligence</p>
-                    </div>
-                  </div>
-                  <div className="bg-blue-50 border-l-4 border-blue-400 p-4 rounded-r-lg">
-                    <p className="text-blue-800 leading-relaxed">{meeting.data_summary}</p>
-                  </div>
-                </div>
-              )}
-
-              {/* Summary Points Timeline */}
-              {meeting.summary_points && meeting.summary_points.length > 0 && (
-                <div className="calendly-card">
-                  <h3 className="calendly-h3 mb-4">Key Moments Timeline</h3>
-                  <div className="space-y-4">
-                    {meeting.summary_points.map((point, index) => (
-                      <div key={index} className="flex items-start space-x-4">
-                        <div className="flex-shrink-0 w-16 text-right">
-                          <span className="text-xs text-gray-500 font-mono">
-                            {formatTimestamp(point.timestamp)}
-                          </span>
-                        </div>
-                        <div className="flex-shrink-0 w-3 h-3 bg-blue-500 rounded-full mt-2"></div>
-                        <div className="flex-1">
-                          <p className="text-gray-800 leading-relaxed">{point.text}</p>
-                          {meeting.grain_share_url && (
-                            <button
-                              onClick={() => window.open(`${meeting.grain_share_url}?t=${point.timestamp}`, '_blank')}
-                              className="text-blue-600 hover:text-blue-800 text-xs mt-1 flex items-center space-x-1"
-                            >
-                              <ExternalLink className="w-3 h-3" />
-                              <span>Jump to moment</span>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Grain Intelligence Notes */}
-              {meeting.intelligence_notes && (
-                <div className="space-y-6">
-                  {/* Key Takeaways */}
-                  <div className="calendly-card">
-                    <h3 className="calendly-h3 mb-4">Key Takeaways</h3>
-                    <div className="space-y-3">
-                      {extractKeyTakeaways(meeting.intelligence_notes).map((takeaway, index) => (
-                        <div key={index} className="border-l-4 border-green-400 bg-green-50 p-4 rounded-r-lg">
-                          <div className="flex items-start space-x-3">
-                            <Lightbulb className="w-5 h-5 text-green-600 mt-0.5" />
-                            <p className="text-green-800 leading-relaxed">{takeaway}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Action Items from Grain */}
-                  <div className="calendly-card">
-                    <h3 className="calendly-h3 mb-4">Action Items (Grain AI)</h3>
-                    <div className="space-y-3">
-                      {extractActionItems(meeting.intelligence_notes).map((action, index) => (
-                        <div key={index} className="border-l-4 border-orange-400 bg-orange-50 p-4 rounded-r-lg">
-                          <div className="flex items-start space-x-3">
-                            <CheckCircle className="w-5 h-5 text-orange-600 mt-0.5" />
-                            <div className="flex-1">
-                              <p className="text-orange-800 leading-relaxed">{action}</p>
-                              <div className="mt-2 flex items-center space-x-2">
-                                <span className="calendly-badge calendly-badge-warning text-xs">Pending</span>
-                                <button className="text-xs text-orange-600 hover:text-orange-800">
-                                  Create JIRA Ticket
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Implementation Details */}
-                  <div className="calendly-card">
-                    <h3 className="calendly-h3 mb-4">Implementation Details</h3>
-                    <div className="bg-gray-50 p-6 rounded-lg">
-                      <div className="prose prose-sm max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: meeting.intelligence_notes.replace(/\*\*/g, '<strong>').replace(/\n/g, '<br/>') }} />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Meeting Health Score */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="calendly-card">
-                  <h4 className="font-medium text-gray-900 mb-3">Engagement Level</h4>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-green-500 h-2 rounded-full"
-                        style={{ width: `${Math.min(100, (meeting.summary_points?.length || 0) * 25)}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-green-600">
-                      {Math.min(100, (meeting.summary_points?.length || 0) * 25)}%
-                    </span>
-                  </div>
-                </div>
-
-                <div className="calendly-card">
-                  <h4 className="font-medium text-gray-900 mb-3">Content Richness</h4>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-500 h-2 rounded-full"
-                        style={{ width: `${meeting.intelligence_notes ? 90 : 30}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-blue-600">
-                      {meeting.intelligence_notes ? '90%' : '30%'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="calendly-card">
-                  <h4 className="font-medium text-gray-900 mb-3">Follow-up Priority</h4>
-                  <div className="flex items-center space-x-3">
-                    <div className="flex-1 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-orange-500 h-2 rounded-full"
-                        style={{ width: `${meeting.intelligence_notes?.toLowerCase().includes('contract') ? 95 : 60}%` }}
-                      />
-                    </div>
-                    <span className="text-sm font-medium text-orange-600">
-                      {meeting.intelligence_notes?.toLowerCase().includes('contract') ? 'High' : 'Medium'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );
