@@ -21,6 +21,12 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action') || 'health';
+    const status = searchParams.get('status');
+
+    // Handle content listing requests (for blog)
+    if (status) {
+      return await handleContentListing(status);
+    }
 
     const orchestrator = await getOrchestrator();
 
@@ -516,5 +522,34 @@ async function getAvailableTemplates() {
       categories: [],
       types: []
     };
+  }
+}
+
+/**
+ * Handle content listing for blog/public consumption
+ */
+async function handleContentListing(status) {
+  try {
+    console.log('📋 CONTENT LISTING: Mock content removed - returning empty array');
+    console.log('📋 Status filter:', status);
+    console.log('📋 Use Content Builder to create actual content that will appear here');
+
+    // Return empty array to force use of actual Content Builder content
+    // Real content will be served from localStorage in the browser
+    return NextResponse.json({
+      success: true,
+      content: [], // Empty array - forces use of actual Content Builder content
+      total: 0,
+      timestamp: new Date().toISOString(),
+      message: 'Mock content removed - use Content Builder to create actual content'
+    });
+
+  } catch (error) {
+    console.error('Error fetching content:', error);
+    return NextResponse.json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }

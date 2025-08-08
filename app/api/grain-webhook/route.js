@@ -277,24 +277,9 @@ async function analyzeMeetingWithAI(meeting) {
 
     // Update meeting with comprehensive analysis results
     if (comprehensiveAnalysis?.overall_analysis) {
-      await supabase
-        .from('meetings')
-        .update({
-          sentiment_score: comprehensiveAnalysis.overall_analysis.sentiment_score,
-          sentiment_label: comprehensiveAnalysis.overall_analysis.sentiment_label,
-          confidence_score: comprehensiveAnalysis.overall_analysis.confidence_score,
-          meeting_summary: comprehensiveAnalysis.overall_analysis.meeting_summary,
-          status: 'analyzed',
-          processing_stage: 'complete',
-          analyzed_at: new Date().toISOString(),
-          metadata: {
-            ...meeting.metadata,
-            key_themes: comprehensiveAnalysis.overall_analysis.key_themes,
-            customer_health_score: comprehensiveAnalysis.overall_analysis.customer_health_score,
-            business_impact: comprehensiveAnalysis.overall_analysis.business_impact
-          }
-        })
-        .eq('id', meeting.id);
+      // Note: Analysis results stored in insights table instead of meetings table
+      // Current meetings table only has: id, grain_id, customer_id, title, date, duration_minutes, participants, raw_transcript, created_at
+      console.log('✅ Analysis completed for meeting:', meeting.id, 'Results stored in insights table');
     }
 
     console.log('✅ Comprehensive AI Analysis completed:', {
@@ -326,20 +311,10 @@ async function analyzeMeetingWithAI(meeting) {
   } catch (error) {
     console.error('AI analysis failed:', error);
     
-    // Update meeting status to indicate analysis failure
+    // Log analysis failure (current meetings table doesn't have status/metadata columns)
     if (supabase) {
-      await supabase
-        .from('meetings')
-        .update({
-          status: 'transcribed',
-          processing_stage: 'analysis_failed',
-          metadata: {
-            ...meeting.metadata,
-            analysis_error: error.message,
-            analysis_failed_at: new Date().toISOString()
-          }
-        })
-        .eq('id', meeting.id);
+      console.log('❌ Analysis failed for meeting:', meeting.id, 'Error:', error.message);
+      // Note: Could store error info in insights table or add to participants JSON if needed
     }
   }
 }
@@ -822,15 +797,8 @@ async function handleGrainZapierData(webhookData) {
         participants: enrichedData.participants,
         raw_transcript: enrichedData.raw_transcript,
         customer_id: enrichedData.customer_id,
-        recording_url: enrichedData.recording_url || mappedData.recording_url,
-        transcript_url: enrichedData.transcript_url || mappedData.transcript_url,
-        grain_share_url: enrichedData.grain_share_url || mappedData.grain_share_url,
-        meeting_summary: mappedData.data_summary,
-        intelligence_notes: mappedData.intelligence_notes,
-        status: 'recorded',
-        processing_stage: 'initial',
-        meeting_type: detectMeetingType(enrichedData.title),
-        organizer_email: extractOrganizerEmail(enrichedData.participants),
+        // Note: Current schema only supports limited columns
+        // recording_url, transcript_url, grain_share_url, meeting_summary, intelligence_notes, status, processing_stage, meeting_type, organizer_email not available in current schema
         created_at: new Date().toISOString()
       }, {
         onConflict: 'grain_id'

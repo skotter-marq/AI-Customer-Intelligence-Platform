@@ -24,7 +24,7 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
   const isLoginPage = pathname === '/login';
-  const isPublicPage = pathname === '/public-changelog' || pathname === '/register';
+  const isPublicPage = pathname === '/public-changelog' || pathname === '/register' || pathname === '/blog' || pathname.startsWith('/blog/');
 
   return (
     <html lang="en">

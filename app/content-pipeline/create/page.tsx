@@ -1766,58 +1766,77 @@ export default function CreateContentPage() {
     const sectionsHTML = content.sections.map(section => {
       switch (section.type) {
         case 'heading1':
-          return `<h1 class="text-3xl font-bold text-gray-900 mb-6">${section.content}</h1>`;
+          return `<h1 style="font-size: 1.875rem; font-weight: 700; color: #111827; margin-bottom: 1.5rem; line-height: 1.2;">${section.content}</h1>`;
         case 'heading2':
-          return `<h2 class="text-2xl font-semibold text-gray-800 mb-4 mt-8">${section.content}</h2>`;
+          return `<h2 style="font-size: 1.5rem; font-weight: 600; color: #1f2937; margin-bottom: 1rem; margin-top: 2rem; line-height: 1.3;">${section.content}</h2>`;
         case 'heading3':
-          return `<h3 class="text-xl font-medium text-gray-700 mb-3 mt-6">${section.content}</h3>`;
+          return `<h3 style="font-size: 1.25rem; font-weight: 500; color: #374151; margin-bottom: 0.75rem; margin-top: 1.5rem; line-height: 1.4;">${section.content}</h3>`;
         case 'paragraph':
-          return `<p class="text-gray-600 leading-relaxed mb-4">${section.content}</p>`;
+          return `<p style="color: #6b7280; line-height: 1.7; margin-bottom: 1rem;">${section.content}</p>`;
         case 'image':
           const imgSrc = section.metadata?.src || '';
           const imgAlt = section.metadata?.alt || section.content || 'Image';
-          return `<div class="my-6">
-                    <img src="${imgSrc}" alt="${imgAlt}" class="w-full rounded-lg shadow-sm" />
-                    ${section.content ? `<p class="text-sm text-gray-500 mt-2 text-center">${section.content}</p>` : ''}
+          if (!imgSrc) {
+            return `<div style="margin: 1.5rem 0; padding: 2rem; background-color: #f3f4f6; border-radius: 0.5rem; text-align: center; color: #6b7280; border: 2px dashed #d1d5db;">
+                      <p>Image source not specified</p>
+                      ${section.content ? `<p style="font-size: 0.875rem; margin-top: 0.5rem;">${section.content}</p>` : ''}
+                    </div>`;
+          }
+          return `<div style="margin: 1.5rem 0;">
+                    <img src="${imgSrc}" alt="${imgAlt}" style="width: 100%; border-radius: 0.5rem; box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);" onError="this.style.display='none'; this.nextElementSibling.style.display='block';" />
+                    <div style="display: none; padding: 2rem; background-color: #f3f4f6; border-radius: 0.5rem; text-align: center; color: #6b7280; border: 2px dashed #d1d5db;">
+                      <p>Failed to load image: ${imgSrc}</p>
+                    </div>
+                    ${section.content ? `<p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; text-align: center;">${section.content}</p>` : ''}
                   </div>`;
         case 'video':
           const videoSrc = section.metadata?.src || '';
-          return `<div class="my-6">
-                    <div class="aspect-video">
-                      <iframe src="${videoSrc}" class="w-full h-full rounded-lg" frameborder="0" allowfullscreen></iframe>
+          if (!videoSrc) {
+            return `<div style="margin: 1.5rem 0; padding: 2rem; background-color: #f3f4f6; border-radius: 0.5rem; text-align: center; color: #6b7280;">
+                      <p>Video source not specified</p>
+                    </div>`;
+          }
+          return `<div style="margin: 1.5rem 0;">
+                    <div style="position: relative; width: 100%; aspect-ratio: 16/9;">
+                      <iframe src="${videoSrc}" style="width: 100%; height: 100%; border-radius: 0.5rem; border: none;" allowfullscreen></iframe>
                     </div>
-                    ${section.content ? `<p class="text-sm text-gray-500 mt-2 text-center">${section.content}</p>` : ''}
+                    ${section.content ? `<p style="font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; text-align: center;">${section.content}</p>` : ''}
                   </div>`;
         case 'list':
           const listItems = section.content.split('\n').filter(item => item.trim());
-          return `<ul class="list-disc list-inside text-gray-600 mb-4 space-y-2">
-                    ${listItems.map(item => `<li>${item.trim()}</li>`).join('')}
+          if (listItems.length === 0) {
+            return `<div style="margin: 1rem 0; padding: 1rem; background-color: #f3f4f6; border-radius: 0.5rem; text-align: center; color: #6b7280;">
+                      <p>Empty list</p>
+                    </div>`;
+          }
+          return `<ul style="list-style-type: disc; margin-left: 1.5rem; color: #6b7280; margin-bottom: 1rem; line-height: 1.7;">
+                    ${listItems.map(item => `<li style="margin-bottom: 0.5rem;">${item.trim()}</li>`).join('')}
                   </ul>`;
         case 'quote':
           const author = section.metadata?.author || '';
-          return `<blockquote class="border-l-4 border-blue-500 pl-4 my-6 italic text-gray-700">
+          return `<blockquote style="border-left: 4px solid #3b82f6; padding-left: 1rem; margin: 1.5rem 0; font-style: italic; color: #374151;">
                     "${section.content}"
-                    ${author ? `<cite class="block text-sm text-gray-500 mt-2">— ${author}</cite>` : ''}
+                    ${author ? `<cite style="display: block; font-size: 0.875rem; color: #6b7280; margin-top: 0.5rem; font-style: normal;">— ${author}</cite>` : ''}
                   </blockquote>`;
         case 'code':
           const language = section.metadata?.language || 'javascript';
-          return `<pre class="bg-gray-100 rounded-lg p-4 overflow-x-auto my-4">
-                    <code class="text-sm text-gray-800">${section.content}</code>
+          return `<pre style="background-color: #f3f4f6; border-radius: 0.5rem; padding: 1rem; overflow-x: auto; margin: 1rem 0;">
+                    <code style="font-size: 0.875rem; color: #1f2937; font-family: 'Courier New', monospace;">${section.content}</code>
                   </pre>`;
         case 'divider':
-          return `<hr class="border-gray-300 my-8">`;
+          return `<hr style="border: none; border-top: 1px solid #d1d5db; margin: 2rem 0;">`;
         default:
-          return `<div class="text-gray-600 mb-4">${section.content}</div>`;
+          return `<div style="color: #6b7280; margin-bottom: 1rem;">${section.content}</div>`;
       }
     }).join('\n');
 
     return `
-      <article class="max-w-4xl mx-auto px-6 py-8">
-        <header class="mb-8">
-          <h1 class="text-4xl font-bold text-gray-900 mb-4">${content.title}</h1>
-          ${content.subtitle ? `<p class="text-xl text-gray-600 mb-6">${content.subtitle}</p>` : ''}
-          ${content.coverImage ? `<img src="${content.coverImage}" alt="${content.title}" class="w-full h-64 object-cover rounded-lg mb-6" />` : ''}
-          <div class="flex items-center text-sm text-gray-500 space-x-4">
+      <article style="max-width: 64rem; margin: 0 auto; padding: 2rem 1.5rem;">
+        <header style="margin-bottom: 2rem;">
+          <h1 style="font-size: 2.5rem; font-weight: 700; color: #111827; margin-bottom: 1rem; line-height: 1.2;">${content.title}</h1>
+          ${content.subtitle ? `<p style="font-size: 1.25rem; color: #6b7280; margin-bottom: 1.5rem; line-height: 1.6;">${content.subtitle}</p>` : ''}
+          ${content.coverImage ? `<img src="${content.coverImage}" alt="${content.title}" style="width: 100%; height: 16rem; object-fit: cover; border-radius: 0.5rem; margin-bottom: 1.5rem;" />` : ''}
+          <div style="display: flex; align-items: center; font-size: 0.875rem; color: #6b7280; gap: 1rem;">
             <span>By ${content.metadata.author}</span>
             <span>•</span>
             <span>${content.metadata.readTime} min read</span>
@@ -1825,7 +1844,7 @@ export default function CreateContentPage() {
             <span>${content.metadata.tags.join(', ')}</span>
           </div>
         </header>
-        <div class="prose prose-lg max-w-none">
+        <div style="max-width: none; line-height: 1.7;">
           ${sectionsHTML}
         </div>
       </article>
@@ -2807,6 +2826,26 @@ export default function CreateContentPage() {
                         {/* Show different buttons based on current publish status */}
                         {publishStatus === 'published' ? (
                           <>
+                            {/* View on Blog Button - when content is published */}
+                            <button
+                              onClick={() => {
+                                if (editingId && richContent?.title) {
+                                  // Generate slug from title for consistent URL
+                                  const slug = richContent.title.toLowerCase()
+                                    .replace(/[^a-z0-9\s-]/g, '')
+                                    .replace(/\s+/g, '-')
+                                    .replace(/-+/g, '-')
+                                    .trim();
+                                  const blogUrl = `/blog/${slug}?from=editor`;
+                                  window.open(blogUrl, '_blank');
+                                }
+                              }}
+                              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 bg-white border border-gray-200 hover:border-gray-300 transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              <span>View on Blog</span>
+                            </button>
+
                             {/* Unpublish Button - when content is currently published */}
                             <button
                               onClick={() => {
@@ -2830,9 +2869,9 @@ export default function CreateContentPage() {
                                 // Navigate back to content pipeline
                                 router.push('/content-pipeline');
                               }}
-                              className="calendly-btn-secondary flex items-center space-x-2"
+                              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 bg-white border border-gray-200 hover:border-gray-300 transition-colors"
                             >
-                              <X className="w-4 h-4" />
+                              <X className="w-4 h-4 mr-2" />
                               <span>Unpublish</span>
                             </button>
 
@@ -2865,7 +2904,7 @@ export default function CreateContentPage() {
                                   router.push('/content-pipeline');
                                 }, 500);
                               }}
-                              className="calendly-btn-primary flex items-center space-x-2"
+                              className="bg-black text-white px-4 py-2 hover:bg-gray-800 transition-colors font-semibold flex items-center space-x-2"
                             >
                               <CheckCircle className="w-4 h-4" />
                               <span>Update Published Content</span>
@@ -2896,9 +2935,9 @@ export default function CreateContentPage() {
                                 // Navigate back to content pipeline
                                 router.push('/content-pipeline');
                               }}
-                              className="calendly-btn-secondary flex items-center space-x-2"
+                              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 bg-white border border-gray-200 hover:border-gray-300 transition-colors"
                             >
-                              <Save className="w-4 h-4" />
+                              <Save className="w-4 h-4 mr-2" />
                               <span>Save as Draft</span>
                             </button>
 
@@ -2934,7 +2973,7 @@ export default function CreateContentPage() {
                                   router.push('/content-pipeline');
                                 }, 500);
                               }}
-                              className="calendly-btn-primary flex items-center space-x-2"
+                              className="bg-black text-white px-4 py-2 hover:bg-gray-800 transition-colors font-semibold flex items-center space-x-2"
                             >
                               <CheckCircle className="w-4 h-4" />
                               <span>{editingId && originalPublishStatus === 'published' && hasChanges ? 'Publish Changes' : 'Publish'}</span>

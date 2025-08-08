@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { 
   Search,
@@ -270,6 +271,15 @@ export default function PublicChangelogPage() {
                   marq
                 </div>
               </div>
+              <nav className="flex items-center space-x-6">
+                <Link 
+                  href="/blog"
+                  className="text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  Blog
+                </Link>
+                <span className="text-gray-900 font-medium">Product Updates</span>
+              </nav>
             </div>
           </div>
           
@@ -725,7 +735,6 @@ export default function PublicChangelogPage() {
             );
           })}
           </div>
-
           {/* Empty State */}
         {filteredEntries.length === 0 && (
           <div className="text-center py-16">

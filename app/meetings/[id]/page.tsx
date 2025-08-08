@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { formatDistanceToNow, format } from 'date-fns';
+import ProductResearchModal from '../../../components/ProductResearchModal';
 import { 
   ArrowLeft,
   Calendar,
@@ -39,8 +40,6 @@ import {
   X,
   Database,
   Bot,
-  ChevronRight,
-  Plus
 } from 'lucide-react';
 
 // Helper function to safely format meeting dates
@@ -121,23 +120,38 @@ export default function MeetingDetailPage() {
   const [showCodaModal, setShowCodaModal] = useState(false);
   const [transcriptSearchTerm, setTranscriptSearchTerm] = useState('');
   const [codaFormData, setCodaFormData] = useState({
-    name: '',
-    email: '',
-    account: '',
-    interviewer: '',
-    recording: '',
-    status: 'Scheduled',
-    role: 'End User',
-    csat: '',
-    initiative: '',
-    jtbd1: '',
-    jtbd2: '',
-    jtbd3: '',
-    jtbd4: '',
-    keyTakeaways: ''
+    // Research Classification
+    researchType: 'Discovery', // Discovery, Feature Request, Bug Report, Competitive Intel, etc.
+    productArea: '', // Login, Dashboard, Integrations, etc.
+    priority: 'Medium',
+    
+    // Customer Context  
+    customerName: '',
+    customerSegment: '', // SMB, Mid-Market, Enterprise
+    customerARR: '',
+    userRole: '', // End User, Admin, Decision Maker
+    
+    // Key Findings
+    primaryFinding: '',
+    secondaryFindings: '',
+    painPoints: '',
+    featureRequests: '',
+    
+    // Product Impact
+    businessImpact: '', // Revenue, Retention, Acquisition, etc.
+    technicalComplexity: 'Medium', // Low, Medium, High
+    userImpact: '',
+    competitiveImplications: '',
+    
+    // Supporting Evidence
+    customerQuotes: '',
+    behaviorObserved: '',
+    
+    // Action Items
+    immediateActions: '',
+    longTermActions: '',
+    ownerTeam: 'Product' // Product, Engineering, Design, etc.
   });
-  const [selectedAIPrompts, setSelectedAIPrompts] = useState([]);
-  const [availablePrompts, setAvailablePrompts] = useState([]);
 
   useEffect(() => {
     async function fetchMeeting() {
@@ -192,33 +206,14 @@ export default function MeetingDetailPage() {
     }
   }, [params.id]);
 
-  // Load available AI prompts for Coda integration
+  // Pre-fill form with meeting data when modal opens
   useEffect(() => {
-    async function loadAvailablePrompts() {
-      try {
-        const response = await fetch('/api/admin/prompts?type=ai_prompts');
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success && result.data.ai_prompts) {
-            setAvailablePrompts(result.data.ai_prompts);
-            // Pre-select useful prompts for Coda analysis
-            setSelectedAIPrompts(['comprehensive-meeting-analysis', 'feature-request-prioritization']);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to load AI prompts:', error);
-      }
-    }
-    
-    if (showCodaModal) {
-      loadAvailablePrompts();
-      // Pre-fill form with meeting data
+    if (showCodaModal && meeting) {
       setCodaFormData(prev => ({
         ...prev,
-        account: meeting?.customer_name || '',
-        recording: meeting?.grain_share_url || meeting?.recording_url || meeting?.title || '',
-        name: meeting?.participants?.[0]?.name || '',
-        email: meeting?.participants?.[0]?.email || ''
+        customerName: meeting.customer_name || '',
+        primaryFinding: meeting.meeting_summary || '',
+        customerQuotes: meeting.raw_transcript ? `"${meeting.raw_transcript.split('\n\n')[0]?.substring(0, 200)}..."` : ''
       }));
     }
   }, [showCodaModal, meeting]);
@@ -737,307 +732,44 @@ export default function MeetingDetailPage() {
           </div>
         </div>
 
-        {/* Advanced Coda Export Modal */}
-        {showCodaModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex">
-              {/* Left Panel - Form Fields */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-xl font-bold text-gray-900">Export to Coda Research</h2>
-                    <button
-                      onClick={() => setShowCodaModal(false)}
-                      className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                    >
-                      <X className="w-5 h-5 text-gray-500" />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="p-6 space-y-6">
-                  {/* Meeting Context */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-3">Meeting Context</h3>
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Meeting:</span>
-                        <span className="font-medium text-gray-900">{meeting.title}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Date:</span>
-                        <span className="font-medium text-gray-900">{formatMeetingDate(meeting.date)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Duration:</span>
-                        <span className="font-medium text-gray-900">{meeting.duration_minutes} min</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Research Details Form */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-3">Research Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                        <input
-                          type="text"
-                          value={codaFormData.name}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, name: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Customer contact name"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                        <input
-                          type="email"
-                          value={codaFormData.email}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, email: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="customer@company.com"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Account *</label>
-                        <input
-                          type="text"
-                          value={codaFormData.account}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, account: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Company name"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Interviewer</label>
-                        <input
-                          type="text"
-                          value={codaFormData.interviewer}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, interviewer: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="Internal team member"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                        <select
-                          value={codaFormData.status}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, status: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="Scheduled">Scheduled</option>
-                          <option value="Completed">Completed</option>
-                          <option value="Cancelled">Cancelled</option>
-                          <option value="No Show">No Show</option>
-                        </select>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                        <select
-                          value={codaFormData.role}
-                          onChange={(e) => setCodaFormData(prev => ({ ...prev, role: e.target.value }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                        >
-                          <option value="End User">End User</option>
-                          <option value="Admin">Admin</option>
-                          <option value="Decision Maker">Decision Maker</option>
-                          <option value="Champion">Champion</option>
-                          <option value="Influencer">Influencer</option>
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* JTBD Fields */}
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-3">Jobs to Be Done Analysis</h3>
-                    <div className="space-y-3">
-                      {[1, 2, 3, 4].map(num => (
-                        <div key={num}>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">JTBD {num}</label>
-                          <input
-                            type="text"
-                            value={codaFormData[`jtbd${num}` as keyof typeof codaFormData]}
-                            onChange={(e) => setCodaFormData(prev => ({ ...prev, [`jtbd${num}`]: e.target.value }))}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder={`Job to be done ${num}`}
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Key Takeaways */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Key Takeaways</label>
-                    <textarea
-                      value={codaFormData.keyTakeaways}
-                      onChange={(e) => setCodaFormData(prev => ({ ...prev, keyTakeaways: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      rows={4}
-                      placeholder="Main insights and takeaways from the meeting..."
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Right Panel - AI Analysis Options */}
-              <div className="w-80 bg-gray-50 border-l border-gray-200 flex flex-col">
-                <div className="p-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900">AI Analysis</h3>
-                  <p className="text-sm text-gray-600 mt-1">Select AI prompts to run analysis and auto-populate fields</p>
-                </div>
-                
-                <div className="flex-1 p-4 space-y-4 overflow-y-auto">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Available Prompts</h4>
-                    <div className="space-y-2">
-                      {availablePrompts.map((prompt) => (
-                        <label key={prompt.id} className="flex items-start space-x-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedAIPrompts.includes(prompt.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedAIPrompts(prev => [...prev, prompt.id]);
-                              } else {
-                                setSelectedAIPrompts(prev => prev.filter(id => id !== prompt.id));
-                              }
-                            }}
-                            className="mt-1 rounded border-gray-300"
-                          />
-                          <div>
-                            <span className="text-sm font-medium text-gray-900">{prompt.name}</span>
-                            <p className="text-xs text-gray-600">{prompt.description}</p>
-                          </div>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  {selectedAIPrompts.length > 0 && (
-                    <button
-                      onClick={async () => {
-                        try {
-                          // Run AI analysis on selected prompts
-                          const analysisPromises = selectedAIPrompts.map(promptId =>
-                            fetch('/api/ai/analyze', {
-                              method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({
-                                promptId,
-                                variables: {
-                                  customer_name: meeting.customer_name,
-                                  meeting_type: meeting.meeting_type || 'general',
-                                  meeting_date: meeting.date,
-                                  duration_minutes: meeting.duration_minutes,
-                                  participants: JSON.stringify(meeting.participants || []),
-                                  transcript: meeting.raw_transcript || ''
-                                }
-                              })
-                            }).then(res => res.json())
-                          );
-                          
-                          const results = await Promise.allSettled(analysisPromises);
-                          
-                          // Auto-populate form with AI results
-                          results.forEach((result, index) => {
-                            if (result.status === 'fulfilled' && result.value.success) {
-                              const analysis = result.value.analysis;
-                              const promptId = selectedAIPrompts[index];
-                              
-                              // Auto-populate based on prompt type
-                              if (promptId === 'comprehensive-meeting-analysis' && analysis.overall_analysis) {
-                                setCodaFormData(prev => ({
-                                  ...prev,
-                                  keyTakeaways: prev.keyTakeaways || analysis.overall_analysis.meeting_summary || ''
-                                }));
-                              }
-                              
-                              if (promptId === 'feature-request-prioritization' && analysis.feature_requests) {
-                                const topFeatures = analysis.feature_requests
-                                  .filter(f => f.customer_priority === 'must_have')
-                                  .map(f => f.feature_title)
-                                  .slice(0, 4);
-                                
-                                topFeatures.forEach((feature, idx) => {
-                                  setCodaFormData(prev => ({
-                                    ...prev,
-                                    [`jtbd${idx + 1}`]: prev[`jtbd${idx + 1}` as keyof typeof prev] || feature
-                                  }));
-                                });
-                              }
-                            }
-                          });
-                          
-                          alert('AI analysis complete! Form fields have been auto-populated.');
-                        } catch (error) {
-                          console.error('AI analysis failed:', error);
-                          alert('AI analysis failed. Please try again.');
-                        }
-                      }}
-                      className="w-full px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-                    >
-                      Run AI Analysis ({selectedAIPrompts.length} prompts)
-                    </button>
-                  )}
-                </div>
-                
-                {/* Action Buttons */}
-                <div className="p-4 border-t border-gray-200 space-y-3">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const response = await fetch('/api/coda', {
-                          method: 'POST',
-                          headers: { 'Content-Type': 'application/json' },
-                          body: JSON.stringify({
-                            action: 'create_research_initiative',
-                            meetingId: meeting.id,
-                            docId: process.env.NEXT_PUBLIC_CODA_DOC_ID || 'defaultDocId',
-                            tableId: process.env.NEXT_PUBLIC_CODA_TABLE_ID || 'defaultTableId',
-                            formData: codaFormData,
-                            aiAnalysisConfig: {
-                              selectedPrompts: selectedAIPrompts
-                            }
-                          })
-                        });
-                        
-                        const result = await response.json();
-                        
-                        if (result.success) {
-                          alert('Successfully exported to Coda with AI insights!');
-                          setShowCodaModal(false);
-                        } else {
-                          throw new Error(result.error || 'Export failed');
-                        }
-                      } catch (error) {
-                        console.error('Coda export error:', error);
-                        alert('Failed to export to Coda. Please try again.');
-                      }
-                    }}
-                    className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-                  >
-                    Export to Coda
-                  </button>
-                  
-                  <button
-                    onClick={() => setShowCodaModal(false)}
-                    className="w-full px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Product Research Modal */}
+        <ProductResearchModal
+          isOpen={showCodaModal}
+          onClose={() => setShowCodaModal(false)}
+          meeting={meeting}
+          formData={codaFormData}
+          setFormData={setCodaFormData}
+          onSubmit={async () => {
+            try {
+              const response = await fetch('/api/coda-export', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  action: 'create_research_initiative',
+                  meetingId: meeting.id,
+                  docId: process.env.NEXT_PUBLIC_CODA_DOC_ID || 'defaultDocId',
+                  tableId: process.env.NEXT_PUBLIC_CODA_TABLE_ID || 'defaultTableId',
+                  formData: codaFormData,
+                  researchType: 'product_insights'
+                })
+              });
+              
+              const result = await response.json();
+              
+              if (result.success) {
+                alert('Successfully published product research to Coda!');
+                setShowCodaModal(false);
+              } else {
+                throw new Error(result.error || 'Export failed');
+              }
+            } catch (error) {
+              console.error('Research export error:', error);
+              alert('Failed to publish research. Please try again.');
+            }
+          }}
+        />
       </div>
     </div>
   );

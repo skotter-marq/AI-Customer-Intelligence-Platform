@@ -119,408 +119,107 @@ export default function ContentPipelinePage() {
     }
   }, [contentItems]);
 
+  // Helper function to get actual content from localStorage
+  const getActualContentFromLocalStorage = (): ContentItem[] => {
+    const actualItems: ContentItem[] = [];
+    
+    try {
+      // Look for all content status keys
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('content_status_')) {
+          try {
+            const statusData = JSON.parse(localStorage.getItem(key) || '{}');
+            
+            if (statusData.title) {
+              const contentId = key.replace('content_status_', '');
+              
+              // Generate slug from title
+              const slug = statusData.title.toLowerCase()
+                .replace(/[^a-z0-9\s-]/g, '')
+                .replace(/\s+/g, '-')
+                .replace(/-+/g, '-')
+                .trim();
+              
+              // Create content item
+              const contentItem: ContentItem = {
+                id: contentId,
+                title: statusData.title,
+                type: statusData.type || 'blog',
+                status: statusData.status || 'draft',
+                author: 'Content Creator',
+                published_date: statusData.status === 'published' ? (statusData.publishedAt || statusData.savedAt) : null,
+                created_date: statusData.savedAt || new Date().toISOString(),
+                description: `Created with Content Builder - ${statusData.type || 'Blog'} content`,
+                feature_title: statusData.title,
+                feature_category: statusData.type || 'General',
+                reading_time: 5,
+                tags: ['Content Builder', statusData.type || 'Blog'],
+                featured_image: 'https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?w=400&h=240&fit=crop',
+                excerpt: `${statusData.title} - Created with Content Builder`,
+                slug: slug,
+                views: Math.floor(Math.random() * 1000), // Random views for demo
+                engagement: Math.floor(Math.random() * 100), // Random engagement for demo
+                selected_layout: 'content_builder',
+                layout_completed: true,
+                generated_content: {
+                  sections: [
+                    {
+                      title: 'Content',
+                      content: 'Rich content created with Content Builder',
+                      type: 'text'
+                    }
+                  ]
+                }
+              };
+              
+              actualItems.push(contentItem);
+            }
+          } catch (parseError) {
+            console.warn('Failed to parse content status:', key, parseError);
+          }
+        }
+      }
+      
+      // Sort by created date (newest first)
+      actualItems.sort((a, b) => 
+        new Date(b.created_date).getTime() - new Date(a.created_date).getTime()
+      );
+      
+    } catch (error) {
+      console.error('Error reading content from localStorage:', error);
+    }
+    
+    return actualItems;
+  };
+
   const fetchContentItems = async () => {
     try {
       setLoading(true);
-      // Mock data - replace with actual API call
-      const mockItems: ContentItem[] = [
-        {
-          id: '1',
-          title: 'The Future of Data Analytics: Industry Trends and Market Evolution',
-          type: 'blog',
-          status: 'published',
-          author: 'Sarah Chen',
-          published_date: '2024-01-15',
-          created_date: '2024-01-10',
-          description: 'Thought leadership piece analyzing emerging trends in data analytics and our strategic position in the evolving market landscape.',
-          feature_title: 'AI-Powered Data Export',
-          feature_category: 'Data Management',
-          reading_time: 8,
-          tags: ['Thought Leadership', 'Data Analytics', 'Market Trends', 'Industry Analysis'],
-          featured_image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=240&fit=crop',
-          excerpt: 'Explore the future of data analytics and how emerging trends are reshaping the industry landscape.',
-          slug: 'future-data-analytics-industry-trends',
-          views: 2847,
-          engagement: 78,
-          selected_layout: 'blog_thought_leadership',
-          layout_completed: true,
-          generated_content: {
-            sections: [
-              {
-                title: 'Executive Summary',
-                content: 'The data analytics landscape is experiencing unprecedented transformation driven by AI, machine learning, and real-time processing capabilities.',
-                type: 'text'
-              },
-              {
-                title: 'Market Evolution Video',
-                content: 'Interactive visualization showing data analytics market growth from 2020-2025',
-                type: 'video'
-              },
-              {
-                title: 'Key Industry Trends',
-                content: 'Analysis of five major trends reshaping how organizations approach data analytics and business intelligence.',
-                type: 'text'
-              }
-            ]
-          }
-        },
-        {
-          id: '2',
-          title: 'TechCorp Digital Transformation: Complete Customer Journey',
-          type: 'case_study',
-          status: 'published',
-          author: 'Michael Rodriguez',
-          published_date: '2024-01-12',
-          created_date: '2024-01-08',
-          description: 'Comprehensive case study documenting TechCorp\'s complete digital transformation journey from initial challenges through implementation to measurable results.',
-          feature_title: 'Real-time Dashboard Widgets',
-          feature_category: 'User Interface',
-          reading_time: 12,
-          tags: ['Customer Transformation', 'Digital Innovation', 'Enterprise Success', 'ROI'],
-          featured_image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=240&fit=crop',
-          excerpt: 'Follow TechCorp\'s remarkable transformation journey and discover the strategies that delivered 200% ROI.',
-          slug: 'techcorp-digital-transformation-journey',
-          views: 1923,
-          engagement: 82,
-          selected_layout: 'case_study_transformation',
-          layout_completed: true,
-          generated_content: {
-            sections: [
-              {
-                title: 'Challenge Overview',
-                content: 'TechCorp faced declining efficiency and outdated systems that hindered growth and customer satisfaction.',
-                type: 'text'
-              },
-              {
-                title: 'Implementation Journey',
-                content: 'Behind-the-scenes video showcasing the 6-month transformation process',
-                type: 'video'
-              },
-              {
-                title: 'Measurable Results',
-                content: '200% ROI achieved within 18 months through improved efficiency and customer satisfaction metrics.',
-                type: 'text'
-              },
-              {
-                title: 'Key Success Factors',
-                content: 'Strategic insights that made the difference between success and failure in this digital transformation.',
-                type: 'text'
-              }
-            ]
-          }
-        },
-        {
-          id: '3',
-          title: 'Announcing Next-Generation Security Framework: Enterprise Protection Redefined',
-          type: 'press_release',
-          status: 'published',
-          author: 'Lisa Park',
-          published_date: '2024-01-08',
-          created_date: '2024-01-05',
-          description: 'Major product launch announcement detailing our revolutionary security framework with breakthrough features and enterprise-grade capabilities.',
-          feature_title: 'Advanced Security Framework',
-          feature_category: 'Security',
-          reading_time: 6,
-          tags: ['Product Launch', 'Security Innovation', 'Enterprise', 'Press Release'],
-          featured_image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=240&fit=crop',
-          excerpt: 'Introducing our revolutionary security framework that redefines enterprise protection standards.',
-          slug: 'next-generation-security-framework-launch',
-          views: 3241,
-          engagement: 65,
-          selected_layout: 'press_release_announcement',
-          layout_completed: true,
-          generated_content: {
-            sections: [
-              {
-                title: 'Product Announcement',
-                content: 'Today we announce the launch of our next-generation security framework, setting new industry standards for enterprise protection.',
-                type: 'text'
-              },
-              {
-                title: 'Product Demo Video',
-                content: 'Live demonstration of the security framework features and capabilities',
-                type: 'video'
-              },
-              {
-                title: 'Key Features & Benefits',
-                content: 'Advanced threat detection, zero-trust architecture, and seamless integration with existing enterprise systems.',
-                type: 'text'
-              },
-              {
-                title: 'Availability & Pricing',
-                content: 'The security framework is available immediately for enterprise customers with flexible pricing options.',
-                type: 'text'
-              }
-            ]
-          }
-        },
-        {
-          id: '4',
-          title: 'Step-by-Step Guide: Implementing Real-Time Analytics',
-          type: 'blog',
-          status: 'review',
-          author: 'David Kim',
-          created_date: '2024-01-14',
-          description: 'Comprehensive how-to guide walking users through real-time analytics implementation with practical examples, code snippets, and troubleshooting tips.',
-          feature_title: 'Real-time Analytics Engine',
-          feature_category: 'Analytics',
-          reading_time: 15,
-          tags: ['How-To Guide', 'Implementation', 'Analytics', 'Tutorial'],
-          featured_image: 'https://images.unsplash.com/photo-1551634804-cdd3e556b1f5?w=400&h=240&fit=crop',
-          excerpt: 'Master real-time analytics implementation with our comprehensive step-by-step tutorial.',
-          slug: 'step-by-step-real-time-analytics-guide',
-          selected_layout: 'blog_howto_guide',
-          layout_completed: true,
-          generated_content: {
-            sections: [
-              {
-                title: 'Prerequisites & Setup',
-                content: 'System requirements and initial configuration steps for implementing real-time analytics.',
-                type: 'text'
-              },
-              {
-                title: 'Implementation Code Example',
-                content: 'const analytics = new RealTimeEngine({ apiKey: "your-key", streamUrl: "wss://api.example.com" });',
-                type: 'code'
-              },
-              {
-                title: 'Configuration Walkthrough',
-                content: 'Interactive video guide showing each configuration step',
-                type: 'video'
-              },
-              {
-                title: 'Troubleshooting Common Issues',
-                content: 'Solutions for the most frequently encountered problems during implementation.',
-                type: 'text'
-              }
-            ]
-          }
-        },
-        {
-          id: '5',
-          title: 'Product Spotlight: Revolutionary Features Driving Innovation',
-          type: 'newsletter',
-          status: 'draft',
-          author: 'Jennifer Wu',
-          created_date: '2024-01-16',
-          description: 'Feature-focused newsletter showcasing our latest breakthrough capabilities with in-depth tutorials and expert insights.',
-          feature_title: 'AI Content Generation',
-          feature_category: 'Artificial Intelligence',
-          reading_time: 10,
-          tags: ['Feature Focus', 'Innovation', 'AI Technology', 'Product Updates'],
-          featured_image: 'https://images.unsplash.com/photo-1677442136019-21780ecad995?w=400&h=240&fit=crop',
-          excerpt: 'Discover our revolutionary AI-powered features and learn how to leverage them for maximum impact.',
-          slug: 'product-spotlight-revolutionary-features',
-          selected_layout: 'newsletter_focused',
-          layout_completed: true,
-          generated_content: {
-            sections: [
-              {
-                title: 'Featured Innovation',
-                content: 'This month we spotlight our AI Content Generation feature that\'s transforming how teams create and optimize content.',
-                type: 'text'
-              },
-              {
-                title: 'Feature Demonstration',
-                content: 'Watch our AI Content Generation in action with real customer examples',
-                type: 'video'
-              },
-              {
-                title: 'Customer Success Story',
-                content: '"The AI Content Generation feature helped us increase content production by 300% while maintaining quality." - Sarah J., Marketing Director',
-                type: 'quote'
-              },
-              {
-                title: 'Getting Started Guide',
-                content: 'Step-by-step instructions to start using AI Content Generation in your workflow today.',
-                type: 'text'
-              }
-            ]
-          }
-        },
-        {
-          id: '6',
-          title: 'Platform vs. Competitors: Comprehensive Feature Analysis',
-          type: 'blog',
-          status: 'draft',
-          author: 'Alex Thompson',
-          created_date: '2024-01-18',
-          description: 'In-depth comparison analysis showcasing our platform\'s unique advantages against alternative solutions in the market.',
-          feature_title: 'Advanced Analytics Suite',
-          feature_category: 'Analytics',
-          reading_time: 11,
-          tags: ['Competitive Analysis', 'Platform Comparison', 'Market Research', 'Features'],
-          featured_image: 'https://images.unsplash.com/photo-1553028826-f4804a6dba3b?w=400&h=240&fit=crop',
-          excerpt: 'See how our platform outperforms competitors with superior features and innovative capabilities.',
-          slug: 'platform-vs-competitors-feature-analysis',
-          selected_layout: 'blog_comparison',
-          layout_completed: true,
-          generated_content: {
-            sections: [
-              {
-                title: 'Market Landscape Overview',
-                content: 'Analysis of the current competitive landscape and where our platform stands among industry leaders.',
-                type: 'text'
-              },
-              {
-                title: 'Feature Comparison Matrix',
-                content: 'Interactive comparison chart showing feature availability across platforms',
-                type: 'video'
-              },
-              {
-                title: 'Unique Advantages',
-                content: 'Our platform delivers superior performance in real-time analytics, user experience, and integration capabilities.',
-                type: 'text'
-              },
-              {
-                title: 'Customer Migration Case Studies',
-                content: 'Real examples of customers who switched to our platform and the benefits they experienced.',
-                type: 'text'
-              }
-            ]
-          }
-        },
-        {
-          id: '7',
-          title: 'Behind the Code: Building Our Mobile-First Architecture',
-          type: 'blog',
-          status: 'published',
-          author: 'Maya Patel',
-          published_date: '2024-01-20',
-          created_date: '2024-01-15',
-          description: 'Development story revealing the human journey behind our mobile-first architecture with team insights and technical challenges.',
-          feature_title: 'Mobile App Integration',
-          feature_category: 'Mobile',
-          reading_time: 9,
-          tags: ['Behind the Scenes', 'Development Story', 'Mobile Architecture', 'Team Insights'],
-          featured_image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=400&h=240&fit=crop',
-          excerpt: 'Go behind the scenes with our development team and discover the challenges overcome building our mobile architecture.',
-          slug: 'behind-code-mobile-first-architecture',
-          views: 1456,
-          engagement: 73,
-          selected_layout: 'blog_behind_scenes',
-          layout_completed: true,
-          generated_content: {
-            sections: [
-              {
-                title: 'Feature Origin Story',
-                content: 'The idea for our mobile-first architecture came from a simple observation: our users were increasingly accessing our platform from mobile devices, but our existing infrastructure was struggling to keep up.',
-                type: 'text'
-              },
-              {
-                title: 'The Spark of an Idea',
-                content: 'How the mobile-first vision emerged during a critical product meeting when user engagement data revealed 70% mobile usage.',
-                type: 'text'
-              },
-              {
-                title: 'Team Member Reflection',
-                content: 'The biggest challenge wasn\'t technical - it was convincing everyone that we needed to rebuild from the ground up. But once we saw the user data, it became clear this was our path forward.',
-                type: 'quote'
-              },
-              {
-                title: 'Design and Planning',
-                content: 'Our design process involved extensive user research, performance benchmarking, and architectural planning to ensure we could scale to millions of users.',
-                type: 'text'
-              },
-              {
-                title: 'Design Mockups and Wireframes',
-                content: 'Early wireframes and architectural diagrams showing the mobile-first approach',
-                type: 'image'
-              },
-              {
-                title: 'Development Team Interviews',
-                content: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-                type: 'video'
-              },
-              {
-                title: 'Development Challenges',
-                content: 'The biggest technical obstacle was maintaining sub-200ms response times while supporting real-time data synchronization across multiple mobile platforms.',
-                type: 'text'
-              },
-              {
-                title: 'Technical Solution',
-                content: 'const mobileOptimizer = new PerformanceEngine({\n  caching: "intelligent",\n  compression: "adaptive",\n  realTime: true,\n  maxResponseTime: 200\n});',
-                type: 'code'
-              },
-              {
-                title: 'Testing and Refinement',
-                content: 'We conducted extensive beta testing with over 500 mobile users, iterating on performance and user experience based on real usage patterns.',
-                type: 'text'
-              },
-              {
-                title: 'Beta User Feedback',
-                content: 'The new mobile experience is incredible - everything loads instantly and the interface feels native. This is exactly what we needed.',
-                type: 'quote'
-              },
-              {
-                title: 'Lessons Learned',
-                content: 'Building mobile-first taught us that performance constraints often lead to better overall architecture. The optimizations we made for mobile improved our entire platform.',
-                type: 'text'
-              }
-            ]
-          }
-        },
-        {
-          id: '8',
-          title: 'ROI Analysis: Quantifying Enterprise Value and Impact',
-          type: 'case_study',
-          status: 'published',
-          author: 'Carlos Rivera',
-          published_date: '2024-01-18',
-          created_date: '2024-01-12',
-          description: 'Numbers-driven case study emphasizing quantifiable business value, financial impact, and measurable ROI metrics.',
-          feature_title: 'Enterprise Reporting Suite',
-          feature_category: 'Business Intelligence',
-          reading_time: 14,
-          tags: ['ROI Analysis', 'Financial Impact', 'Enterprise Value', 'Metrics'],
-          featured_image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400&h=240&fit=crop',
-          excerpt: 'Discover the quantifiable business impact and measurable ROI delivered by our enterprise solutions.',
-          slug: 'roi-analysis-enterprise-value-impact',
-          views: 2134,
-          engagement: 85,
-          selected_layout: 'case_study_roi_focused',
-          layout_completed: true,
-          generated_content: {
-            sections: [
-              {
-                title: 'Executive Summary',
-                content: 'Comprehensive analysis showing 240% ROI achieved through our Enterprise Reporting Suite implementation.',
-                type: 'text'
-              },
-              {
-                title: 'Financial Impact Visualization',
-                content: 'Interactive charts showing cost savings and revenue growth over 24 months',
-                type: 'video'
-              },
-              {
-                title: 'Key Performance Metrics',
-                content: '40% reduction in reporting time, 60% improvement in data accuracy, and 240% ROI within 18 months.',
-                type: 'text'
-              },
-              {
-                title: 'Implementation Timeline',
-                content: 'Month-by-month breakdown of implementation milestones and corresponding business impact.',
-                type: 'text'
-              }
-            ]
-          }
-        }
-      ];
-
-      setContentItems(mockItems);
+      console.log('📋 CONTENT PIPELINE: Loading actual content from localStorage');
       
-      // Calculate stats
-      const published = mockItems.filter(item => item.status === 'published');
+      // Get actual content created through Content Builder
+      const actualItems = getActualContentFromLocalStorage();
+      
+      setContentItems(actualItems);
+
+      
+      // Calculate stats from actual content
+      const published = actualItems.filter(item => item.status === 'published');
       const totalViews = published.reduce((sum, item) => sum + (item.views || 0), 0);
-      const avgEngagement = published.reduce((sum, item) => sum + (item.engagement || 0), 0) / published.length;
+      const avgEngagement = published.length > 0 
+        ? published.reduce((sum, item) => sum + (item.engagement || 0), 0) / published.length 
+        : 0;
       
       setStats({
-        total_posts: mockItems.length,
+        total_posts: actualItems.length,
         published: published.length,
-        drafts: mockItems.filter(item => item.status === 'draft').length,
+        drafts: actualItems.filter(item => item.status === 'draft').length,
         views_this_month: totalViews,
         engagement_rate: Math.round(avgEngagement)
       });
+      
+      console.log('📊 CONTENT PIPELINE: Loaded', actualItems.length, 'actual items');
       
     } catch (error) {
       console.error('Error fetching content items:', error);
@@ -1408,7 +1107,7 @@ export default function ContentPipelinePage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            window.open(`/content/${item.slug}`, '_blank');
+                            window.open(item.status === 'published' ? '/blog' : `/content/${item.slug}`, '_blank');
                           }}
                           className="p-2 rounded-lg transition-colors"
                           style={{ color: '#718096' }}
@@ -1420,7 +1119,7 @@ export default function ContentPipelinePage() {
                             e.currentTarget.style.background = 'transparent';
                             e.currentTarget.style.color = '#718096';
                           }}
-                          title="View on site"
+                          title={item.status === 'published' ? 'View on blog' : 'View on site'}
                         >
                           <ExternalLink className="w-4 h-4" />
                         </button>
@@ -1586,7 +1285,7 @@ export default function ContentPipelinePage() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              window.open(`/content/${item.slug}`, '_blank');
+                              window.open(item.status === 'published' ? '/blog' : `/content/${item.slug}`, '_blank');
                             }}
                             className="p-2 rounded-lg transition-colors"
                             style={{ color: '#718096' }}
@@ -1598,7 +1297,7 @@ export default function ContentPipelinePage() {
                               e.currentTarget.style.background = 'transparent';
                               e.currentTarget.style.color = '#718096';
                             }}
-                            title="View on site"
+                            title={item.status === 'published' ? 'View on blog' : 'View on site'}
                           >
                             <ExternalLink className="w-4 h-4" />
                           </button>
@@ -1638,7 +1337,7 @@ export default function ContentPipelinePage() {
               <p className="calendly-body" style={{ marginBottom: '24px' }}>
                 {searchTerm || selectedFilter !== 'all' || statusFilter !== 'all' 
                   ? 'Try adjusting your search or filters' 
-                  : 'Get started by creating your first piece of content'}
+                  : 'No content has been created yet. Use the Content Builder to create your first article, case study, or press release.'}
               </p>
               <button
                 onClick={handleCreateContent}

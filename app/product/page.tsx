@@ -875,6 +875,15 @@ export default function ProductPage() {
               <h1 className="calendly-h1">Product Changelog</h1>
               <p className="calendly-body">Manage published changelog entries, review pending updates, and track customer engagement</p>
             </div>
+            <div className="flex items-center space-x-3">
+              <Link 
+                href="/public-changelog"
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                <Eye className="w-4 h-4" />
+                <span>View Public Changelog</span>
+              </Link>
+            </div>
           </div>
 
           {/* Changelog-Focused Stats Cards */}
