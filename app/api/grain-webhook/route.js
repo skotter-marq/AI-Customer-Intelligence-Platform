@@ -186,7 +186,8 @@ async function handleMeetingShared(data) {
 async function analyzeMeetingWithAI(meeting) {
   try {
     // Import AI provider
-    const AIProvider = require('../../../lib/ai-provider.js');
+    const AIProviderModule = await import('../../../lib/ai-provider.js');
+    const AIProvider = AIProviderModule.default;
     const aiProvider = new AIProvider();
     
     // Prepare meeting data for analysis (using actual schema)
