@@ -1,10 +1,20 @@
 import { supabase } from '../../../lib/supabase-client';
 
+export async function GET() {
+  return Response.json({ 
+    status: 'Grain webhook endpoint is active',
+    timestamp: new Date().toISOString()
+  });
+}
+
 export async function POST(request) {
+  console.log('🎥 POST request received to grain webhook');
   try {
+    console.log('🔍 Parsing JSON data...');
     const webhookData = await request.json();
     
     console.log('🎥 Received webhook data:', JSON.stringify(webhookData, null, 2));
+    console.log('🔍 Supabase client status:', supabase ? 'Available' : 'Not available');
     
     // Detect if this is from Zapier Grain app (different format)
     if (isGrainZapierData(webhookData)) {
