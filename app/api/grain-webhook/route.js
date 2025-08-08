@@ -844,7 +844,11 @@ async function handleGrainZapierData(webhookData) {
     
   } catch (error) {
     console.error('❌ Failed to process comprehensive Zapier Grain data:', error);
-    throw error;
+    return Response.json({ 
+      error: error.message,
+      message: 'Failed to process Zapier Grain data',
+      timestamp: new Date().toISOString()
+    }, { status: 500 });
   }
 }
 
