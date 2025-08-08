@@ -1,4 +1,4 @@
-const { supabase } = require('../../../lib/supabase-client');
+import { supabase } from '../../../lib/supabase-client.js';
 
 export async function POST(request) {
   try {
