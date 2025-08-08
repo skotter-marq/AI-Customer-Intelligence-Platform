@@ -119,8 +119,7 @@ async function handleMeetingRecorded(data) {
       await analyzeMeetingWithAI(savedMeeting);
     }
 
-    // Send Slack notification about new meeting with enriched data
-    await notifyNewMeeting(savedMeeting, enrichedData);
+    // Only send notifications for product-relevant meetings (handled after AI analysis)
 
     console.log('✅ Meeting recorded and saved with enriched data:', savedMeeting.id);
     
@@ -319,8 +318,8 @@ async function analyzeMeetingWithAI(meeting) {
       await createJiraTicketsForFeatures(comprehensiveAnalysis.feature_requests, meeting);
     }
     
-    // Send Slack notification with comprehensive insights
-    await notifyMeetingAnalyzed(meeting, comprehensiveAnalysis);
+    // Send product-focused notifications only when actionable insights are found
+    await notifyProductInsights(meeting, comprehensiveAnalysis, enrichedData);
     
     console.log('✅ Meeting AI analysis completed:', meeting.id);
     
@@ -688,118 +687,33 @@ async function createJiraTicketsForFeatures(featureRequests, meeting) {
   });
 }
 
-async function notifyNewMeeting(meeting, enrichedData = null) {
+async function notifyProductInsights(meeting, analysis, enrichedData = null) {
   try {
-    console.log('📢 Sending improved meeting notification...');
-    
-    // Extract real insights from enrichedData if available
     const customerName = enrichedData?.customer_name || meeting.customer_name || extractCustomerFromMeeting(meeting);
-    const meetingTitle = meeting.title || 'Meeting Recording';
-    const duration = meeting.duration_minutes || enrichedData?.duration_minutes;
+    const meetingType = meeting.meeting_type || inferMeetingType(meeting.title || '');
     
-    // Generate more meaningful summary
-    const insightSummary = generateMeetingSummary(meeting, enrichedData);
-    const actionItems = generateActionItems(meeting, enrichedData);
-    const priorityScore = calculateMeetingPriority(meeting, enrichedData);
+    // Determine if this meeting has product-relevant insights
+    const productInsights = analyzeProductRelevance(meeting, analysis, meetingType);
     
-    // Use customer insight template and send to insights channel
-    await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'send_notification',
-        templateId: 'customer-insight-alert',
-        type: 'insight',
-        templateData: {
-          customerName: customerName,
-          meetingTitle: meetingTitle,
-          insightType: `${duration ? duration + '-min' : ''} Meeting Recording`,
-          priorityScore: priorityScore,
-          insightSummary: insightSummary,
-          actionItems: actionItems,
-          customerQuote: `"${extractMeetingQuote(meeting)}"`,
-          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
-          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=Follow%20up:%20${encodeURIComponent(customerName + ' - ' + meetingTitle)}`
-        },
-        metadata: {
-          meeting_id: meeting.id,
-          customer: customerName,
-          duration: duration,
-          source: 'grain_webhook_enhanced',
-          data_completeness: enrichedData?.data_completeness?.score || null
-        }
-      })
-    });
-    
-    console.log('✅ Sent enhanced meeting notification for:', meetingTitle);
-  } catch (error) {
-    console.warn('Failed to send Slack notification:', error);
-  }
-}
-
-async function notifyMeetingAnalyzed(meeting, analysis) {
-  try {
-    console.log('📢 Sending AI analysis completion notification...');
-    
-    const keyInsights = analysis.insights?.filter(i => i.priority === 'high' || i.priority === 'critical') || [];
-    const featureRequests = analysis.feature_requests?.length || 0;
-    const competitorMentions = analysis.competitive_intelligence?.length || 0;
-    const overallAnalysis = analysis.overall_analysis || {};
-    
-    // Create detailed action items from AI analysis
-    const aiActionItems = [];
-    if (keyInsights.length > 0) {
-      aiActionItems.push(`Review ${keyInsights.length} high-priority insights identified`);
-    }
-    if (featureRequests > 0) {
-      aiActionItems.push(`Follow up on ${featureRequests} feature request(s)`);
-    }
-    if (competitorMentions > 0) {
-      aiActionItems.push(`Address ${competitorMentions} competitive mention(s)`);
-    }
-    if (overallAnalysis.customer_health_score) {
-      aiActionItems.push(`Customer health score: ${overallAnalysis.customer_health_score}/10`);
+    if (!productInsights.shouldNotify) {
+      console.log('📵 No product-relevant insights found, skipping notification');
+      return;
     }
     
-    // Extract most important insight as quote
-    const topInsight = keyInsights[0]?.description || 
-                      analysis.insights?.[0]?.description || 
-                      overallAnalysis.meeting_summary?.substring(0, 100) || 
-                      'AI analysis completed';
+    console.log('📢 Sending product-focused insight notification...');
+    
+    // Create targeted notification based on insight type
+    const notification = createProductNotification(customerName, meeting, productInsights, analysis);
     
     await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'send_notification',
-        templateId: 'customer-insight-alert',
-        type: 'insight',
-        templateData: {
-          customerName: meeting.customer_name || 'Customer',
-          meetingTitle: `${meeting.title} - AI Analysis Complete`,
-          insightType: `AI Analysis (${overallAnalysis.sentiment_label || 'Analyzed'})`,
-          priorityScore: Math.min(10, 5 + keyInsights.length + featureRequests),
-          insightSummary: overallAnalysis.meeting_summary || `AI analysis identified ${keyInsights.length} insights, ${featureRequests} feature requests, and ${competitorMentions} competitive mentions.`,
-          actionItems: aiActionItems.length > 0 ? aiActionItems.map(item => `• ${item}`).join('\n') : '• Review detailed AI analysis in dashboard',
-          customerQuote: `"${topInsight.length > 100 ? topInsight.substring(0, 97) + '...' : topInsight}"`,
-          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
-          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=Follow%20up:%20${encodeURIComponent((meeting.customer_name || 'Customer') + ' - AI Analysis')}`
-        },
-        metadata: {
-          meeting_id: meeting.id,
-          customer: meeting.customer_name,
-          sentiment: overallAnalysis.sentiment_label,
-          insights_count: keyInsights.length,
-          feature_requests: featureRequests,
-          competitive_mentions: competitorMentions,
-          source: 'ai_analysis_complete'
-        }
-      })
+      body: JSON.stringify(notification)
     });
     
-    console.log('✅ AI analysis notification sent successfully');
+    console.log('✅ Product insight notification sent:', productInsights.primaryInsightType);
   } catch (error) {
-    console.warn('Failed to send analysis notification:', error);
+    console.warn('Failed to send product insight notification:', error);
   }
 }
 
@@ -941,8 +855,7 @@ async function handleGrainZapierData(webhookData) {
       });
     }
     
-    // Send enhanced notifications with Grain insights
-    await notifyNewMeetingWithGrainData(savedMeeting, mappedData);
+    // Product insights notification handled after AI analysis
     
     return Response.json({
       success: true,
@@ -1398,4 +1311,197 @@ function extractMeetingQuote(meeting) {
   }
   
   return `Meeting scheduled regarding: ${meeting.title || 'customer discussion'}`;
+}
+
+// Product-focused notification intelligence
+function analyzeProductRelevance(meeting, analysis, meetingType) {
+  const insights = {
+    shouldNotify: false,
+    primaryInsightType: null,
+    featureRequests: [],
+    technicalIssues: [],
+    competitiveIntel: [],
+    usabilityFeedback: [],
+    priorityScore: 0
+  };
+  
+  // Always notify for Discovery and Support/Troubleshooting meetings
+  const productRelevantTypes = ['discovery', 'support', 'troubleshooting', 'technical'];
+  if (productRelevantTypes.includes(meetingType)) {
+    insights.shouldNotify = true;
+    insights.primaryInsightType = meetingType;
+    insights.priorityScore += 3;
+  }
+  
+  // Analyze AI insights for product-relevant content
+  if (analysis?.feature_requests && analysis.feature_requests.length > 0) {
+    insights.shouldNotify = true;
+    insights.featureRequests = analysis.feature_requests.filter(req => 
+      req.priority === 'high' || req.priority === 'critical' || req.urgency === 'immediate'
+    );
+    if (insights.featureRequests.length > 0) {
+      insights.primaryInsightType = 'feature_requests';
+      insights.priorityScore += insights.featureRequests.length * 2;
+    }
+  }
+  
+  // Check for technical issues or bugs
+  if (analysis?.insights) {
+    const technicalIssues = analysis.insights.filter(insight => 
+      insight.category === 'technical_issue' ||
+      insight.description.toLowerCase().includes('bug') ||
+      insight.description.toLowerCase().includes('error') ||
+      insight.description.toLowerCase().includes('broken') ||
+      insight.description.toLowerCase().includes('not working')
+    );
+    
+    if (technicalIssues.length > 0) {
+      insights.shouldNotify = true;
+      insights.technicalIssues = technicalIssues;
+      insights.primaryInsightType = insights.primaryInsightType || 'technical_issues';
+      insights.priorityScore += technicalIssues.length * 3;
+    }
+  }
+  
+  // Check for competitive intelligence
+  if (analysis?.competitive_intelligence && analysis.competitive_intelligence.length > 0) {
+    insights.shouldNotify = true;
+    insights.competitiveIntel = analysis.competitive_intelligence;
+    insights.primaryInsightType = insights.primaryInsightType || 'competitive_intel';
+    insights.priorityScore += analysis.competitive_intelligence.length;
+  }
+  
+  // Check for usability feedback
+  if (analysis?.insights) {
+    const usabilityFeedback = analysis.insights.filter(insight => 
+      insight.category === 'usability' ||
+      insight.description.toLowerCase().includes('confusing') ||
+      insight.description.toLowerCase().includes('difficult') ||
+      insight.description.toLowerCase().includes('user experience') ||
+      insight.description.toLowerCase().includes('interface')
+    );
+    
+    if (usabilityFeedback.length > 0) {
+      insights.shouldNotify = true;
+      insights.usabilityFeedback = usabilityFeedback;
+      insights.primaryInsightType = insights.primaryInsightType || 'usability_feedback';
+      insights.priorityScore += usabilityFeedback.length;
+    }
+  }
+  
+  // Don't notify for routine meetings without significant insights
+  const routineMeetingTypes = ['demo', 'general', 'check_in', 'training'];
+  if (routineMeetingTypes.includes(meetingType) && insights.priorityScore < 2) {
+    insights.shouldNotify = false;
+  }
+  
+  return insights;
+}
+
+function createProductNotification(customerName, meeting, productInsights, analysis) {
+  const baseNotification = {
+    action: 'send_notification',
+    templateId: 'product-insight-alert', // Different template for product team
+    type: 'product_insight',
+    metadata: {
+      meeting_id: meeting.id,
+      customer: customerName,
+      insight_type: productInsights.primaryInsightType,
+      priority_score: productInsights.priorityScore,
+      source: 'product_intelligence'
+    }
+  };
+  
+  switch (productInsights.primaryInsightType) {
+    case 'feature_requests':
+      return {
+        ...baseNotification,
+        templateData: {
+          customerName: customerName,
+          meetingTitle: meeting.title || 'Customer Meeting',
+          insightType: `${productInsights.featureRequests.length} Feature Request(s)`,
+          priorityScore: Math.min(10, productInsights.priorityScore),
+          insightSummary: `${customerName} requested ${productInsights.featureRequests.length} features: ${productInsights.featureRequests.map(req => req.title).join(', ')}`,
+          actionItems: productInsights.featureRequests.map(req => 
+            `• ${req.title} (${req.priority} priority${req.timeframe ? ', needed ' + req.timeframe : ''})`
+          ).join('\n'),
+          customerQuote: `"${productInsights.featureRequests[0]?.description || 'See meeting for details'}"`,
+          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=${encodeURIComponent(customerName + ' - ' + productInsights.featureRequests[0]?.title)}`
+        }
+      };
+      
+    case 'technical_issues':
+      return {
+        ...baseNotification,
+        templateData: {
+          customerName: customerName,
+          meetingTitle: meeting.title || 'Support Meeting',
+          insightType: `${productInsights.technicalIssues.length} Technical Issue(s)`,
+          priorityScore: Math.min(10, productInsights.priorityScore),
+          insightSummary: `${customerName} reported technical issues that may require product attention`,
+          actionItems: productInsights.technicalIssues.map(issue => 
+            `• ${issue.description} (Priority: ${issue.priority})`
+          ).join('\n'),
+          customerQuote: `"${productInsights.technicalIssues[0]?.description || 'Technical issues reported'}"`,
+          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10004&summary=${encodeURIComponent(customerName + ' - Technical Issue')}`
+        }
+      };
+      
+    case 'competitive_intel':
+      return {
+        ...baseNotification,
+        templateData: {
+          customerName: customerName,
+          meetingTitle: meeting.title || 'Customer Meeting',
+          insightType: `Competitive Intelligence`,
+          priorityScore: Math.min(10, productInsights.priorityScore),
+          insightSummary: `${customerName} mentioned competitors and their capabilities that we should be aware of`,
+          actionItems: productInsights.competitiveIntel.map(intel => 
+            `• Competitor: ${intel.competitor} - ${intel.capability}`
+          ).join('\n'),
+          customerQuote: `"${productInsights.competitiveIntel[0]?.context || 'Competitive insights discussed'}"`,
+          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=${encodeURIComponent('Competitive Analysis - ' + customerName)}`
+        }
+      };
+      
+    case 'discovery':
+      return {
+        ...baseNotification,
+        templateData: {
+          customerName: customerName,
+          meetingTitle: meeting.title || 'Discovery Meeting',
+          insightType: `Discovery Session Insights`,
+          priorityScore: Math.min(10, productInsights.priorityScore),
+          insightSummary: `Discovery meeting with ${customerName} revealed product insights and market opportunities`,
+          actionItems: [
+            '• Review customer workflows and pain points',
+            '• Assess product-market fit opportunities',
+            '• Document user requirements for product planning',
+            '• Identify potential feature gaps'
+          ].join('\n'),
+          customerQuote: extractMeetingQuote(meeting),
+          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=${encodeURIComponent('Discovery Insights - ' + customerName)}`
+        }
+      };
+      
+    default:
+      return {
+        ...baseNotification,
+        templateData: {
+          customerName: customerName,
+          meetingTitle: meeting.title || 'Customer Meeting',
+          insightType: `Product Insights Available`,
+          priorityScore: Math.min(10, productInsights.priorityScore),
+          insightSummary: `Meeting with ${customerName} contains insights relevant to product development`,
+          actionItems: '• Review meeting insights for product implications',
+          customerQuote: extractMeetingQuote(meeting),
+          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=${encodeURIComponent('Product Review - ' + customerName)}`
+        }
+      };
+  }
 }
