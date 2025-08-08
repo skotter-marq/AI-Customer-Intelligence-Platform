@@ -119,8 +119,8 @@ async function handleMeetingRecorded(data) {
       await analyzeMeetingWithAI(savedMeeting);
     }
 
-    // Send Slack notification about new meeting
-    await notifyNewMeeting(savedMeeting);
+    // Send Slack notification about new meeting with enriched data
+    await notifyNewMeeting(savedMeeting, enrichedData);
 
     console.log('✅ Meeting recorded and saved with enriched data:', savedMeeting.id);
     
@@ -688,8 +688,20 @@ async function createJiraTicketsForFeatures(featureRequests, meeting) {
   });
 }
 
-async function notifyNewMeeting(meeting) {
+async function notifyNewMeeting(meeting, enrichedData = null) {
   try {
+    console.log('📢 Sending improved meeting notification...');
+    
+    // Extract real insights from enrichedData if available
+    const customerName = enrichedData?.customer_name || meeting.customer_name || extractCustomerFromMeeting(meeting);
+    const meetingTitle = meeting.title || 'Meeting Recording';
+    const duration = meeting.duration_minutes || enrichedData?.duration_minutes;
+    
+    // Generate more meaningful summary
+    const insightSummary = generateMeetingSummary(meeting, enrichedData);
+    const actionItems = generateActionItems(meeting, enrichedData);
+    const priorityScore = calculateMeetingPriority(meeting, enrichedData);
+    
     // Use customer insight template and send to insights channel
     await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
       method: 'POST',
@@ -699,26 +711,27 @@ async function notifyNewMeeting(meeting) {
         templateId: 'customer-insight-alert',
         type: 'insight',
         templateData: {
-          customerName: meeting.customer_name || 'Unknown Customer',
-          meetingTitle: meeting.title || 'Untitled Meeting',
-          insightType: 'Meeting Recording',
-          priorityScore: meeting.priority_score || 5,
-          insightSummary: meeting.summary || 'New meeting recorded and ready for analysis',
-          actionItems: meeting.action_items || '• Review meeting transcript\n• Extract key insights\n• Follow up on customer requests',
-          customerQuote: meeting.key_quote || 'Meeting analysis pending...',
-          meetingUrl: meeting.grain_url || '#',
-          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=Follow%20up:%20${encodeURIComponent(meeting.title || 'Meeting')}`
+          customerName: customerName,
+          meetingTitle: meetingTitle,
+          insightType: `${duration ? duration + '-min' : ''} Meeting Recording`,
+          priorityScore: priorityScore,
+          insightSummary: insightSummary,
+          actionItems: actionItems,
+          customerQuote: `"${extractMeetingQuote(meeting)}"`,
+          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=Follow%20up:%20${encodeURIComponent(customerName + ' - ' + meetingTitle)}`
         },
         metadata: {
           meeting_id: meeting.id,
-          customer: meeting.customer_name,
-          duration: meeting.duration_minutes,
-          source: 'grain_webhook'
+          customer: customerName,
+          duration: duration,
+          source: 'grain_webhook_enhanced',
+          data_completeness: enrichedData?.data_completeness?.score || null
         }
       })
     });
     
-    console.log('✅ Sent customer insight notification for meeting:', meeting.title);
+    console.log('✅ Sent enhanced meeting notification for:', meetingTitle);
   } catch (error) {
     console.warn('Failed to send Slack notification:', error);
   }
@@ -726,31 +739,65 @@ async function notifyNewMeeting(meeting) {
 
 async function notifyMeetingAnalyzed(meeting, analysis) {
   try {
-    const keyInsights = analysis.insights.filter(i => i.priority === 'high' || i.priority === 'critical');
-    const featureRequests = analysis.feature_requests.length;
-    const competitorMentions = analysis.competitive_intelligence.length;
+    console.log('📢 Sending AI analysis completion notification...');
     
-    let message = `🧠 Meeting analyzed: ${meeting.title}\n`;
-    message += `Sentiment: ${analysis.overall_analysis.sentiment_label} (${(analysis.overall_analysis.sentiment_score * 100).toFixed(0)}%)\n`;
+    const keyInsights = analysis.insights?.filter(i => i.priority === 'high' || i.priority === 'critical') || [];
+    const featureRequests = analysis.feature_requests?.length || 0;
+    const competitorMentions = analysis.competitive_intelligence?.length || 0;
+    const overallAnalysis = analysis.overall_analysis || {};
     
-    if (keyInsights.length > 0) message += `⚡ ${keyInsights.length} high-priority insights\n`;
-    if (featureRequests > 0) message += `💡 ${featureRequests} feature requests\n`;
-    if (competitorMentions > 0) message += `🏢 ${competitorMentions} competitive mentions\n`;
-
+    // Create detailed action items from AI analysis
+    const aiActionItems = [];
+    if (keyInsights.length > 0) {
+      aiActionItems.push(`Review ${keyInsights.length} high-priority insights identified`);
+    }
+    if (featureRequests > 0) {
+      aiActionItems.push(`Follow up on ${featureRequests} feature request(s)`);
+    }
+    if (competitorMentions > 0) {
+      aiActionItems.push(`Address ${competitorMentions} competitive mention(s)`);
+    }
+    if (overallAnalysis.customer_health_score) {
+      aiActionItems.push(`Customer health score: ${overallAnalysis.customer_health_score}/10`);
+    }
+    
+    // Extract most important insight as quote
+    const topInsight = keyInsights[0]?.description || 
+                      analysis.insights?.[0]?.description || 
+                      overallAnalysis.meeting_summary?.substring(0, 100) || 
+                      'AI analysis completed';
+    
     await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/slack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'send_notification',
-        message,
-        type: 'success',
+        templateId: 'customer-insight-alert',
+        type: 'insight',
+        templateData: {
+          customerName: meeting.customer_name || 'Customer',
+          meetingTitle: `${meeting.title} - AI Analysis Complete`,
+          insightType: `AI Analysis (${overallAnalysis.sentiment_label || 'Analyzed'})`,
+          priorityScore: Math.min(10, 5 + keyInsights.length + featureRequests),
+          insightSummary: overallAnalysis.meeting_summary || `AI analysis identified ${keyInsights.length} insights, ${featureRequests} feature requests, and ${competitorMentions} competitive mentions.`,
+          actionItems: aiActionItems.length > 0 ? aiActionItems.map(item => `• ${item}`).join('\n') : '• Review detailed AI analysis in dashboard',
+          customerQuote: `"${topInsight.length > 100 ? topInsight.substring(0, 97) + '...' : topInsight}"`,
+          meetingUrl: meeting.recording_url || meeting.grain_share_url || '#',
+          jiraCreateUrl: `https://marq.atlassian.net/secure/CreateIssue.jspa?issuetype=10001&summary=Follow%20up:%20${encodeURIComponent((meeting.customer_name || 'Customer') + ' - AI Analysis')}`
+        },
         metadata: {
           meeting_id: meeting.id,
-          sentiment: analysis.overall_analysis.sentiment_label,
-          insights_count: keyInsights.length
+          customer: meeting.customer_name,
+          sentiment: overallAnalysis.sentiment_label,
+          insights_count: keyInsights.length,
+          feature_requests: featureRequests,
+          competitive_mentions: competitorMentions,
+          source: 'ai_analysis_complete'
         }
       })
     });
+    
+    console.log('✅ AI analysis notification sent successfully');
   } catch (error) {
     console.warn('Failed to send analysis notification:', error);
   }
@@ -1219,4 +1266,136 @@ function calculatePriorityFromGrainData(grainData) {
   if (grainData.summary_points?.length > 3) score += 1;
   
   return Math.min(score, 10); // Cap at 10
+}
+
+// Helper functions for improved Slack notifications
+function extractCustomerFromMeeting(meeting) {
+  if (meeting.customer_name && meeting.customer_name !== 'Unknown Customer') {
+    return meeting.customer_name;
+  }
+  
+  // Try to extract from participants
+  if (meeting.participants && Array.isArray(meeting.participants)) {
+    const externalParticipants = meeting.participants.filter(p => 
+      p.email && !isInternalEmail(p.email)
+    );
+    
+    if (externalParticipants.length > 0) {
+      const email = externalParticipants[0].email;
+      const domain = email.split('@')[1];
+      return formatCompanyName(domain);
+    }
+  }
+  
+  return 'External Customer';
+}
+
+function generateMeetingSummary(meeting, enrichedData) {
+  const customerName = enrichedData?.customer_name || meeting.customer_name || 'customer';
+  const duration = meeting.duration_minutes || enrichedData?.duration_minutes;
+  const participantCount = meeting.participants?.length || 0;
+  const hasTranscript = !!(meeting.raw_transcript || enrichedData?.raw_transcript);
+  
+  let summary = `New meeting with ${customerName}`;
+  
+  if (duration) summary += ` (${duration} minutes)`;
+  if (participantCount > 0) summary += ` involving ${participantCount} participants`;
+  if (hasTranscript) summary += `. Transcript available for AI analysis`;
+  else summary += `. Transcript processing in progress`;
+  
+  // Add meeting type context
+  const meetingType = meeting.meeting_type || inferMeetingType(meeting.title || '');
+  if (meetingType && meetingType !== 'general') {
+    summary += `. Meeting type: ${meetingType.replace('_', ' ')}`;
+  }
+  
+  return summary + '.';
+}
+
+function generateActionItems(meeting, enrichedData) {
+  const actionItems = [];
+  const hasTranscript = !!(meeting.raw_transcript || enrichedData?.raw_transcript);
+  const customerName = enrichedData?.customer_name || meeting.customer_name || 'customer';
+  
+  if (hasTranscript) {
+    actionItems.push('Review AI-generated meeting insights');
+    actionItems.push('Follow up on customer requests and questions');
+  } else {
+    actionItems.push('Wait for transcript processing to complete');
+    actionItems.push('Review meeting recording when available');
+  }
+  
+  actionItems.push(`Update ${customerName} account with meeting notes`);
+  
+  const meetingType = meeting.meeting_type || inferMeetingType(meeting.title || '');
+  switch (meetingType) {
+    case 'demo':
+      actionItems.push('Schedule follow-up demo if needed');
+      actionItems.push('Send demo resources and documentation');
+      break;
+    case 'support':
+      actionItems.push('Create support tickets for identified issues');
+      actionItems.push('Follow up on resolution timeline');
+      break;
+    case 'qbr':
+      actionItems.push('Prepare QBR summary and action plan');
+      actionItems.push('Schedule next quarterly review');
+      break;
+    case 'discovery':
+      actionItems.push('Document customer requirements and pain points');
+      actionItems.push('Prepare proposal based on discovery insights');
+      break;
+  }
+  
+  return actionItems.map(item => `• ${item}`).join('\n');
+}
+
+function calculateMeetingPriority(meeting, enrichedData) {
+  let priority = 5; // Base priority
+  
+  const customerName = enrichedData?.customer_name || meeting.customer_name || '';
+  const title = meeting.title || '';
+  const duration = meeting.duration_minutes || enrichedData?.duration_minutes || 0;
+  
+  // Increase priority based on customer name patterns
+  if (customerName.toLowerCase().includes('enterprise') || 
+      customerName.toLowerCase().includes('university') ||
+      customerName.toLowerCase().includes('corp')) {
+    priority += 2;
+  }
+  
+  // Increase priority based on meeting type
+  const meetingType = meeting.meeting_type || inferMeetingType(title);
+  switch (meetingType) {
+    case 'qbr': priority += 3; break;
+    case 'support': priority += 2; break;
+    case 'demo': priority += 1; break;
+  }
+  
+  // Increase priority for longer meetings (indicates importance)
+  if (duration > 45) priority += 2;
+  else if (duration > 30) priority += 1;
+  
+  // Increase priority if multiple external participants
+  const externalCount = meeting.participants?.filter(p => 
+    p.email && !isInternalEmail(p.email)
+  ).length || 0;
+  if (externalCount > 2) priority += 1;
+  
+  return Math.min(priority, 10);
+}
+
+function extractMeetingQuote(meeting) {
+  // Try to extract a meaningful quote or first line from transcript
+  const transcript = meeting.raw_transcript;
+  if (transcript && transcript.length > 50) {
+    // Extract first customer speaking line (basic heuristic)
+    const lines = transcript.split('\n').filter(line => line.trim().length > 20);
+    if (lines.length > 0) {
+      const firstLine = lines[0].replace(/^\d+:\d+\s*/, '').replace(/^[^:]+:\s*/, '').trim();
+      return firstLine.length > 100 ? firstLine.substring(0, 97) + '...' : firstLine;
+    }
+  }
+  
+  return `Meeting scheduled regarding: ${meeting.title || 'customer discussion'}`;
 }
