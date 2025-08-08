@@ -1,8 +1,33 @@
-import { supabase } from '../../../lib/supabase-client';
+import { createClient } from '@supabase/supabase-js';
+
+// Create supabase client with error handling
+function createSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Supabase environment variables missing:', {
+      url: supabaseUrl ? 'SET' : 'MISSING',
+      key: supabaseKey ? 'SET' : 'MISSING'
+    });
+    return null;
+  }
+  
+  return createClient(supabaseUrl, supabaseKey);
+}
+
+const supabase = createSupabaseClient();
 
 export async function GET() {
   return Response.json({ 
     status: 'Grain webhook endpoint is active',
+    supabase: supabase ? 'Connected' : 'Not connected',
+    env_vars: {
+      supabase_url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'MISSING',
+      supabase_key: process.env.SUPABASE_SERVICE_ROLE_KEY ? 'SET' : 'MISSING',
+      anthropic_key: process.env.ANTHROPIC_API_KEY ? 'SET' : 'MISSING',
+      base_url: process.env.NEXT_PUBLIC_BASE_URL ? 'SET' : 'MISSING'
+    },
     timestamp: new Date().toISOString()
   });
 }
